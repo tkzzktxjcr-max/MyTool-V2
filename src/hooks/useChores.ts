@@ -21,12 +21,11 @@ export const useChores = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.CHORES, [
-        `familyId=${family.id}`,
-      ]);
+      const response = await listDocuments(COLLECTIONS.CHORES);
       
-      setChores(
-        response.documents.map((doc: any) => ({
+      const familyChores = response.documents
+        .filter((doc: any) => doc.familyId === family.id)
+        .map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           title: doc.title,
@@ -37,8 +36,9 @@ export const useChores = () => {
           dueDate: doc.dueDate,
           status: doc.status as ChoreStatus,
           createdBy: doc.createdBy,
-        }))
-      );
+        }));
+      
+      setChores(familyChores);
     } catch (error) {
       console.error('Error loading chores:', error);
     } finally {

@@ -20,12 +20,11 @@ export const useCalendar = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.EVENTS, [
-        `familyId=${family.id}`,
-      ]);
+      const response = await listDocuments(COLLECTIONS.EVENTS);
       
-      setEvents(
-        response.documents.map((doc: any) => ({
+      const familyEvents = response.documents
+        .filter((doc: any) => doc.familyId === family.id)
+        .map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           title: doc.title,
@@ -37,8 +36,9 @@ export const useCalendar = () => {
           assignedTo: doc.assignedTo,
           reminder: doc.reminder,
           createdBy: doc.createdBy,
-        }))
-      );
+        }));
+      
+      setEvents(familyEvents);
     } catch (error) {
       console.error('Error loading events:', error);
     } finally {

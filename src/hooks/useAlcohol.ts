@@ -25,17 +25,17 @@ export const useAlcohol = () => {
     return (volumeCl * abv) / 10;
   };
 
-  const loadLogs = useCallback(async (days: number = 30) => {
+  const loadLogs = useCallback(async () => {
     if (!user?.$id) return;
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
-        `userId=${user.$id}`,
-      ]);
+      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS);
       
-      setLogs(
-        response.documents.map((doc: any) => ({
+      // Filter locally since query syntax is problematic
+      const userLogs = response.documents
+        .filter((doc: any) => doc.userId === user.$id)
+        .map((doc: any) => ({
           id: doc.$id,
           userId: doc.userId,
           date: doc.date,
@@ -43,8 +43,9 @@ export const useAlcohol = () => {
           volumeCl: doc.volumeCl,
           abv: doc.abv,
           units: doc.units,
-        }))
-      );
+        }));
+      
+      setLogs(userLogs);
     } catch (error) {
       console.error('Error loading alcohol logs:', error);
     } finally {

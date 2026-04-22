@@ -44,7 +44,7 @@ export default function AlcoholTrackerPage() {
   });
 
   useEffect(() => {
-    loadLogs(30);
+    loadLogs();
   }, [loadLogs]);
 
   const handleSubmit = async (e: React.FormEvent) => {

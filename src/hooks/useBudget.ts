@@ -20,12 +20,11 @@ export const useBudget = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.BUDGET_ENTRIES, [
-        `familyId=${family.id}`,
-      ]);
+      const response = await listDocuments(COLLECTIONS.BUDGET_ENTRIES);
       
-      setEntries(
-        response.documents.map((doc: any) => ({
+      const familyEntries = response.documents
+        .filter((doc: any) => doc.familyId === family.id)
+        .map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           amount: doc.amount,
@@ -34,8 +33,9 @@ export const useBudget = () => {
           date: doc.date,
           type: doc.type,
           createdBy: doc.createdBy,
-        }))
-      );
+        }));
+      
+      setEntries(familyEntries);
     } catch (error) {
       console.error('Error loading budget entries:', error);
     } finally {
