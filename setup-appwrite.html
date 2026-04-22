@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Setup Appwrite - Family Hub</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        h1 { color: #FF6B6B; }
+        button { background: #4ECDC4; color: white; border: none; padding: 15px 30px; font-size: 16px; cursor: pointer; border-radius: 10px; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .log { background: #f5f5f5; padding: 20px; border-radius: 10px; max-height: 400px; overflow-y: auto; margin-top: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: #666; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Setup Appwrite - Family Hub</h1>
+    <p>Cliquez sur le bouton ci-dessous pour créer la base de données et toutes les collections.</p>
+    <button id="startBtn" onclick="startSetup()">Démarrer la configuration</button>
+    <div class="log" id="log"></div>
+
+    <script>
+        const ENDPOINT = 'https://backend.071098v2.duckdns.org/v1';
+        const API_KEY = 'standard_e12ff812a90093edebb0f9642d57cc93efa3329c65f169f8450c002fb1975042c5cb7dd4ff3ed659ac1ab5730032fd2c2daaa1f59e84b98dd78c058cfd255157d08eca34cfb81daf10ec09c8db238c2ba038b8591e17fe156f4723b0a2b0169c620639743f15380f9b58c3b2c9ee491b6de662644eea42212626a4fc8bfc3f19';
+
+        const collections = [
+            {
+                name: 'users_profile',
+                attributes: [
+                    { key: 'userId', type: 'string', size: 50, required: true },
+                    { key: 'email', type: 'string', size: 255, required: true },
+                    { key: 'name', type: 'string', size: 255, required: true },
+                    { key: 'familyId', type: 'string', size: 50, required: false },
+                    { key: 'avatar', type: 'string', size: 500, required: false },
+                    { key: 'createdAt', type: 'datetime', required: false }
+                ]
+            },
+            {
+                name: 'families',
+                attributes: [
+                    { key: 'name', type: 'string', size: 255, required: true },
+                    { key: 'ownerId', type: 'string', size: 50, required: true },
+                    { key: 'inviteCode', type: 'string', size: 20, required: false },
+                    { key: 'monthlyBudget', type: 'double', required: false },
+                    { key: 'createdAt', type: 'datetime', required: false }
+                ]
+            },
+            {
+                name: 'family_members',
+                attributes: [
+                    { key: 'familyId', type: 'string', size: 50, required: true },
+                    { key: 'userId', type: 'string', size: 50, required: true },
+                    { key: 'role', type: 'string', size: 20, required: true },
+                    { key: 'name', type: 'string', size: 255, required: true },
+                    { key: 'avatar', type: 'string', size: 500, required: false }
+                ]
+            },
+            {
+                name: 'events',
+                attributes: [
+                    { key: 'familyId', type: 'string', size: 50, required: true },
+                    { key: 'title', type: 'string', size: 255, required: true },
+                    { key: 'description', type: 'string', size: 1000, required: false },
+                    { key: 'date', type: 'datetime', required: true },
+                    { key: 'endDate', type: 'datetime', required: false },
+                    { key: 'color', type: 'string', size: 20, required: false },
+                    { key: 'category', type: 'string', size: 50, required: false },
+                    { key: 'assignedTo', type: 'string', size: 50, required: false },
+                    { key: 'reminder', type: 'boolean', required: false },
+                    { key: 'createdBy', type: 'string', size: 50, required: true }
+                ]
+            },
+            {
+                name: 'chores',
+                attributes: [
+                    { key: 'familyId', type: 'string', size: 50, required: true },
+                    { key: 'title', type: 'string', size: 255, required: true },
+                    { key: 'description', type: 'string', size: 500, required: false },
+                    { key: 'frequency', type: 'string', size: 20, required: false },
+                    { key: 'points', type: 'integer', required: false },
+                    { key: 'assignedTo', type: 'string', size: 50, required: false },
+                    { key: 'dueDate', type: 'datetime', required: false },
+                    { key: 'status', type: 'string', size: 20, required: false },
+                    { key: 'createdBy', type: 'string', size: 50, required: true }
+                ]
+            },
+            {
+                name: 'budget_entries',
+                attributes: [
+                    { key: 'familyId', type: 'string', size: 50, required: true },
+                    { key: 'amount', type: 'double', required: true },
+                    { key: 'category', type: 'string', size: 50, required: true },
+                    { key: 'description', type: 'string', size: 255, required: false },
+                    { key: 'date', type: 'datetime', required: true },
+                    { key: 'type', type: 'string', size: 20, required: true },
+                    { key: 'createdBy', type: 'string', size: 50, required: true }
+                ]
+            },
+            {
+                name: 'alcohol_logs',
+                attributes: [
+                    { key: 'userId', type: 'string', size: 50, required: true },
+                    { key: 'date', type: 'datetime', required: true },
+                    { key: 'drinkType', type: 'string', size: 50, required: true },
+                    { key: 'volumeCl', type: 'double', required: true },
+                    { key: 'abv', type: 'double', required: true },
+                    { key: 'units', type: 'double', required: true },
+                    { key: 'context', type: 'string', size: 100, required: false },
+                    { key: 'notes', type: 'string', size: 500, required: false },
+                    { key: 'mood', type: 'string', size: 50, required: false }
+                ]
+            }
+        ];
+
+        const log = document.getElementById('log');
+        const btn = document.getElementById('startBtn');
+
+        function addLog(message, type = 'info') {
+            const p = document.createElement('p');
+            p.className = type;
+            p.textContent = message;
+            log.appendChild(p);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function apiCall(endpoint, method, data) {
+            const response = await fetch(endpoint, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Appwrite-Key': API_KEY
+                },
+                body: JSON.stringify(data)
+            });
+            return response.json();
+        }
+
+        async function createDatabase() {
+            addLog('📦 Création de la base de données "family_hub"...', 'info');
+            try {
+                const result = await apiCall(`${ENDPOINT}/databases`, 'POST', {
+                    name: 'family_hub',
+                    permissions: ['read("users")', 'create("users")', 'update("users")', 'delete("users")']
+                });
+                if (result.$id) {
+                    addLog(`✅ Base de données créée: ${result.$id}`, 'success');
+                    return result.$id;
+                } else if (result.code === 409) {
+                    addLog('ℹ️ Base de données existe déjà', 'info');
+                    return 'family_hub';
+                } else {
+                    addLog(`❌ Erreur: ${result.message || JSON.stringify(result)}`, 'error');
+                    return null;
+                }
+            } catch (e) {
+                addLog(`❌ Erreur de connexion: ${e.message}`, 'error');
+                return null;
+            }
+        }
+
+        async function createCollection(dbId, collection) {
+            addLog(`   Creating collection "${collection.name}"...`, 'info');
+            try {
+                const result = await apiCall(`${ENDPOINT}/databases/${dbId}/collections`, 'POST', {
+                    name: collection.name,
+                    permissions: ['read("users")', 'create("users")', 'update("users")', 'delete("users")'],
+                    attributes: collection.attributes
+                });
+                if (result.$id) {
+                    addLog(`   ✅ ${collection.name} créé`, 'success');
+                    return true;
+                } else {
+                    addLog(`   ❌ ${collection.name}: ${result.message || 'erreur'}`, 'error');
+                    return false;
+                }
+            } catch (e) {
+                addLog(`   ❌ ${collection.name}: ${e.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function startSetup() {
+            btn.disabled = true;
+            btn.textContent = 'Configuration en cours...';
+            log.innerHTML = '';
+
+            addLog('🚀 Début de la configuration Appwrite', 'info');
+            addLog('==============================', 'info');
+
+            const dbId = await createDatabase();
+            if (!dbId) {
+                addLog('❌ Impossible de continuer sans base de données', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Réessayer';
+                return;
+            }
+
+            addLog('', 'info');
+            addLog('📦 Création des collections...', 'info');
+            addLog('==============================', 'info');
+
+            for (const collection of collections) {
+                await createCollection(dbId, collection);
+                await new Promise(r => setTimeout(r, 500)); // Pause pour éviter les erreurs
+            }
+
+            addLog('', 'info');
+            addLog('==============================', 'info');
+            addLog('✅ Configuration terminée !', 'success');
+            addLog('', 'info');
+            addLog('📝 Mettez à jour votre fichier .env :', 'info');
+            addLog(`VITE_APPWRITE_DATABASE_ID=${dbId}`, 'info');
+
+            btn.textContent = 'Terminé !';
+        }
+    </script>
+</body>
+</html>
