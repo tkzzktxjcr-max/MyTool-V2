@@ -1,0 +1,131 @@
+"use client";
+
+import { useState, useCallback } from 'react';
+import { 
+  createDocument, 
+  listDocuments, 
+  updateDocument, 
+  deleteDocument,
+  COLLECTIONS,
+} from '@/lib/appwrite';
+import { useFamily } from '@/contexts/FamilyContext';
+import type { Chore, CreateChoreForm, ChoreStatus } from '@/types';
+
+export const useChores = () => {
+  const { family } = useFamily();
+  const [chores, setChores] = useState<Chore[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadChores = useCallback(async () => {
+    if (!family?.id) return;
+
+    setLoading(true);
+    try {
+      const response = await listDocuments(COLLECTIONS.CHORES, [
+        `familyId=${family.id}`,
+      ]);
+      
+      setChores(
+        response.documents.map(doc => ({
+          id: doc.$id,
+          familyId: doc.familyId,
+          title: doc.title,
+          description: doc.description,
+          frequency: doc.frequency,
+          points: doc.points,
+          assignedTo: doc.assignedTo,
+          dueDate: doc.dueDate,
+          status: doc.status as ChoreStatus,
+          createdBy: doc.createdBy,
+        }))
+      );
+    } catch (error) {
+      console.error('Error loading chores:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [family?.id]);
+
+  const createChore = async (form: CreateChoreForm): Promise<Chore> => {
+    if (!family?.id) throw new Error('No family selected');
+
+    const doc = await createDocument(COLLECTIONS.CHORES, {
+      familyId: family.id,
+      title: form.title,
+      description: form.description,
+      frequency: form.frequency,
+      points: form.points || 10,
+      assignedTo: form.assignedTo,
+      dueDate: form.dueDate?.toISOString(),
+      status: 'pending',
+      createdBy: family.ownerId,
+    });
+
+    const chore: Chore = {
+      id: doc.$id,
+      familyId: doc.familyId,
+      title: doc.title,
+      description: doc.description,
+      frequency: doc.frequency,
+      points: doc.points,
+      assignedTo: doc.assignedTo,
+      dueDate: doc.dueDate,
+      status: doc.status as ChoreStatus,
+      createdBy: doc.createdBy,
+    };
+
+    setChores(prev => [...prev, chore]);
+    return chore;
+  };
+
+  const updateChore = async (choreId: string, data: Partial<Chore>): Promise<void> => {
+    await updateDocument(COLLECTIONS.CHORES, choreId, {
+      ...data,
+      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
+    });
+
+    setChores(prev =>
+      prev.map(c =>
+        c.id === choreId ? { ...c, ...data } : c
+      )
+    );
+  };
+
+  const completeChore = async (choreId: string): Promise<void> => {
+    await updateChore(choreId, { status: 'completed' });
+  };
+
+  const deleteChore = async (choreId: string): Promise<void> => {
+    await deleteDocument(COLLECTIONS.CHORES, choreId);
+    setChores(prev => prev.filter(c => c.id !== choreId));
+  };
+
+  const getPendingChores = (): Chore[] => {
+    return chores.filter(c => c.status === 'pending');
+  };
+
+  const getChoresByAssignee = (userId: string): Chore[] => {
+    return chores.filter(c => c.assignedTo === userId);
+  };
+
+  const getTodaysChores = (): Chore[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return chores.filter(c => {
+      if (!c.dueDate) return c.status === 'pending';
+      return c.dueDate.split('T')[0] === today && c.status === 'pending';
+    });
+  };
+
+  return {
+    chores,
+    loading,
+    loadChores,
+    createChore,
+    updateChore,
+    completeChore,
+    deleteChore,
+    getPendingChores,
+    getChoresByAssignee,
+    getTodaysChores,
+  };
+};
