@@ -4,7 +4,6 @@ import { useState, useCallback } from 'react';
 import { 
   createDocument, 
   listDocuments, 
-  updateDocument, 
   deleteDocument,
   COLLECTIONS,
 } from '@/lib/appwrite';
@@ -16,17 +15,17 @@ export const useCalendar = () => {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadEvents = useCallback(async (startDate?: Date, endDate?: Date) => {
+  const loadEvents = useCallback(async () => {
     if (!family?.id) return;
 
     setLoading(true);
     try {
-      const queries = [`familyId=${family.id}`];
-      
-      const response = await listDocuments(COLLECTIONS.EVENTS, queries);
+      const response = await listDocuments(COLLECTIONS.EVENTS, [
+        `familyId=${family.id}`,
+      ]);
       
       setEvents(
-        response.documents.map(doc => ({
+        response.documents.map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           title: doc.title,
@@ -59,7 +58,7 @@ export const useCalendar = () => {
       other: '#95A5A6',
     };
 
-    const doc = await createDocument(COLLECTIONS.EVENTS, {
+    const doc: any = await createDocument(COLLECTIONS.EVENTS, {
       familyId: family.id,
       title: form.title,
       description: form.description,
@@ -90,35 +89,9 @@ export const useCalendar = () => {
     return event;
   };
 
-  const updateEvent = async (eventId: string, data: Partial<CreateEventForm>): Promise<void> => {
-    const updateData: Record<string, unknown> = {};
-    if (data.title !== undefined) updateData.title = data.title;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.date !== undefined) updateData.date = data.date.toISOString();
-    if (data.endDate !== undefined) updateData.endDate = data.endDate?.toISOString();
-    if (data.category !== undefined) updateData.category = data.category;
-    if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
-    if (data.reminder !== undefined) updateData.reminder = data.reminder;
-
-    await updateDocument(COLLECTIONS.EVENTS, eventId, updateData);
-
-    setEvents(prev =>
-      prev.map(e =>
-        e.id === eventId
-          ? { ...e, ...updateData, date: updateData.date as string, endDate: updateData.endDate as string | undefined }
-          : e
-      )
-    );
-  };
-
   const deleteEvent = async (eventId: string): Promise<void> => {
     await deleteDocument(COLLECTIONS.EVENTS, eventId);
     setEvents(prev => prev.filter(e => e.id !== eventId));
-  };
-
-  const getEventsByDate = (date: Date): CalendarEvent[] => {
-    const dateStr = date.toISOString().split('T')[0];
-    return events.filter(e => e.date.split('T')[0] === dateStr);
   };
 
   return {
@@ -126,8 +99,6 @@ export const useCalendar = () => {
     loading,
     loadEvents,
     createEvent,
-    updateEvent,
     deleteEvent,
-    getEventsByDate,
   };
 };

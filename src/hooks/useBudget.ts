@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { 
   createDocument, 
   listDocuments, 
-  updateDocument, 
   deleteDocument,
   COLLECTIONS,
 } from '@/lib/appwrite';
@@ -16,24 +15,17 @@ export const useBudget = () => {
   const [entries, setEntries] = useState<BudgetEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const loadEntries = useCallback(async (startDate?: Date, endDate?: Date) => {
+  const loadEntries = useCallback(async () => {
     if (!family?.id) return;
 
     setLoading(true);
     try {
-      let queries = [`familyId=${family.id}`];
-      
-      if (startDate) {
-        queries.push(`date>="${startDate.toISOString()}"`);
-      }
-      if (endDate) {
-        queries.push(`date<="${endDate.toISOString()}"`);
-      }
-
-      const response = await listDocuments(COLLECTIONS.BUDGET_ENTRIES, queries);
+      const response = await listDocuments(COLLECTIONS.BUDGET_ENTRIES, [
+        `familyId=${family.id}`,
+      ]);
       
       setEntries(
-        response.documents.map(doc => ({
+        response.documents.map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           amount: doc.amount,
@@ -54,7 +46,7 @@ export const useBudget = () => {
   const createEntry = async (form: CreateBudgetEntryForm): Promise<BudgetEntry> => {
     if (!family?.id) throw new Error('No family selected');
 
-    const doc = await createDocument(COLLECTIONS.BUDGET_ENTRIES, {
+    const doc: any = await createDocument(COLLECTIONS.BUDGET_ENTRIES, {
       familyId: family.id,
       amount: form.amount,
       category: form.category,
@@ -79,27 +71,11 @@ export const useBudget = () => {
     return entry;
   };
 
-  const updateEntry = async (entryId: string, data: Partial<CreateBudgetEntryForm>): Promise<void> => {
-    await updateDocument(COLLECTIONS.BUDGET_ENTRIES, entryId, {
-      ...data,
-      date: data.date?.toISOString(),
-    });
-
-    setEntries(prev =>
-      prev.map(e =>
-        e.id === entryId
-          ? { ...e, ...data, date: data.date?.toISOString() || e.date }
-          : e
-      )
-    );
-  };
-
   const deleteEntry = async (entryId: string): Promise<void> => {
     await deleteDocument(COLLECTIONS.BUDGET_ENTRIES, entryId);
     setEntries(prev => prev.filter(e => e.id !== entryId));
   };
 
-  // Calculs
   const totalExpenses = useMemo(() => {
     return entries
       .filter(e => e.type === 'expense')
@@ -143,25 +119,16 @@ export const useBudget = () => {
     return categories;
   }, [entries]);
 
-  const getEntriesByMonth = (year: number, month: number): BudgetEntry[] => {
-    return entries.filter(e => {
-      const date = new Date(e.date);
-      return date.getFullYear() === year && date.getMonth() === month;
-    });
-  };
-
   return {
     entries,
     loading,
     loadEntries,
     createEntry,
-    updateEntry,
     deleteEntry,
     totalExpenses,
     totalIncome,
     balance,
     budgetUsed,
     expensesByCategory,
-    getEntriesByMonth,
   };
 };

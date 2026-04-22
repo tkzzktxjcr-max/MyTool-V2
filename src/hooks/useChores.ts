@@ -26,7 +26,7 @@ export const useChores = () => {
       ]);
       
       setChores(
-        response.documents.map(doc => ({
+        response.documents.map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           title: doc.title,
@@ -49,7 +49,7 @@ export const useChores = () => {
   const createChore = async (form: CreateChoreForm): Promise<Chore> => {
     if (!family?.id) throw new Error('No family selected');
 
-    const doc = await createDocument(COLLECTIONS.CHORES, {
+    const doc: any = await createDocument(COLLECTIONS.CHORES, {
       familyId: family.id,
       title: form.title,
       description: form.description,
@@ -78,34 +78,18 @@ export const useChores = () => {
     return chore;
   };
 
-  const updateChore = async (choreId: string, data: Partial<Chore>): Promise<void> => {
-    await updateDocument(COLLECTIONS.CHORES, choreId, {
-      ...data,
-      dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : undefined,
-    });
-
+  const completeChore = async (choreId: string): Promise<void> => {
+    await updateDocument(COLLECTIONS.CHORES, choreId, { status: 'completed' });
     setChores(prev =>
       prev.map(c =>
-        c.id === choreId ? { ...c, ...data } : c
+        c.id === choreId ? { ...c, status: 'completed' } : c
       )
     );
-  };
-
-  const completeChore = async (choreId: string): Promise<void> => {
-    await updateChore(choreId, { status: 'completed' });
   };
 
   const deleteChore = async (choreId: string): Promise<void> => {
     await deleteDocument(COLLECTIONS.CHORES, choreId);
     setChores(prev => prev.filter(c => c.id !== choreId));
-  };
-
-  const getPendingChores = (): Chore[] => {
-    return chores.filter(c => c.status === 'pending');
-  };
-
-  const getChoresByAssignee = (userId: string): Chore[] => {
-    return chores.filter(c => c.assignedTo === userId);
   };
 
   const getTodaysChores = (): Chore[] => {
@@ -121,11 +105,8 @@ export const useChores = () => {
     loading,
     loadChores,
     createChore,
-    updateChore,
     completeChore,
     deleteChore,
-    getPendingChores,
-    getChoresByAssignee,
     getTodaysChores,
   };
 };

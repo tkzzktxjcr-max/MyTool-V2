@@ -31,16 +31,12 @@ export const useAlcohol = () => {
 
     setLoading(true);
     try {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() - days);
-
       const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
         `userId=${user.$id}`,
-        `date>="${startDate.toISOString()}"`,
       ]);
       
       setLogs(
-        response.documents.map(doc => ({
+        response.documents.map((doc: any) => ({
           id: doc.$id,
           userId: doc.userId,
           date: doc.date,
@@ -65,7 +61,7 @@ export const useAlcohol = () => {
 
     const units = calculateUnits(form.volumeCl, form.abv);
 
-    const doc = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
+    const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
       userId: user.$id,
       date: new Date().toISOString(),
       drinkType: form.drinkType,
