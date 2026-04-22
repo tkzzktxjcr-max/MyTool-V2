@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 
 type AuthMode = 'login' | 'register';
@@ -41,8 +42,8 @@ export default function AuthPage() {
         await register(formData.email, formData.password, formData.name);
       }
       navigate('/');
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }
@@ -55,14 +56,12 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
-      {/* Background decoration */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-secondary/10 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md relative animate-fade-in">
-        {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-3 mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-white font-bold text-2xl shadow-lg shadow-primary/25">
@@ -186,7 +185,7 @@ export default function AuthPage() {
                 className="w-full h-12"
                 loading={loading}
               >
-                {mode === 'login' ? 'Se connecter' : 'S\'inscrire'}
+                {mode === 'login' ? 'Se connecter' : "S'inscrire"}
               </Button>
             </form>
 

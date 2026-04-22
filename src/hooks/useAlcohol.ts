@@ -4,7 +4,6 @@ import { useState, useCallback, useMemo } from 'react';
 import { 
   createDocument, 
   listDocuments, 
-  updateDocument, 
   deleteDocument,
   COLLECTIONS,
 } from '@/lib/appwrite';
@@ -23,7 +22,6 @@ export const useAlcohol = () => {
   const [logs, setLogs] = useState<AlcoholLog[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Calcul des unités : (volume cl × % alc) / 10
   const calculateUnits = (volumeCl: number, abv: number): number => {
     return (volumeCl * abv) / 10;
   };
@@ -101,7 +99,6 @@ export const useAlcohol = () => {
     setLogs(prev => prev.filter(l => l.id !== logId));
   };
 
-  // Insights
   const insights = useMemo((): AlcoholInsight | null => {
     if (logs.length === 0) return null;
 
@@ -111,26 +108,18 @@ export const useAlcohol = () => {
     const monthAgo = new Date(now);
     monthAgo.setDate(monthAgo.getDate() - 30);
 
-    // Unités totales
-    const totalUnits = logs.reduce((sum, l) => sum + l.units, 0);
-
-    // Semaine en cours
     const weeklyLogs = logs.filter(l => new Date(l.date) >= weekAgo);
     const weeklyUnits = weeklyLogs.reduce((sum, l) => sum + l.units, 0);
 
-    // Mois en cours
     const monthlyLogs = logs.filter(l => new Date(l.date) >= monthAgo);
     const monthlyUnits = monthlyLogs.reduce((sum, l) => sum + l.units, 0);
 
-    // Moyenne par jour (semaine)
     const averagePerDay = weeklyLogs.length > 0 
       ? weeklyUnits / 7 
       : 0;
 
-    // Jours au-dessus de la limite
     const daysOverLimit = weeklyLogs.filter(l => l.units > HEALTH_GUIDELINES.maxDailyUnits).length;
 
-    // Tendance quotidienne (7 derniers jours)
     const dailyTrend = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(now);
       date.setDate(date.getDate() - (6 - i));
@@ -141,13 +130,12 @@ export const useAlcohol = () => {
       return { date: dateStr, units: dayUnits };
     });
 
-    // Tendance hebdomadaire (4 dernières semaines)
     const weeklyTrend = Array.from({ length: 4 }, (_, i) => {
       const weekEnd = new Date(now);
       weekEnd.setDate(weekEnd.getDate() - (i * 7));
       const weekStart = new Date(weekEnd);
       weekStart.setDate(weekStart.getDate() - 7);
-      const weekLabel = `S${weekEnd.getWeek ? weekEnd.getWeek() : i + 1}`;
+      const weekLabel = `S${4 - i}`;
       const weekUnits = logs
         .filter(l => {
           const d = new Date(l.date);
@@ -157,7 +145,6 @@ export const useAlcohol = () => {
       return { week: weekLabel, units: weekUnits };
     }).reverse();
 
-    // Boisson la plus courante
     const drinkCounts: Record<string, number> = {};
     logs.forEach(l => {
       drinkCounts[l.drinkType] = (drinkCounts[l.drinkType] || 0) + 1;
@@ -165,7 +152,6 @@ export const useAlcohol = () => {
     const mostCommonDrink = Object.entries(drinkCounts)
       .sort((a, b) => b[1] - a[1])[0]?.[0] as DrinkType || 'beer';
 
-    // Contexte le plus courant
     const contextCounts: Record<string, number> = {};
     logs.forEach(l => {
       if (l.context) {
@@ -175,7 +161,6 @@ export const useAlcohol = () => {
     const mostCommonContext = Object.entries(contextCounts)
       .sort((a, b) => b[1] - a[1])[0]?.[0] as AlcoholContext || 'other';
 
-    // Niveau de risque
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
     if (weeklyUnits > HEALTH_GUIDELINES.maxWeeklyUnits * 1.5) {
       riskLevel = 'high';
@@ -183,7 +168,6 @@ export const useAlcohol = () => {
       riskLevel = 'moderate';
     }
 
-    // Recommandations
     const recommendations: string[] = [];
     if (weeklyUnits > HEALTH_GUIDELINES.maxWeeklyUnits) {
       recommendations.push('⚠️ Vous avez dépassé les recommandations de santé cette semaine (14 unités max)');

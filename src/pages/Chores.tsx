@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useChores } from '@/hooks/useChores';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
@@ -14,12 +15,12 @@ import {
   User,
   Trash2,
   CheckCircle2,
-  RotateCcw,
+  PartyPopper,
 } from 'lucide-react';
 import { format, parseISO, isToday, isPast, isTomorrow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { Chore, CreateChoreForm, ChoreFrequency, ChoreStatus } from '@/types';
+import type { CreateChoreForm, ChoreFrequency, ChoreStatus } from '@/types';
 
 const frequencies: { value: ChoreFrequency; label: string }[] = [
   { value: 'daily', label: 'Quotidien' },
@@ -91,12 +92,11 @@ export default function ChoresPage() {
     return format(date, 'd MMM', { locale: fr });
   };
 
-  const isOverdue = (chore: Chore) => {
+  const isOverdue = (chore: { dueDate?: string; status: string }) => {
     if (!chore.dueDate || chore.status !== 'pending') return false;
     return isPast(parseISO(chore.dueDate));
   };
 
-  // Stats
   const totalPoints = chores
     .filter(c => c.status === 'completed')
     .reduce((sum, c) => sum + (c.points || 0), 0);
@@ -104,7 +104,6 @@ export default function ChoresPage() {
   const pendingCount = chores.filter(c => c.status === 'pending').length;
   const completedCount = chores.filter(c => c.status === 'completed').length;
 
-  // Leaderboard
   const memberPoints = members.map(member => {
     const points = chores
       .filter(c => c.assignedTo === member.id && c.status === 'completed')
@@ -114,7 +113,6 @@ export default function ChoresPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -226,7 +224,6 @@ export default function ChoresPage() {
         </Dialog>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="text-center">
           <CardContent className="pt-6">
@@ -252,9 +249,7 @@ export default function ChoresPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Chores List */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Filter */}
           <div className="flex gap-2">
             {(['all', 'pending', 'completed'] as const).map((f) => (
               <Button
@@ -270,7 +265,6 @@ export default function ChoresPage() {
             ))}
           </div>
 
-          {/* Chores */}
           {filteredChores.length === 0 ? (
             <Card className="text-center py-12">
               <CheckSquare className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
@@ -294,7 +288,6 @@ export default function ChoresPage() {
                   >
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
-                        {/* Status toggle */}
                         <button
                           onClick={() => chore.status === 'pending' && completeChore(chore.id)}
                           disabled={chore.status === 'completed'}
@@ -311,7 +304,6 @@ export default function ChoresPage() {
                           )}
                         </button>
 
-                        {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h4 className={cn(
@@ -348,7 +340,6 @@ export default function ChoresPage() {
                           </div>
                         </div>
 
-                        {/* Delete */}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -366,7 +357,6 @@ export default function ChoresPage() {
           )}
         </div>
 
-        {/* Leaderboard */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

@@ -3,23 +3,22 @@
 import { useEffect, useState } from 'react';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useCalendar } from '@/hooks/useCalendar';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
 import { 
   Plus, 
   ChevronLeft, 
   ChevronRight, 
   Calendar as CalendarIcon,
   Clock,
-  MapPin,
   X,
 } from 'lucide-react';
 import { format, parseISO, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { CalendarEvent, CreateEventForm, EventCategory } from '@/types';
+import type { CreateEventForm, EventCategory } from '@/types';
 import { EVENT_COLORS } from '@/types';
 
 const categories: { value: EventCategory; label: string }[] = [
@@ -37,7 +36,6 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<CreateEventForm>({
@@ -87,7 +85,7 @@ export default function CalendarPage() {
     end: endOfMonth(currentMonth),
   });
 
-  const getEventsForDate = (date: Date): CalendarEvent[] => {
+  const getEventsForDate = (date: Date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     return events.filter(e => e.date.split('T')[0] === dateStr);
   };
@@ -99,7 +97,6 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -179,9 +176,7 @@ export default function CalendarPage() {
         </Dialog>
       </div>
 
-      {/* Calendar Grid */}
       <div className="grid lg:grid-cols-3 gap-6">
-        {/* Calendar */}
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <Button variant="ghost" size="icon" onClick={goToPreviousMonth}>
@@ -195,7 +190,6 @@ export default function CalendarPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {/* Days header */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day) => (
                 <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
@@ -204,14 +198,11 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            {/* Calendar grid */}
             <div className="grid grid-cols-7 gap-1">
-              {/* Empty cells for first day offset */}
               {Array.from({ length: (startOfMonth(currentMonth).getDay() + 6) % 7 }).map((_, i) => (
                 <div key={`empty-${i}`} className="aspect-square" />
               ))}
 
-              {/* Days */}
               {monthDays.map((day) => {
                 const dayEvents = getEventsForDate(day);
                 const isSelected = isSameDay(day, selectedDate);
@@ -237,7 +228,7 @@ export default function CalendarPage() {
                     </span>
                     {dayEvents.length > 0 && (
                       <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-                        {dayEvents.slice(0, 3).map((event, i) => (
+                        {dayEvents.slice(0, 3).map((event) => (
                           <div
                             key={event.id}
                             className="w-1.5 h-1.5 rounded-full"
@@ -256,7 +247,6 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
 
-        {/* Selected Date Events */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">

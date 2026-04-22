@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/hooks/useAlcohol';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { 
   Plus, 
   Wine, 
@@ -109,7 +110,6 @@ export default function AlcoholTrackerPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -183,7 +183,6 @@ export default function AlcoholTrackerPage() {
                 </div>
               </div>
 
-              {/* Unit preview */}
               <div className="p-3 rounded-xl bg-muted/50">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Unités calculées</span>
@@ -257,7 +256,6 @@ export default function AlcoholTrackerPage() {
         </Dialog>
       </div>
 
-      {/* Risk Assessment */}
       {insights && (
         <Card className={cn("border-2", getRiskColor(insights.riskLevel))}>
           <CardContent className="p-6">
@@ -297,7 +295,6 @@ export default function AlcoholTrackerPage() {
         </Card>
       )}
 
-      {/* Today's Progress */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -340,7 +337,6 @@ export default function AlcoholTrackerPage() {
       </Card>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Weekly Chart */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -378,7 +374,6 @@ export default function AlcoholTrackerPage() {
           </CardContent>
         </Card>
 
-        {/* Recommendations */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -412,7 +407,6 @@ export default function AlcoholTrackerPage() {
         </Card>
       </div>
 
-      {/* Stats */}
       {insights && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
@@ -444,7 +438,6 @@ export default function AlcoholTrackerPage() {
         </div>
       )}
 
-      {/* Recent Logs */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

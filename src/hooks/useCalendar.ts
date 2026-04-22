@@ -21,15 +21,8 @@ export const useCalendar = () => {
 
     setLoading(true);
     try {
-      let queries = [`familyId=${family.id}`];
+      const queries = [`familyId=${family.id}`];
       
-      if (startDate) {
-        queries.push(`date>=$new Date(startDate).toISOString()}`);
-      }
-      if (endDate) {
-        queries.push(`date<=${new Date(endDate).toISOString()}`);
-      }
-
       const response = await listDocuments(COLLECTIONS.EVENTS, queries);
       
       setEvents(
@@ -98,16 +91,21 @@ export const useCalendar = () => {
   };
 
   const updateEvent = async (eventId: string, data: Partial<CreateEventForm>): Promise<void> => {
-    await updateDocument(COLLECTIONS.EVENTS, eventId, {
-      ...data,
-      date: data.date?.toISOString(),
-      endDate: data.endDate?.toISOString(),
-    });
+    const updateData: Record<string, unknown> = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.date !== undefined) updateData.date = data.date.toISOString();
+    if (data.endDate !== undefined) updateData.endDate = data.endDate?.toISOString();
+    if (data.category !== undefined) updateData.category = data.category;
+    if (data.assignedTo !== undefined) updateData.assignedTo = data.assignedTo;
+    if (data.reminder !== undefined) updateData.reminder = data.reminder;
+
+    await updateDocument(COLLECTIONS.EVENTS, eventId, updateData);
 
     setEvents(prev =>
       prev.map(e =>
         e.id === eventId
-          ? { ...e, ...data, date: data.date?.toISOString() || e.date }
+          ? { ...e, ...updateData, date: updateData.date as string, endDate: updateData.endDate as string | undefined }
           : e
       )
     );

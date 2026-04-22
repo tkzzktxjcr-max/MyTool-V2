@@ -1,10 +1,9 @@
 "use client";
 
-import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/card";
+import { useLocation, Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const NotFound = () => {
   const location = useLocation();
@@ -27,18 +26,18 @@ const NotFound = () => {
           La page que vous recherchez n'existe pas ou a été déplacée.
         </p>
         <div className="flex gap-3 justify-center">
-          <Button variant="outline" asChild>
-            <Link to="/">
+          <Link to="/">
+            <Button variant="outline">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Retour
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link to="/">
+            </Button>
+          </Link>
+          <Link to="/">
+            <Button>
               <Home className="h-4 w-4 mr-2" />
               Accueil
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

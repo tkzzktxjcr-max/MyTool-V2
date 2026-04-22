@@ -4,20 +4,19 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useFamily } from '@/contexts/FamilyContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Badge, Input } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, Button, Badge } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Copy, Check, Plus, Users, LogOut, Trash2, RefreshCw } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import type { CreateFamilyForm } from '@/types';
 
 export default function FamilyPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
-  const { family, members, loading, createFamily, joinFamily, leaveFamily, generateInviteCode, removeMember } = useFamily();
+  const { family, members, createFamily, joinFamily, leaveFamily, generateInviteCode, removeMember } = useFamily();
   
   const [action, setAction] = useState(searchParams.get('action') || '');
-  const [inviteCode, setInviteCode] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [loadingJoin, setLoadingJoin] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -80,7 +79,6 @@ export default function FamilyPage() {
     }
   };
 
-  // Pas de famille - créer ou rejoindre
   if (!family) {
     return (
       <div className="max-w-lg mx-auto space-y-6">
@@ -94,7 +92,6 @@ export default function FamilyPage() {
           </p>
         </div>
 
-        {/* Create Family */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -134,7 +131,6 @@ export default function FamilyPage() {
           </form>
         </Card>
 
-        {/* Join Family */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -170,10 +166,8 @@ export default function FamilyPage() {
     );
   }
 
-  // Vue famille existante
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
@@ -186,7 +180,6 @@ export default function FamilyPage() {
         </div>
       </div>
 
-      {/* Invite Code */}
       <Card>
         <CardHeader>
           <CardTitle>Code d'invitation</CardTitle>
@@ -224,7 +217,6 @@ export default function FamilyPage() {
         </CardFooter>
       </Card>
 
-      {/* Members */}
       <Card>
         <CardHeader>
           <CardTitle>Membres ({members.length})</CardTitle>
@@ -264,7 +256,6 @@ export default function FamilyPage() {
         </CardContent>
       </Card>
 
-      {/* Settings */}
       <Card>
         <CardHeader>
           <CardTitle>Paramètres</CardTitle>
@@ -293,7 +284,6 @@ export default function FamilyPage() {
         </CardFooter>
       </Card>
 
-      {/* Leave Dialog */}
       <Dialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <DialogContent>
           <DialogHeader>
