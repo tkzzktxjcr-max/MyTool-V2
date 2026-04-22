@@ -12,17 +12,16 @@ import {
   Wine, 
   AlertTriangle,
   CheckCircle,
-  Info,
-  Trash2,
   Droplet,
   TrendingUp,
   Calendar,
+  Trash2,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { CreateAlcoholLogForm, DrinkType, AlcoholContext, Mood } from '@/types';
-import { DRINK_TYPES, ALCOHOL_CONTEXTS, MOODS, HEALTH_GUIDELINES } from '@/types';
+import type { CreateAlcoholLogForm, DrinkType } from '@/types';
+import { DRINK_TYPES, HEALTH_GUIDELINES } from '@/types';
 
 export default function AlcoholTrackerPage() {
   const { 
@@ -42,9 +41,6 @@ export default function AlcoholTrackerPage() {
     drinkType: 'beer',
     volumeCl: 50,
     abv: 5,
-    context: undefined,
-    notes: '',
-    mood: undefined,
   });
 
   useEffect(() => {
@@ -71,9 +67,6 @@ export default function AlcoholTrackerPage() {
       drinkType: 'beer',
       volumeCl: 50,
       abv: 5,
-      context: undefined,
-      notes: '',
-      mood: undefined,
     });
   };
 
@@ -89,10 +82,10 @@ export default function AlcoholTrackerPage() {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'low': return 'bg-secondary/10 text-secondary border-secondary';
-      case 'moderate': return 'bg-accent/10 text-accent-foreground border-accent';
-      case 'high': return 'bg-destructive/10 text-destructive border-destructive';
-      default: return 'bg-secondary/10 text-secondary border-secondary';
+      case 'low': return 'secondary';
+      case 'moderate': return 'accent';
+      case 'high': return 'destructive';
+      default: return 'secondary';
     }
   };
 
@@ -195,59 +188,6 @@ export default function AlcoholTrackerPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Contexte</label>
-                <Select
-                  value={formData.context || ''}
-                  onValueChange={(value) => setFormData(prev => ({ 
-                    ...prev, 
-                    context: value as AlcoholContext || undefined 
-                  }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir un contexte (optionnel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(ALCOHOL_CONTEXTS).map(([key, ctx]) => (
-                      <SelectItem key={key} value={key}>
-                        {ctx.icon} {ctx.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Humeur</label>
-                <Select
-                  value={formData.mood || ''}
-                  onValueChange={(value) => setFormData(prev => ({ 
-                    ...prev, 
-                    mood: value as Mood || undefined 
-                  }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Comment vous sentez-vous ? (optionnel)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(MOODS).map(([key, mood]) => (
-                      <SelectItem key={key} value={key}>
-                        {mood.emoji} {mood.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Notes</label>
-                <Input
-                  placeholder="Notes optionnelles..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                />
-              </div>
-
               <Button type="submit" className="w-full" loading={loading}>
                 Enregistrer
               </Button>
@@ -257,13 +197,17 @@ export default function AlcoholTrackerPage() {
       </div>
 
       {insights && (
-        <Card className={cn("border-2", getRiskColor(insights.riskLevel))}>
+        <Card className={cn("border-2", 
+          insights.riskLevel === 'low' && "border-secondary bg-secondary/5",
+          insights.riskLevel === 'moderate' && "border-accent bg-accent/5",
+          insights.riskLevel === 'high' && "border-destructive bg-destructive/5"
+        )}>
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
               <div className={cn(
                 "flex h-14 w-14 items-center justify-center rounded-2xl",
-                insights.riskLevel === 'low' ? "bg-secondary/20" :
-                insights.riskLevel === 'moderate' ? "bg-accent/20" : "bg-destructive/20"
+                insights.riskLevel === 'low' ? "bg-secondary/20 text-secondary" :
+                insights.riskLevel === 'moderate' ? "bg-accent/20 text-accent-foreground" : "bg-destructive/20 text-destructive"
               )}>
                 {getRiskIcon(insights.riskLevel)}
               </div>
@@ -377,7 +321,7 @@ export default function AlcoholTrackerPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
+              <AlertTriangle className="h-5 w-5" />
               Conseils santé
             </CardTitle>
           </CardHeader>
@@ -475,8 +419,6 @@ export default function AlcoholTrackerPage() {
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {format(parseISO(log.date), 'd MMM à HH:mm', { locale: fr })}
-                      {log.context && ` • ${ALCOHOL_CONTEXTS[log.context]?.icon} ${ALCOHOL_CONTEXTS[log.context]?.label}`}
-                      {log.mood && ` • ${MOODS[log.mood]?.emoji} ${MOODS[log.mood]?.label}`}
                     </p>
                   </div>
                   <div className="text-right">

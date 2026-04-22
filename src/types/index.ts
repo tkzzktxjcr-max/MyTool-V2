@@ -1,4 +1,10 @@
 // ==================== USER & AUTH ====================
+export interface AuthUser {
+  $id: string;
+  email: string;
+  name: string;
+}
+
 export interface UserProfile {
   id: string;
   userId: string;
@@ -6,13 +12,7 @@ export interface UserProfile {
   name: string;
   familyId?: string;
   avatar?: string;
-  createdAt: string;
-}
-
-export interface AuthUser {
-  $id: string;
-  email: string;
-  name: string;
+  createdAt?: string;
 }
 
 // ==================== FAMILY ====================
@@ -34,7 +34,14 @@ export interface FamilyMember {
   avatar?: string;
 }
 
-// ==================== EVENTS ====================
+export interface CreateFamilyForm {
+  name: string;
+  monthlyBudget?: number;
+}
+
+// ==================== CALENDAR ====================
+export type EventCategory = 'family' | 'school' | 'work' | 'leisure' | 'medical' | 'other';
+
 export interface CalendarEvent {
   id: string;
   familyId: string;
@@ -49,24 +56,26 @@ export interface CalendarEvent {
   createdBy: string;
 }
 
-export type EventCategory = 'family' | 'school' | 'work' | 'leisure' | 'medical' | 'other';
-
-export const EVENT_COLORS: Record<EventCategory, string> = {
-  family: '#FF6B6B',
-  school: '#4ECDC4',
-  work: '#45B7D1',
-  leisure: '#FFE66D',
-  medical: '#96CEB4',
-  other: '#95A5A6',
-};
+export interface CreateEventForm {
+  title: string;
+  description?: string;
+  date: Date;
+  endDate?: Date;
+  category: EventCategory;
+  assignedTo?: string;
+  reminder?: boolean;
+}
 
 // ==================== CHORES ====================
+export type ChoreFrequency = 'daily' | 'weekly' | 'monthly';
+export type ChoreStatus = 'pending' | 'completed';
+
 export interface Chore {
   id: string;
   familyId: string;
   title: string;
   description?: string;
-  frequency: ChoreFrequency;
+  frequency?: ChoreFrequency;
   points?: number;
   assignedTo?: string;
   dueDate?: string;
@@ -74,16 +83,30 @@ export interface Chore {
   createdBy: string;
 }
 
-export type ChoreFrequency = 'daily' | 'weekly' | 'monthly';
-export type ChoreStatus = 'pending' | 'completed' | 'missed';
-
-export const CHORE_STATUS_COLORS: Record<ChoreStatus, string> = {
-  pending: '#FFE66D',
-  completed: '#4ECDC4',
-  missed: '#FF6B6B',
-};
+export interface CreateChoreForm {
+  title: string;
+  description?: string;
+  frequency?: ChoreFrequency;
+  points?: number;
+  assignedTo?: string;
+  dueDate?: Date;
+}
 
 // ==================== BUDGET ====================
+export type BudgetCategory = 'groceries' | 'leisure' | 'bills' | 'transport' | 'health' | 'education' | 'gifts' | 'savings' | 'other';
+
+export const BUDGET_CATEGORIES: Record<BudgetCategory, { label: string; icon: string; color: string }> = {
+  groceries: { label: 'Courses', icon: '🛒', color: '#FF6B6B' },
+  leisure: { label: 'Loisirs', icon: '🎮', color: '#4ECDC4' },
+  bills: { label: 'Factures', icon: '📄', color: '#45B7D1' },
+  transport: { label: 'Transport', icon: '🚗', color: '#96CEB4' },
+  health: { label: 'Santé', icon: '💊', color: '#DDA0DD' },
+  education: { label: 'Éducation', icon: '📚', color: '#FFE66D' },
+  gifts: { label: 'Cadeaux', icon: '🎁', color: '#FFB6C1' },
+  savings: { label: 'Épargne', icon: '💰', color: '#98D8C8' },
+  other: { label: 'Autre', icon: '📦', color: '#95A5A6' },
+};
+
 export interface BudgetEntry {
   id: string;
   familyId: string;
@@ -91,34 +114,21 @@ export interface BudgetEntry {
   category: BudgetCategory;
   description?: string;
   date: string;
-  type: 'expense' | 'income';
+  type: 'income' | 'expense';
   createdBy: string;
 }
 
-export type BudgetCategory = 
-  | 'groceries' 
-  | 'leisure' 
-  | 'bills' 
-  | 'transport' 
-  | 'health' 
-  | 'education' 
-  | 'gifts' 
-  | 'savings' 
-  | 'other';
-
-export const BUDGET_CATEGORIES: Record<BudgetCategory, { label: string; icon: string; color: string }> = {
-  groceries: { label: 'Courses', icon: '🛒', color: '#4ECDC4' },
-  leisure: { label: 'Loisirs', icon: '🎮', color: '#FF6B6B' },
-  bills: { label: 'Factures', icon: '📄', color: '#45B7D1' },
-  transport: { label: 'Transport', icon: '🚗', color: '#FFE66D' },
-  health: { label: 'Santé', icon: '💊', color: '#96CEB4' },
-  education: { label: 'Éducation', icon: '📚', color: '#9B59B6' },
-  gifts: { label: 'Cadeaux', icon: '🎁', color: '#E91E63' },
-  savings: { label: 'Épargne', icon: '💰', color: '#2ECC71' },
-  other: { label: 'Autre', icon: '📦', color: '#95A5A6' },
-};
+export interface CreateBudgetEntryForm {
+  amount: number;
+  category: BudgetCategory;
+  description?: string;
+  date: Date;
+  type: 'income' | 'expense';
+}
 
 // ==================== ALCOHOL ====================
+export type AlcoholContext = 'social' | 'alone' | 'meal' | 'celebration' | 'other';
+
 export interface AlcoholLog {
   id: string;
   userId: string;
@@ -127,16 +137,9 @@ export interface AlcoholLog {
   volumeCl: number;
   abv: number;
   units: number;
-  context?: AlcoholContext;
-  notes?: string;
-  mood?: Mood;
 }
 
 export type DrinkType = 'beer' | 'wine' | 'spirits' | 'cocktail' | 'cider' | 'other';
-
-export type AlcoholContext = 'meal' | 'party' | 'relax' | 'social' | 'celebration' | 'other';
-
-export type Mood = 'happy' | 'relaxed' | 'neutral' | 'stressed' | 'sad';
 
 export const DRINK_TYPES: Record<DrinkType, { label: string; defaultAbv: number; icon: string }> = {
   beer: { label: 'Bière', defaultAbv: 5, icon: '🍺' },
@@ -145,23 +148,6 @@ export const DRINK_TYPES: Record<DrinkType, { label: string; defaultAbv: number;
   cocktail: { label: 'Cocktail', defaultAbv: 20, icon: '🍹' },
   cider: { label: 'Cidre', defaultAbv: 5, icon: '🍎' },
   other: { label: 'Autre', defaultAbv: 10, icon: '🥤' },
-};
-
-export const ALCOHOL_CONTEXTS: Record<AlcoholContext, { label: string; icon: string }> = {
-  meal: { label: 'Repas', icon: '🍽️' },
-  party: { label: 'Fête', icon: '🎉' },
-  relax: { label: 'Détente', icon: '😌' },
-  social: { label: 'Entre amis', icon: '👥' },
-  celebration: { label: 'Célébration', icon: '🎊' },
-  other: { label: 'Autre', icon: '✨' },
-};
-
-export const MOODS: Record<Mood, { label: string; emoji: string }> = {
-  happy: { label: 'Joyeux', emoji: '😊' },
-  relaxed: { label: 'Détendu', emoji: '😌' },
-  neutral: { label: 'Neutre', emoji: '😐' },
-  stressed: { label: 'Stressé', emoji: '😰' },
-  sad: { label: 'Triste', emoji: '😢' },
 };
 
 // ==================== ALCOHOL INSIGHTS ====================
@@ -187,66 +173,9 @@ export const HEALTH_GUIDELINES = {
   dangerousUnits: 6,
 };
 
-// ==================== UTILITY TYPES ====================
-export interface DashboardStats {
-  upcomingEvents: number;
-  pendingChores: number;
-  monthlySpent: number;
-  monthlyBudget: number;
-  weeklyAlcoholUnits: number;
-  alcoholRiskLevel: 'low' | 'moderate' | 'high';
-}
-
 // ==================== FORM TYPES ====================
-export interface LoginForm {
-  email: string;
-  password: string;
-}
-
-export interface RegisterForm {
-  email: string;
-  password: string;
-  name: string;
-  confirmPassword: string;
-}
-
-export interface CreateFamilyForm {
-  name: string;
-  monthlyBudget?: number;
-}
-
-export interface CreateEventForm {
-  title: string;
-  description?: string;
-  date: Date;
-  endDate?: Date;
-  category: EventCategory;
-  assignedTo?: string;
-  reminder?: boolean;
-}
-
-export interface CreateChoreForm {
-  title: string;
-  description?: string;
-  frequency: ChoreFrequency;
-  points?: number;
-  assignedTo?: string;
-  dueDate?: Date;
-}
-
-export interface CreateBudgetEntryForm {
-  amount: number;
-  category: BudgetCategory;
-  description?: string;
-  date: Date;
-  type: 'expense' | 'income';
-}
-
 export interface CreateAlcoholLogForm {
   drinkType: DrinkType;
   volumeCl: number;
   abv: number;
-  context?: AlcoholContext;
-  notes?: string;
-  mood?: Mood;
 }

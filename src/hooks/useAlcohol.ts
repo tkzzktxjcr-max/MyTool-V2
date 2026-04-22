@@ -13,7 +13,6 @@ import type {
   CreateAlcoholLogForm, 
   AlcoholInsight,
   DrinkType,
-  AlcoholContext,
 } from '@/types';
 import { HEALTH_GUIDELINES, DRINK_TYPES } from '@/types';
 
@@ -44,9 +43,6 @@ export const useAlcohol = () => {
           volumeCl: doc.volumeCl,
           abv: doc.abv,
           units: doc.units,
-          context: doc.context as AlcoholContext | undefined,
-          notes: doc.notes,
-          mood: doc.mood,
         }))
       );
     } catch (error) {
@@ -68,9 +64,6 @@ export const useAlcohol = () => {
       volumeCl: form.volumeCl,
       abv: form.abv,
       units,
-      context: form.context,
-      notes: form.notes,
-      mood: form.mood,
     });
 
     const log: AlcoholLog = {
@@ -81,9 +74,6 @@ export const useAlcohol = () => {
       volumeCl: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,
-      context: doc.context as AlcoholContext | undefined,
-      notes: doc.notes,
-      mood: doc.mood,
     };
 
     setLogs(prev => [log, ...prev]);
@@ -148,15 +138,6 @@ export const useAlcohol = () => {
     const mostCommonDrink = Object.entries(drinkCounts)
       .sort((a, b) => b[1] - a[1])[0]?.[0] as DrinkType || 'beer';
 
-    const contextCounts: Record<string, number> = {};
-    logs.forEach(l => {
-      if (l.context) {
-        contextCounts[l.context] = (contextCounts[l.context] || 0) + 1;
-      }
-    });
-    const mostCommonContext = Object.entries(contextCounts)
-      .sort((a, b) => b[1] - a[1])[0]?.[0] as AlcoholContext || 'other';
-
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
     if (weeklyUnits > HEALTH_GUIDELINES.maxWeeklyUnits * 1.5) {
       riskLevel = 'high';
@@ -188,7 +169,7 @@ export const useAlcohol = () => {
       riskLevel,
       daysOverLimit,
       mostCommonDrink,
-      mostCommonContext,
+      mostCommonContext: 'other',
       recommendations,
     };
   }, [logs]);
