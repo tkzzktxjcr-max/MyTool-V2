@@ -60,22 +60,20 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         createdAt: familyDoc.$createdAt,
       });
 
-      // Charger les membres
-      const membersResponse = await listDocuments(
-        COLLECTIONS.FAMILY_MEMBERS,
-        [`familyId=${profile.familyId}`]
-      );
-      
-      setMembers(
-        membersResponse.documents.map(doc => ({
+      // Charger les membres - filtrer côté client
+      const membersResponse = await listDocuments(COLLECTIONS.FAMILY_MEMBERS);
+      const familyMembers = membersResponse.documents
+        .filter((doc: any) => doc.familyId === profile.familyId)
+        .map((doc: any) => ({
           id: doc.$id,
           familyId: doc.familyId,
           userId: doc.userId,
           role: doc.role,
           name: doc.name,
           avatar: doc.avatar,
-        }))
-      );
+        }));
+      
+      setMembers(familyMembers);
     } catch (error) {
       console.error('Error loading family:', error);
       setFamily(null);
@@ -135,17 +133,15 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const joinFamily = async (inviteCode: string): Promise<void> => {
     if (!profile) throw new Error('Not authenticated');
 
-    // Trouver la famille avec ce code
-    const familiesResponse = await listDocuments(
-      COLLECTIONS.FAMILIES,
-      [`inviteCode=${inviteCode}`]
+    // Trouver la famille avec ce code - filtrer côté client
+    const familiesResponse = await listDocuments(COLLECTIONS.FAMILIES);
+    const familyDoc = familiesResponse.documents.find(
+      (doc: any) => doc.inviteCode === inviteCode
     );
 
-    if (familiesResponse.documents.length === 0) {
+    if (!familyDoc) {
       throw new Error('Code invitation invalide');
     }
-
-    const familyDoc = familiesResponse.documents[0];
 
     // Ajouter le membre
     await createDocument(COLLECTIONS.FAMILY_MEMBERS, {
@@ -171,20 +167,14 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const leaveFamily = async (): Promise<void> => {
     if (!profile || !profile.familyId) return;
 
-    // Trouver le membership
-    const membershipsResponse = await listDocuments(
-      COLLECTIONS.FAMILY_MEMBERS,
-      [
-        `familyId=${profile.familyId}`,
-        `userId=${profile.userId}`,
-      ]
+    // Trouver le membership - filtrer côté client
+    const membershipsResponse = await listDocuments(COLLECTIONS.FAMILY_MEMBERS);
+    const membership = membershipsResponse.documents.find(
+      (doc: any) => doc.familyId === profile.familyId && doc.userId === profile.userId
     );
 
-    if (membershipsResponse.documents.length > 0) {
-      await deleteDocument(
-        COLLECTIONS.FAMILY_MEMBERS,
-        membershipsResponse.documents[0].$id
-      );
+    if (membership) {
+      await deleteDocument(COLLECTIONS.FAMILY_MEMBERS, membership.$id);
     }
 
     // Retirer la famille du profil
