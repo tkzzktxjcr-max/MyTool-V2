@@ -22,7 +22,7 @@
 
     <script>
         const ENDPOINT = 'https://backend.071098v2.duckdns.org/v1';
-        const API_KEY = 'standard_e12ff812a90093edebb0f9642d57cc93efa3329c65f169f8450c002fb1975042c5cb7dd4ff3ed659ac1ab5730032fd2c2daaa1f59e84b98dd78c058cfd255157d08eca34cfb81daf10ec09c8db238c2ba038b8591e17fe156f4723b0a2b0169c620639743f15380f9b58c3b2c9ee491b6de662644eea42212626a4fc8bfc3f19';
+        const API_KEY = 'eab72d539f918bdc0d68a42bb9c079f18fc2f4fa04b84e3cc461fa621dc94ac7263b91178b0f951830f329203ad000b11c49e419dd9e7df6849e4849a628b29996cbd7dc4debdbf66f4465cea0b4d10bc427c63bf72b6ef9be08e3a5c6c39450ad4e2ec46f604801dca6a4ef5e36ec9fa56251254ef1991913ea2f82cdbff9b7';
 
         const collections = [
             {
@@ -160,7 +160,7 @@
         }
 
         async function createCollection(dbId, collection) {
-            addLog(`   Creating collection "${collection.name}"...`, 'info');
+            addLog(`   Création de "${collection.name}"...`, 'info');
             try {
                 const result = await apiCall(`${ENDPOINT}/databases/${dbId}/collections`, 'POST', {
                     name: collection.name,
@@ -202,7 +202,7 @@
 
             for (const collection of collections) {
                 await createCollection(dbId, collection);
-                await new Promise(r => setTimeout(r, 500)); // Pause pour éviter les erreurs
+                await new Promise(r => setTimeout(r, 500));
             }
 
             addLog('', 'info');
