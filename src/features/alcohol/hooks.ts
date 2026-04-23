@@ -69,10 +69,13 @@ const calculateTotalBAC = (
   }, 0);
 };
 
-// Find the real peak time - when was the LAST drink consumed
-// Peak is typically 30-60 min after the last drink
-const findPeakTime = (drinks: { timestamp: string }[]): Date => {
-  if (drinks.length === 0) return new Date();
+// Find the real peak time - 45 min after the last drink
+const findPeakInfo = (
+  drinks: { servingSize: number; abv: number; timestamp: string }[],
+  weightKg: number,
+  sex: 'male' | 'female' | 'unspecified'
+): { peakTime: Date; peakBAC: number } => {
+  if (drinks.length === 0) return { peakTime: new Date(), peakBAC: 0 };
   
   // Get the latest drink time
   const lastDrinkTime = drinks.reduce((latest, drink) => {
@@ -83,7 +86,31 @@ const findPeakTime = (drinks: { timestamp: string }[]): Date => {
   // Peak is about 45 min after last drink
   const peakTime = new Date(lastDrinkTime.getTime() + 45 * 60 * 1000);
   
-  return peakTime;
+  // Calculate BAC at peak time
+  let peakBAC = 0;
+  drinks.forEach(drink => {
+    const drinkTime = new Date(drink.timestamp);
+    const hoursToPeak = (peakTime.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
+    if (hoursToPeak >= 0) {
+      peakBAC += calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursToPeak);
+    }
+  });
+  
+  return { peakTime, peakBAC };
+};
+
+// Find when BAC reaches zero
+const findZeroTime = (
+  drinks: { servingSize: number; abv: number; timestamp: string }[],
+  weightKg: number,
+  sex: 'male' | 'female' | 'unspecified'
+): Date => {
+  const { peakBAC, peakTime } = findPeakInfo(drinks, weightKg, sex);
+  if (peakBAC === 0) return new Date();
+  
+  // Time to return to 0 from peak
+  const hoursToZero = peakBAC / METABOLISM_RATE;
+  return new Date(peakTime.getTime() + hoursToZero * 60 * 60 * 1000);
 };
 
 export const useAlcohol = () => {
@@ -244,8 +271,10 @@ export const useAlcohol = () => {
     let peakBAC = 0;
     let peakTime = now;
     
-    // First, find when the peak was (45 min after last drink)
-    const estimatedPeakTime = findPeakTime(activeDrinks);
+    // Calculate peak time and BAC
+    const peakInfo = findPeakInfo(activeDrinks, weightKg, sex);
+    peakTime = peakInfo.peakTime;
+    peakBAC = peakInfo.peakBAC;
     
     // Generate timeline points
     for (let time = startTime.getTime(); time <= endTime.getTime(); time += intervalMs) {
@@ -262,12 +291,6 @@ export const useAlcohol = () => {
         }
       });
       
-      // Find the maximum BAC in the timeline
-      if (totalBAC > peakBAC) {
-        peakBAC = totalBAC;
-        peakTime = currentDate;
-      }
-      
       timeline.push({
         time: currentDate,
         bac: Math.round(totalBAC * 100) / 100,
@@ -275,14 +298,8 @@ export const useAlcohol = () => {
       });
     }
     
-    // Find when BAC reaches zero
-    let zeroTime = now;
-    for (let i = timeline.length - 1; i >= 0; i--) {
-      if (timeline[i].bac > 0.01) {
-        zeroTime = timeline[i + 1]?.time || timeline[i].time;
-        break;
-      }
-    }
+    // Calculate zero time
+    const zeroTime = findZeroTime(activeDrinks, weightKg, sex);
     
     const currentBAC = calculateTotalBAC(activeDrinks, weightKg, sex);
     
