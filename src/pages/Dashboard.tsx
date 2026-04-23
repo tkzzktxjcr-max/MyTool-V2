@@ -13,11 +13,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar as CalendarIcon, CheckSquare, Plus, ArrowRight, PartyPopper, Users, TrendingUp, TrendingDown, Activity, Sparkles } from 'lucide-react';
-import { format, parseISO, isToday, isTomorrow } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
-// Animated counter component
 const AnimatedNumber = ({ value, suffix = '' }: { value: number; suffix?: string }) => {
   const [display, setDisplay] = useState(0);
   
@@ -43,7 +42,6 @@ const AnimatedNumber = ({ value, suffix = '' }: { value: number; suffix?: string
   return <span>{display}{suffix}</span>;
 };
 
-// Greeting based on time
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Bonjour';
@@ -54,10 +52,10 @@ const getGreeting = () => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { family, members } = useFamily();
+  const { family } = useFamily();
   const { events, loadEvents } = useCalendar();
-  const { loadChores, getTodaysChores, chores } = useChores();
-  const { budgetUsed, loadEntries, totalExpenses, totalIncome } = useBudget();
+  const { loadChores, getTodaysChores } = useChores();
+  const { budgetUsed, loadEntries } = useBudget();
   const { insights, loadLogs, getTodayUnits } = useAlcohol();
 
   useEffect(() => {
@@ -70,11 +68,11 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-2xl mx-auto text-center py-20"
+        className="max-w-lg mx-auto text-center py-8 md:py-12"
       >
         <motion.div 
           whileHover={{ scale: 1.02 }}
-          className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-4xl font-bold mb-6 mx-auto glow-primary"
+          className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-4 mx-auto"
         >
           {user?.name?.charAt(0).toUpperCase()}
         </motion.div>
@@ -82,7 +80,7 @@ export default function Dashboard() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-3xl font-bold mb-2"
+          className="text-2xl md:text-3xl font-bold mb-2"
         >
           Bienvenue, {user?.name?.split(' ')[0]} 👋
         </motion.h1>
@@ -90,44 +88,38 @@ export default function Dashboard() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="text-muted-foreground mb-8"
+          className="text-muted-foreground mb-6"
         >
           Commencez par créer ou rejoindre une famille
         </motion.p>
         
-        <div className="space-y-4">
-          <motion.div
-            whileHover={{ x: 8, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
+        <div className="space-y-3">
+          <motion.div whileTap={{ scale: 0.98 }}>
             <Card hover onClick={() => navigate('/family?action=create')} className="cursor-pointer">
-              <CardContent className="flex items-center gap-4 p-6">
-                <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
-                  <Plus className="w-7 h-7 text-primary" />
+              <CardContent className="flex items-center gap-3 p-4 md:p-6">
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Plus className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h3 className="font-semibold">Créer une famille</h3>
-                  <p className="text-sm text-muted-foreground">Commencez votre propre espace</p>
+                  <h3 className="font-semibold text-sm md:text-base">Créer une famille</h3>
+                  <p className="text-xs md:text-sm text-muted-foreground">Commencez votre propre espace</p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               </CardContent>
             </Card>
           </motion.div>
           
-          <motion.div
-            whileHover={{ x: 8, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
+          <motion.div whileTap={{ scale: 0.98 }}>
             <Card hover onClick={() => navigate('/family?action=join')} className="cursor-pointer">
-              <CardContent className="flex items-center gap-4 p-6">
-                <div className="w-14 h-14 rounded-2xl bg-secondary/20 flex items-center justify-center">
-                  <Users className="w-7 h-7 text-secondary" />
+              <CardContent className="flex items-center gap-3 p-4 md:p-6">
+                <div className="w-12 h-12 rounded-2xl bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-6 h-6 text-secondary" />
                 </div>
                 <div className="flex-1 text-left">
-                  <h3 className="font-semibold">Rejoindre une famille</h3>
-                  <p className="text-sm text-muted-foreground">Utilisez un code d'invitation</p>
+                  <h3 className="font-semibold text-sm md:text-base">Rejoindre une famille</h3>
+                  <p className="text-xs md:text-sm text-muted-foreground">Utilisez un code d'invitation</p>
                 </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               </CardContent>
             </Card>
           </motion.div>
@@ -144,138 +136,86 @@ export default function Dashboard() {
     .slice(0, 4);
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Hero Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-3xl glass-card p-8 glow-primary"
+        className="relative overflow-hidden rounded-2xl md:rounded-3xl glass-card p-4 md:p-8"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10" />
         <div className="relative">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between">
             <div>
-              <p className="text-muted-foreground text-sm mb-1">
+              <p className="text-muted-foreground text-xs md:text-sm mb-1">
                 {format(new Date(), 'EEEE d MMMM', { locale: fr })}
               </p>
-              <h1 className="text-4xl font-bold mb-2">
+              <h1 className="text-2xl md:text-4xl font-bold mb-2">
                 {getGreeting()}, {user?.name?.split(' ')[0]} <span className="animate-wave">👋</span>
               </h1>
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {todaysChores.length + upcomingEvents.length} choses à faire aujourd'hui
               </p>
             </div>
-            <motion.div 
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-3xl absolute -right-10 -top-10"
-            />
           </div>
         </div>
       </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card glow="primary">
-          <CardContent className="pt-6 text-center">
-            <div className="text-4xl font-bold gradient-text mb-1">
+          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
+            <div className="text-2xl md:text-4xl font-bold gradient-text mb-1">
               <AnimatedNumber value={todaysChores.length} />
             </div>
-            <p className="text-sm text-muted-foreground">Corvées du jour</p>
-            <div className="mt-2 flex justify-center gap-1">
-              {Array.from({ length: Math.min(todaysChores.length, 5) }).map((_, i) => (
-                <motion.div 
-                  key={i}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="w-2 h-2 rounded-full bg-primary"
-                />
-              ))}
-            </div>
+            <p className="text-xs md:text-sm text-muted-foreground">Corvées du jour</p>
           </CardContent>
         </Card>
 
         <Card glow="secondary">
-          <CardContent className="pt-6 text-center">
-            <div className={cn("text-4xl font-bold mb-1", budgetUsed > 80 ? "text-destructive" : "text-secondary")}>
+          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
+            <div className={cn("text-2xl md:text-4xl font-bold mb-1", budgetUsed > 80 ? "text-destructive" : "text-secondary")}>
               <AnimatedNumber value={Math.round(budgetUsed)} suffix="%" />
             </div>
-            <p className="text-sm text-muted-foreground">Budget utilisé</p>
-            <div className="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(budgetUsed, 100)}%` }}
-                transition={{ duration: 1, delay: 0.2 }}
-                className={cn("h-full rounded-full", budgetUsed > 80 ? "bg-destructive" : "bg-secondary")}
-              />
-            </div>
+            <p className="text-xs md:text-sm text-muted-foreground">Budget utilisé</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-4xl font-bold mb-1">
+          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
+            <div className="text-2xl md:text-4xl font-bold mb-1">
               <AnimatedNumber value={Number(insights?.totalWeeklyUnits.toFixed(1) || 0)} />
             </div>
-            <p className="text-sm text-muted-foreground">Alcool (semaine)</p>
-            <div className="mt-2 flex items-center justify-center gap-2 text-xs">
-              {insights?.totalWeeklyUnits <= 14 ? (
-                <>
-                  <TrendingDown className="w-4 h-4 text-secondary" />
-                  <span className="text-secondary">Dans les limites</span>
-                </>
-              ) : (
-                <>
-                  <TrendingUp className="w-4 h-4 text-destructive" />
-                  <span className="text-destructive">Au-delà</span>
-                </>
-              )}
-            </div>
+            <p className="text-xs md:text-sm text-muted-foreground">Alcool (semaine)</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6 text-center">
-            <div className="text-4xl font-bold mb-1">{upcomingEvents.length}</div>
-            <p className="text-sm text-muted-foreground">Événements</p>
-            <div className="mt-2 flex justify-center gap-1">
-              {upcomingEvents.slice(0, 3).map((event, i) => (
-                <motion.div 
-                  key={event.id}
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="w-6 h-6 rounded-lg flex items-center justify-center text-xs"
-                  style={{ backgroundColor: event.color + '40', color: event.color }}
-                >
-                  {format(parseISO(event.date), 'd')}
-                </motion.div>
-              ))}
-            </div>
+          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
+            <div className="text-2xl md:text-4xl font-bold mb-1">{upcomingEvents.length}</div>
+            <p className="text-xs md:text-sm text-muted-foreground">Événements</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
         {/* Today's Tasks */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="lg:col-span-2"
         >
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                    <CheckSquare className="w-5 h-5 text-primary" />
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                    <CheckSquare className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="font-semibold text-lg">Corvées du jour</h2>
-                    <p className="text-sm text-muted-foreground">{todaysChores.length} tâches en attente</p>
+                    <h2 className="font-semibold text-sm md:text-base">Corvées du jour</h2>
+                    <p className="text-xs text-muted-foreground">{todaysChores.length} tâches</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/chores')}>
@@ -284,40 +224,22 @@ export default function Dashboard() {
               </div>
 
               {todaysChores.length === 0 ? (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-center py-12"
-                >
-                  <div className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4">
-                    <PartyPopper className="w-8 h-8 text-secondary" />
-                  </div>
-                  <p className="text-muted-foreground">Aucune corvée prévue aujourd'hui !</p>
-                  <p className="text-sm text-muted-foreground mt-1">Profitez de votre temps libre ✨</p>
-                </motion.div>
+                <div className="text-center py-6 md:py-8">
+                  <PartyPopper className="w-10 h-10 md:w-12 md:h-12 mx-auto text-muted-foreground/30 mb-2" />
+                  <p className="text-muted-foreground text-sm">Aucune corvée prévue !</p>
+                </div>
               ) : (
-                <div className="space-y-3">
-                  {todaysChores.map((chore, i) => (
-                    <motion.div
-                      key={chore.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.1 }}
-                      whileHover={{ x: 4 }}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] transition-colors cursor-pointer"
-                    >
-                      <motion.div 
-                        whileTap={{ scale: 0.9 }}
-                        className="w-6 h-6 rounded-full border-2 border-white/20 flex items-center justify-center"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium">{chore.title}</p>
-                        <p className="text-xs text-muted-foreground">{chore.points} points</p>
+                <div className="space-y-2 md:space-y-3">
+                  {todaysChores.slice(0, 3).map((chore) => (
+                    <div key={chore.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03]">
+                      <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{chore.title}</p>
                       </div>
-                      <Badge variant={chore.status === 'completed' ? 'secondary' : 'outline'}>
+                      <Badge variant={chore.status === 'completed' ? 'secondary' : 'outline'} className="text-xs">
                         {chore.frequency}
                       </Badge>
-                    </motion.div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -327,20 +249,20 @@ export default function Dashboard() {
 
         {/* Upcoming Events */}
         <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
-                    <CalendarIcon className="w-5 h-5 text-secondary" />
+            <CardContent className="p-4 md:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
+                    <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
                   </div>
                   <div>
-                    <h2 className="font-semibold text-lg">À venir</h2>
-                    <p className="text-sm text-muted-foreground">{upcomingEvents.length} événements</p>
+                    <h2 className="font-semibold text-sm md:text-base">À venir</h2>
+                    <p className="text-xs text-muted-foreground">{upcomingEvents.length} événements</p>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
@@ -348,36 +270,27 @@ export default function Dashboard() {
                 </Button>
               </div>
 
-              <div className="space-y-4">
-                {upcomingEvents.map((event, i) => (
-                  <motion.div
-                    key={event.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    whileHover={{ scale: 1.02 }}
-                    className="flex items-start gap-4 p-3 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] transition-colors cursor-pointer"
-                  >
-                    <motion.div 
-                      initial={{ rotate: -10 }}
-                      animate={{ rotate: 0 }}
-                      className="w-12 h-12 rounded-xl flex flex-col items-center justify-center text-white"
+              <div className="space-y-2 md:space-y-3">
+                {upcomingEvents.slice(0, 3).map((event) => (
+                  <div key={event.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03]">
+                    <div 
+                      className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0"
                       style={{ backgroundColor: event.color }}
                     >
-                      <span className="text-[10px] font-medium">
+                      <span className="text-[8px] md:text-[10px] font-medium">
                         {format(parseISO(event.date), 'EEE', { locale: fr })}
                       </span>
-                      <span className="text-lg font-bold">
+                      <span className="text-sm md:text-lg font-bold">
                         {format(parseISO(event.date), 'd')}
                       </span>
-                    </motion.div>
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{event.title}</p>
+                      <p className="font-medium text-sm truncate">{event.title}</p>
                       <p className="text-xs text-muted-foreground">
                         {format(parseISO(event.date), 'HH:mm')}
                       </p>
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </CardContent>
@@ -392,15 +305,15 @@ export default function Dashboard() {
         transition={{ delay: 0.4 }}
       >
         <Card className="border border-secondary/20">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
-                  <Activity className="w-5 h-5 text-secondary" />
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 md:gap-3">
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
+                  <Activity className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-lg">Insights Bien-être</h2>
-                  <p className="text-sm text-muted-foreground">Suivi personnel privé</p>
+                  <h2 className="font-semibold text-sm md:text-base">Insights Bien-être</h2>
+                  <p className="text-xs text-muted-foreground">Suivi personnel</p>
                 </div>
               </div>
               <Button variant="ghost" size="sm" onClick={() => navigate('/alcohol')}>
@@ -408,63 +321,33 @@ export default function Dashboard() {
               </Button>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center p-4">
+            <div className="grid grid-cols-3 gap-3 md:gap-4">
+              <div className="text-center p-2 md:p-3">
                 <div className={cn(
-                  "text-3xl font-bold mb-2",
+                  "text-xl md:text-2xl font-bold mb-1",
                   todaysUnits <= 2 ? "text-secondary" : todaysUnits <= 4 ? "text-accent" : "text-destructive"
                 )}>
                   {todaysUnits.toFixed(1)}
                 </div>
-                <p className="text-sm text-muted-foreground">unités aujourd'hui</p>
-                <div className="mt-2 h-2 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((todaysUnits / 4) * 100, 100)}%` }}
-                    className={cn(
-                      "h-full rounded-full",
-                      todaysUnits <= 2 ? "bg-secondary" : todaysUnits <= 4 ? "bg-accent" : "bg-destructive"
-                    )}
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">aujourd'hui</p>
               </div>
 
-              <div className="text-center p-4">
-                <div className="text-3xl font-bold text-foreground mb-2">
+              <div className="text-center p-2 md:p-3">
+                <div className="text-xl md:text-2xl font-bold mb-1">
                   {insights?.averagePerDay.toFixed(1) || '0'}
                 </div>
-                <p className="text-sm text-muted-foreground">moyenne / jour</p>
-                <div className="mt-2 flex justify-center gap-1">
-                  {[...Array(7)].map((_, i) => {
-                    const dayUnits = insights?.dailyTrend[i]?.units || 0;
-                    const height = Math.min(Math.max(dayUnits * 8, 4), 24);
-                    return (
-                      <motion.div
-                        key={i}
-                        initial={{ height: 4 }}
-                        animate={{ height }}
-                        transition={{ delay: 0.5 + i * 0.05 }}
-                        className="w-4 bg-primary/40 rounded-full"
-                      />
-                    );
-                  })}
-                </div>
+                <p className="text-xs text-muted-foreground">moyenne / jour</p>
               </div>
 
-              <div className="text-center p-4">
+              <div className="text-center p-2 md:p-3">
                 <div className={cn(
-                  "text-3xl font-bold mb-2 flex items-center justify-center gap-2",
+                  "text-xl md:text-2xl font-bold mb-1 flex items-center justify-center gap-1",
                   insights?.riskLevel === 'low' ? "text-secondary" : insights?.riskLevel === 'moderate' ? "text-accent" : "text-destructive"
                 )}>
-                  {insights?.riskLevel === 'low' && <Sparkles className="w-6 h-6" />}
+                  {insights?.riskLevel === 'low' && <Sparkles className="w-4 h-4" />}
                   {insights?.riskLevel === 'low' ? 'Faible' : insights?.riskLevel === 'moderate' ? 'Modéré' : 'Élevé'}
                 </div>
-                <p className="text-sm text-muted-foreground">niveau de risque</p>
-                {insights?.recommendations[0] && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {insights.recommendations[0]}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">risque</p>
               </div>
             </div>
           </CardContent>

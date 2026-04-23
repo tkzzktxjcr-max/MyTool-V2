@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Wine, AlertTriangle, CheckCircle, Droplet, Trash2, Activity, Sparkles, TrendingDown, TrendingUp } from 'lucide-react';
+import { Plus, Wine, AlertTriangle, CheckCircle, Droplet, Trash2, Activity, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -35,285 +35,143 @@ export default function AlcoholPage() {
   };
 
   const todaysUnits = getTodayUnits();
-  const recentLogs = logs.slice(0, 7);
+  const recentLogs = logs.slice(0, 5);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between"
-      >
+    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
-              <Activity className="w-6 h-6 text-secondary" />
+          <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
+              <Activity className="w-4 h-4 md:w-6 md:h-6 text-secondary" />
             </div>
-            Insights Bien-être
+            <span className="hidden sm:inline">Insights Bien-être</span>
           </h1>
-          <p className="text-muted-foreground mt-1">Suivi personnel privé</p>
+          <p className="text-muted-foreground text-sm">Suivi personnel</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter
+            <Button size="sm" className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-1" />
+              <span className="hidden sm:inline">Ajouter un verre</span>
+              <span className="sm:hidden">Ajouter</span>
             </Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Enregistrer une consommation</DialogTitle></DialogHeader>
+          <DialogContent className="mx-4">
+            <DialogHeader><DialogTitle>Enregistrer</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Type de drink</label>
+                <label className="text-sm font-medium">Type</label>
                 <Select value={formData.drinkType} onValueChange={handleDrinkChange}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(DRINK_TYPES).map(([key, drink]) => (
-                      <SelectItem key={key} value={key}>
-                        <span className="mr-2">{drink.icon}</span>
-                        {drink.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectContent>{Object.entries(DRINK_TYPES).map(([key, drink]) => <SelectItem key={key} value={key}>{drink.icon} {drink.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Volume (cl)</label>
-                  <Input 
-                    type="number" 
-                    min="1" 
-                    max="200" 
-                    value={formData.volumeCl} 
-                    onChange={(e) => setFormData(prev => ({ ...prev, volumeCl: parseInt(e.target.value) || 0 }))} 
-                    required 
-                  />
+                  <Input type="number" min="1" max="200" value={formData.volumeCl} onChange={(e) => setFormData(prev => ({ ...prev, volumeCl: parseInt(e.target.value) || 0 }))} required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Degré (%)</label>
-                  <Input 
-                    type="number" 
-                    min="0.1" 
-                    max="100" 
-                    step="0.1" 
-                    value={formData.abv} 
-                    onChange={(e) => setFormData(prev => ({ ...prev, abv: parseFloat(e.target.value) || 0 }))} 
-                    required 
-                  />
+                  <Input type="number" min="0.1" max="100" step="0.1" value={formData.abv} onChange={(e) => setFormData(prev => ({ ...prev, abv: parseFloat(e.target.value) || 0 }))} required />
                 </div>
               </div>
-              <div className="p-4 rounded-xl bg-white/[0.03] text-center">
-                <span className="text-sm text-muted-foreground block mb-1">Unités calculées</span>
-                <span className="text-2xl font-bold">{calculateUnits(formData.volumeCl, formData.abv).toFixed(1)}</span>
+              <div className="p-3 rounded-xl bg-muted/50 text-center">
+                <span className="text-sm text-muted-foreground">Unités: </span>
+                <span className="text-lg font-bold">{calculateUnits(formData.volumeCl, formData.abv).toFixed(1)}</span>
               </div>
               <Button type="submit" className="w-full">Enregistrer</Button>
             </form>
           </DialogContent>
         </Dialog>
-      </motion.div>
+      </div>
 
-      {/* Risk Level Card */}
+      {/* Risk Level */}
       {insights && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className={cn(
-            "border-2",
-            insights.riskLevel === 'low' && "border-secondary/30 bg-secondary/5",
-            insights.riskLevel === 'moderate' && "border-accent/30 bg-accent/5",
-            insights.riskLevel === 'high' && "border-destructive/30 bg-destructive/5"
-          )}>
-            <CardContent className="p-6">
-              <div className="flex items-start gap-6">
-                <motion.div 
-                  whileHover={{ scale: 1.1 }}
-                  className={cn(
-                    "w-16 h-16 rounded-2xl flex items-center justify-center",
-                    insights.riskLevel === 'low' && "bg-secondary/20 text-secondary",
-                    insights.riskLevel === 'moderate' && "bg-accent/20 text-accent",
-                    insights.riskLevel === 'high' && "bg-destructive/20 text-destructive"
-                  )}
-                >
-                  {insights.riskLevel === 'low' ? (
-                    <Sparkles className="w-8 h-8" />
-                  ) : (
-                    <AlertTriangle className="w-8 h-8" />
-                  )}
-                </motion.div>
-                
-                <div className="flex-1">
-                  <h3 className={cn(
-                    "text-2xl font-bold mb-2",
-                    insights.riskLevel === 'low' && "text-secondary",
-                    insights.riskLevel === 'moderate' && "text-accent",
-                    insights.riskLevel === 'high' && "text-destructive"
-                  )}>
-                    {insights.riskLevel === 'low' ? 'Risque faible' : insights.riskLevel === 'moderate' ? 'Risque modéré' : 'Risque élevé'}
-                  </h3>
-                  
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Cette semaine</p>
-                      <p className="text-xl font-bold">
-                        {insights.totalWeeklyUnits.toFixed(1)} / {HEALTH_GUIDELINES.maxWeeklyUnits} unités
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Moyenne / jour</p>
-                      <p className="text-xl font-bold">
-                        {insights.averagePerDay.toFixed(1)} unités
-                      </p>
-                    </div>
+        <Card className={cn("border-2", insights.riskLevel === 'low' && "border-secondary/30 bg-secondary/5", insights.riskLevel === 'moderate' && "border-accent/30 bg-accent/5", insights.riskLevel === 'high' && "border-destructive/30 bg-destructive/5")}>
+          <CardContent className="p-4 md:p-6">
+            <div className="flex items-start gap-3 md:gap-4">
+              <div className={cn("w-10 h-10 md:w-14 md:h-14 rounded-xl flex items-center justify-center", insights.riskLevel === 'low' && "bg-secondary/20 text-secondary", insights.riskLevel === 'moderate' && "bg-accent/20 text-accent", insights.riskLevel === 'high' && "bg-destructive/20 text-destructive")}>
+                {insights.riskLevel === 'low' ? <Sparkles className="w-5 h-5 md:w-6 md:h-6" /> : <AlertTriangle className="w-5 h-5 md:w-6 md:h-6" />}
+              </div>
+              <div className="flex-1">
+                <h3 className={cn("text-lg md:text-xl font-bold mb-1", insights.riskLevel === 'low' && "text-secondary", insights.riskLevel === 'moderate' && "text-accent", insights.riskLevel === 'high' && "text-destructive")}>
+                  {insights.riskLevel === 'low' ? 'Risque faible' : insights.riskLevel === 'moderate' ? 'Risque modéré' : 'Risque élevé'}
+                </h3>
+                <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Semaine</p>
+                    <p className="font-semibold">{insights.totalWeeklyUnits.toFixed(1)} / {HEALTH_GUIDELINES.maxWeeklyUnits}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Moyenne/jour</p>
+                    <p className="font-semibold">{insights.averagePerDay.toFixed(1)}</p>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Today's Progress */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Card>
-          <CardContent className="p-6">
-            <h3 className="font-semibold flex items-center gap-2 mb-4">
-              <Droplet className="h-5 w-5 text-secondary" />
-              Aujourd'hui
-            </h3>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-4xl font-bold">{todaysUnits.toFixed(1)}</p>
-                <p className="text-sm text-muted-foreground">unités aujourd'hui</p>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-semibold">
-                  {HEALTH_GUIDELINES.maxDailyUnits - todaysUnits > 0 
-                    ? `${(HEALTH_GUIDELINES.maxDailyUnits - todaysUnits).toFixed(1)} restantes`
-                    : `${(todaysUnits - HEALTH_GUIDELINES.maxDailyUnits).toFixed(1)} au-delà`
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground">limite: {HEALTH_GUIDELINES.maxDailyUnits}</p>
-              </div>
+      <Card>
+        <CardContent className="p-4 md:p-6">
+          <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm md:text-base"><Droplet className="h-4 w-4 md:h-5 md:w-5 text-secondary" />Aujourd'hui</h3>
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <p className="text-2xl md:text-4xl font-bold">{todaysUnits.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground">unités</p>
             </div>
-            
-            <div className="mt-4 h-4 rounded-full bg-white/10 overflow-hidden">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min((todaysUnits / HEALTH_GUIDELINES.maxDailyUnits) * 100, 100)}%` }}
-                transition={{ duration: 0.5 }}
-                className={cn(
-                  "h-full rounded-full",
-                  todaysUnits <= HEALTH_GUIDELINES.lowRiskUnits && "bg-secondary",
-                  todaysUnits > HEALTH_GUIDELINES.lowRiskUnits && todaysUnits <= HEALTH_GUIDELINES.maxDailyUnits && "bg-accent",
-                  todaysUnits > HEALTH_GUIDELINES.maxDailyUnits && "bg-destructive"
-                )}
-              />
+            <div className="text-right">
+              <p className="text-sm font-semibold">
+                {HEALTH_GUIDELINES.maxDailyUnits - todaysUnits > 0 ? `${(HEALTH_GUIDELINES.maxDailyUnits - todaysUnits).toFixed(1)} restantes` : `${(todaysUnits - HEALTH_GUIDELINES.maxDailyUnits).toFixed(1)} au-delà`}
+              </p>
+              <p className="text-xs text-muted-foreground">limite: {HEALTH_GUIDELINES.maxDailyUnits}</p>
             </div>
-            
-            {/* Weekly Chart */}
-            <div className="mt-6">
-              <p className="text-sm text-muted-foreground mb-3">7 derniers jours</p>
-              <div className="flex items-end gap-2 h-16">
-                {insights?.dailyTrend.map((day, i) => {
-                  const maxUnits = 6;
-                  const height = Math.min((day.units / maxUnits) * 100, 100);
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: `${height}%` }}
-                        transition={{ delay: 0.3 + i * 0.05 }}
-                        className={cn(
-                          "w-full rounded-t-lg",
-                          day.units <= 2 && "bg-secondary/60",
-                          day.units > 2 && day.units <= 4 && "bg-accent/60",
-                          day.units > 4 && "bg-destructive/60"
-                        )}
-                      />
-                      <span className="text-[10px] text-muted-foreground">
-                        {format(parseISO(day.date), 'EEE', { locale: fr }).charAt(0)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+          </div>
+          <div className="h-2 md:h-3 rounded-full bg-muted overflow-hidden">
+            <div className={cn("h-full rounded-full transition-all", todaysUnits <= HEALTH_GUIDELINES.lowRiskUnits && "bg-secondary", todaysUnits > HEALTH_GUIDELINES.lowRiskUnits && todaysUnits <= HEALTH_GUIDELINES.maxDailyUnits && "bg-accent", todaysUnits > HEALTH_GUIDELINES.maxDailyUnits && "bg-destructive")} style={{ width: `${Math.min((todaysUnits / HEALTH_GUIDELINES.maxDailyUnits) * 100, 100)}%` }} />
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Recent History */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="font-semibold mb-4">Historique récent</h3>
-            
-            <AnimatePresence mode="wait">
-              {recentLogs.length === 0 ? (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-center py-12"
-                >
-                  <Wine className="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-                  <p className="text-muted-foreground">Aucune consommation enregistrée</p>
-                </motion.div>
-              ) : (
-                <motion.div 
-                  key="list"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="space-y-3"
-                >
-                  {recentLogs.map(log => (
-                    <motion.div
-                      key={log.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.03]"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-secondary/10 flex items-center justify-center text-2xl">
-                        {DRINK_TYPES[log.drinkType]?.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium">
-                          {DRINK_TYPES[log.drinkType]?.label} • {log.volumeCl}cl à {log.abv}%
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {format(parseISO(log.date), 'd MMM à HH:mm', { locale: fr })}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold">{log.units.toFixed(1)}</p>
-                        <p className="text-xs text-muted-foreground">unités</p>
-                      </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteLog(log.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* History */}
+      <Card>
+        <CardContent className="p-3 md:p-5">
+          <h3 className="font-semibold mb-3 text-sm md:text-base">Historique</h3>
+          <AnimatePresence mode="wait">
+            {recentLogs.length === 0 ? (
+              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-6">
+                <Wine className="w-8 h-8 md:w-10 md:h-10 mx-auto text-muted-foreground/30 mb-2" />
+                <p className="text-muted-foreground text-sm">Aucune consommation</p>
+              </motion.div>
+            ) : (
+              <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
+                {recentLogs.map(log => (
+                  <div key={log.id} className="flex items-center gap-3 p-2 md:p-3 rounded-xl bg-white/[0.03]">
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-lg md:text-xl">
+                      {DRINK_TYPES[log.drinkType]?.icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs md:text-sm">{DRINK_TYPES[log.drinkType]?.label} • {log.volumeCl}cl</p>
+                      <p className="text-xs text-muted-foreground">{format(parseISO(log.date), 'd MMM à HH:mm', { locale: fr })}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm md:text-base">{log.units.toFixed(1)}</p>
+                      <p className="text-xs text-muted-foreground">unités</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-7 md:w-7" onClick={() => deleteLog(log.id)}>
+                      <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
     </div>
   );
 }
