@@ -15,14 +15,13 @@ export interface Drink {
   createdAt: string;
 }
 
-// Default serving sizes in France (cl)
-const DEFAULT_SERVING_SIZES: Record<DrinkType, number> = {
-  beer: 33,      // 33cl bottle/half pint
-  wine: 12,       // Standard wine glass
-  spirit: 4,      // Whisky shot
-  cocktail: 20,   // Cocktail glass
-  cider: 33,      // Cider bottle
-  other: 25,     // Default
+const DEFAULT_SIZES: Record<DrinkType, number> = {
+  beer: 33,
+  wine: 12,
+  spirit: 4,
+  cocktail: 20,
+  cider: 33,
+  other: 25,
 };
 
 export const drinksService = {
@@ -43,9 +42,7 @@ export const drinksService = {
   },
 
   async getDrinksByUser(userId: string): Promise<Drink[]> {
-    const response = await listDocuments(COLLECTIONS.DRINKS, [
-      Query.equal('userId', userId),
-    ]);
+    const response = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
     return response.documents.map((doc: any) => ({
       id: doc.$id,
       name: doc.name,
@@ -60,14 +57,7 @@ export const drinksService = {
     }));
   },
 
-  async createDrink(data: {
-    name: string;
-    type: DrinkType;
-    abv: number;
-    defaultServingSize: number;
-    emoji: string;
-    userId?: string;
-  }): Promise<Drink> {
+  async createDrink(data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string; userId?: string }): Promise<Drink> {
     const doc: any = await createDocument(COLLECTIONS.DRINKS, {
       name: data.name,
       type: data.type,
@@ -79,7 +69,6 @@ export const drinksService = {
       userId: data.userId || null,
       createdAt: new Date().toISOString(),
     });
-    
     return {
       id: doc.$id,
       name: doc.name,
@@ -87,8 +76,8 @@ export const drinksService = {
       abv: doc.abv,
       defaultServingSize: doc.defaultServingSize,
       emoji: doc.emoji,
-      isFavorite: doc.isFavorite || false,
-      usageCount: doc.usageCount || 0,
+      isFavorite: false,
+      usageCount: 0,
       userId: doc.userId,
       createdAt: doc.$createdAt,
     };
@@ -104,37 +93,56 @@ export const drinksService = {
     }
   },
 
+  async updateDrink(drinkId: string, data: Partial<Drink>): Promise<Drink> {
+    const doc: any = await updateDocument(COLLECTIONS.DRINKS, drinkId, data);
+    return {
+      id: doc.$id,
+      name: doc.name,
+      type: doc.type as DrinkType,
+      abv: doc.abv,
+      defaultServingSize: doc.defaultServingSize,
+      emoji: doc.emoji,
+      isFavorite: doc.isFavorite || false,
+      usageCount: doc.usageCount || 0,
+      userId: doc.userId,
+      createdAt: doc.$createdAt,
+    };
+  },
+
   async deleteDrink(drinkId: string): Promise<void> {
     await deleteDocument(COLLECTIONS.DRINKS, drinkId);
   },
 
-  // Seed default drinks with CORRECT serving sizes
-  async seedDefaultDrinks(userId: string): Promise<Drink[]> {
+  async deleteAllUserDrinks(userId: string): Promise<void> {
+    const drinks = await this.getDrinksByUser(userId);
+    for (const drink of drinks) {
+      await this.deleteDrink(drink.id);
+    }
+  },
+
+  async resetToDefaults(userId: string): Promise<Drink[]> {
+    await this.deleteAllUserDrinks(userId);
     const drinks: Drink[] = [];
-    
     for (const [type, data] of Object.entries(DRINK_TYPES)) {
       const drinkType = type as DrinkType;
       const drink = await this.createDrink({
         name: data.label,
         type: drinkType,
         abv: data.defaultAbv,
-        defaultServingSize: DEFAULT_SERVING_SIZES[drinkType], // Correct size!
+        defaultServingSize: DEFAULT_SIZES[drinkType],
         emoji: data.icon,
         userId,
       });
       drinks.push(drink);
     }
-    
     return drinks;
   },
 
   async ensureUserHasDrinks(userId: string): Promise<Drink[]> {
     const userDrinks = await this.getDrinksByUser(userId);
-    
     if (userDrinks.length === 0) {
-      return await this.seedDefaultDrinks(userId);
+      return await this.resetToDefaults(userId);
     }
-    
     return userDrinks;
   },
 };
