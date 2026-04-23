@@ -56,12 +56,13 @@ export default function Dashboard() {
   const { events, loadEvents } = useCalendar();
   const { loadChores, getTodaysChores } = useChores();
   const { budgetUsed, loadEntries } = useBudget();
-  const { insights, loadLogs, getTodayUnits } = useAlcohol();
+  const { insights, loadData, getTodayUnits } = useAlcohol();
 
   useEffect(() => {
     if (!family?.id) return;
-    Promise.all([loadEvents(), loadChores(), loadEntries(), loadLogs()]);
-  }, [family?.id, loadEvents, loadChores, loadEntries, loadLogs]);
+    Promise.all([loadEvents(), loadChores(), loadEntries()]);
+    loadData();
+  }, [family?.id, loadEvents, loadChores, loadEntries, loadData]);
 
   if (!family) {
     return (
