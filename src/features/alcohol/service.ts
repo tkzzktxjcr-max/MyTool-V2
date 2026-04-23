@@ -76,12 +76,12 @@ export const alcoholService = {
       drinkEmoji: doc.drinkEmoji,
       drinkType: doc.drinkType,
       quantity: doc.quantity,
-      servingSize: doc.servingSize,
+      servingSize: doc.volumeCl || doc.servingSize,
       abv: doc.abv,
       units: doc.units,
       context: doc.context,
       mood: doc.mood,
-      timestamp: doc.date || doc.timestamp, // Use date if available
+      timestamp: doc.date || doc.timestamp,
       notes: doc.notes,
     }));
   },
@@ -111,11 +111,12 @@ export const alcoholService = {
       drinkEmoji: data.drinkEmoji,
       drinkType: data.drinkType,
       quantity: data.quantity,
+      volumeCl: data.servingSize, // Required field: volume in cl
       servingSize: data.servingSize,
       abv: data.abv,
       units,
-      date: timestamp, // Required field for Appwrite
-      timestamp, // Keep for internal use
+      date: timestamp,
+      timestamp,
       context: data.context || null,
       mood: data.mood || null,
       notes: data.notes || null,
@@ -133,7 +134,7 @@ export const alcoholService = {
       drinkEmoji: doc.drinkEmoji,
       drinkType: doc.drinkType,
       quantity: doc.quantity,
-      servingSize: doc.servingSize,
+      servingSize: doc.volumeCl || doc.servingSize,
       abv: doc.abv,
       units: doc.units,
       context: doc.context,
