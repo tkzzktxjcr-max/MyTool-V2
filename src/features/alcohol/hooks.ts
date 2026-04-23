@@ -4,22 +4,22 @@ import { alcoholService } from './service';
 import { drinksService } from './services/drinks.service';
 import { goalsService } from './services/goals.service';
 import { profileService } from './services/profile.service';
+import type { UserProfile } from './services/profile.service';
 import type { AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { HEALTH_GUIDELINES } from './types';
 import type { Drink } from './services/drinks.service';
-import type { UserProfile } from './services/profile.service';
 
 export { type Drink };
 
 interface BACDataPoint {
   time: Date;
-  bac: number; // in g/L
+  bac: number;
   isPast: boolean;
 }
 
 interface BACState {
-  currentBAC: number; // in g/L
-  peakBAC: number; // in g/L
+  currentBAC: number;
+  peakBAC: number;
   peakTime: Date;
   zeroTime: Date;
   timeline: BACDataPoint[];
@@ -27,12 +27,12 @@ interface BACState {
   isNearLimit: boolean;
 }
 
-const DEFAULT_USER_PROFILE: UserProfile = {
+const DEFAULT_USER_PROFILE = {
   id: '',
   userId: '',
   weightKg: 70,
-  sex: 'unspecified',
-  legalLimit: 0.8, // in g/L (standard French limit)
+  sex: 'unspecified' as const,
+  legalLimit: 0.5,
   updatedAt: '',
 };
 
@@ -40,7 +40,7 @@ const DEFAULT_USER_PROFILE: UserProfile = {
 const BODY_WATER_MALE = 0.58;
 const BODY_WATER_FEMALE = 0.49;
 const ALCOHOL_DENSITY = 0.789;
-const METABOLISM_RATE = 0.015; // % per hour
+const METABOLISM_RATE = 0.15; // g/L per hour
 
 const calculateSingleDrinkBAC = (
   volumeMl: number,
@@ -49,18 +49,11 @@ const calculateSingleDrinkBAC = (
   sex: 'male' | 'female' | 'unspecified',
   hoursSinceDrink: number
 ): number => {
-  // Calculate peak BAC in g/L directly
   const alcoholGrams = (volumeMl * abv / 100) * ALCOHOL_DENSITY;
   const bodyWater = sex === 'female' ? BODY_WATER_FEMALE : 
                     sex === 'male' ? BODY_WATER_MALE : 0.68;
-  
-  // BAC formula: (grams / liters_of_body_water) = g/L
-  const bodyWaterLiters = weightKg * bodyWater;
-  const peakBAC_gL = (alcoholGrams / bodyWaterLiters);
-  
-  // Subtract metabolism over time (convert % to g/L: multiply by 10)
-  const metabolism_gL_per_hour = 0.15; // ~0.015% per hour = 0.15 g/L per hour
-  return Math.max(0, peakBAC_gL - (metabolism_gL_per_hour * hoursSinceDrink));
+  const peakBAC = (alcoholGrams / (weightKg * bodyWater));
+  return Math.max(0, peakBAC - (METABOLISM_RATE * hoursSinceDrink));
 };
 
 const calculateTotalBAC = (
@@ -74,6 +67,23 @@ const calculateTotalBAC = (
     if (hoursSince < 0 || hoursSince > 24) return total;
     return total + calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursSince);
   }, 0);
+};
+
+// Find the real peak time - when was the LAST drink consumed
+// Peak is typically 30-60 min after the last drink
+const findPeakTime = (drinks: { timestamp: string }[]): Date => {
+  if (drinks.length === 0) return new Date();
+  
+  // Get the latest drink time
+  const lastDrinkTime = drinks.reduce((latest, drink) => {
+    const drinkTime = new Date(drink.timestamp);
+    return drinkTime > latest ? drinkTime : latest;
+  }, new Date(0));
+  
+  // Peak is about 45 min after last drink
+  const peakTime = new Date(lastDrinkTime.getTime() + 45 * 60 * 1000);
+  
+  return peakTime;
 };
 
 export const useAlcohol = () => {
@@ -209,8 +219,9 @@ export const useAlcohol = () => {
   const getBACState = useMemo((): BACState => {
     const weightKg = userProfile?.weightKg || 70;
     const sex = userProfile?.sex || 'unspecified';
-    const legalLimit = userProfile?.legalLimit || 0.8; // g/L
+    const legalLimit = userProfile?.legalLimit || 0.5;
     
+    // Get drinks from last 24 hours
     const activeDrinks = logs
       .filter(log => {
         const hoursAgo = (Date.now() - new Date(log.timestamp).getTime()) / (1000 * 60 * 60);
@@ -224,24 +235,34 @@ export const useAlcohol = () => {
     
     const now = new Date();
     const timeline: BACDataPoint[] = [];
-    const startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    
+    // Generate timeline from 4 hours ago to 12 hours in future
+    const startTime = new Date(now.getTime() - 4 * 60 * 60 * 1000);
     const intervalMs = 15 * 60 * 1000;
     const endTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
     
     let peakBAC = 0;
     let peakTime = now;
     
+    // First, find when the peak was (45 min after last drink)
+    const estimatedPeakTime = findPeakTime(activeDrinks);
+    
+    // Generate timeline points
     for (let time = startTime.getTime(); time <= endTime.getTime(); time += intervalMs) {
       const currentDate = new Date(time);
       let totalBAC = 0;
       
       activeDrinks.forEach(drink => {
-        const drinkHoursSince = (currentDate.getTime() - new Date(drink.timestamp).getTime()) / (1000 * 60 * 60);
-        if (drinkHoursSince >= 0) {
-          totalBAC += calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, drinkHoursSince);
+        const drinkTime = new Date(drink.timestamp);
+        const hoursSince = (currentDate.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
+        
+        // Only calculate for drinks that have been consumed
+        if (hoursSince >= 0) {
+          totalBAC += calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursSince);
         }
       });
       
+      // Find the maximum BAC in the timeline
       if (totalBAC > peakBAC) {
         peakBAC = totalBAC;
         peakTime = currentDate;
@@ -249,14 +270,15 @@ export const useAlcohol = () => {
       
       timeline.push({
         time: currentDate,
-        bac: Math.round(totalBAC * 100) / 100, // round to 2 decimal places
+        bac: Math.round(totalBAC * 100) / 100,
         isPast: time < now.getTime(),
       });
     }
     
+    // Find when BAC reaches zero
     let zeroTime = now;
     for (let i = timeline.length - 1; i >= 0; i--) {
-      if (timeline[i].bac > 0) {
+      if (timeline[i].bac > 0.01) {
         zeroTime = timeline[i + 1]?.time || timeline[i].time;
         break;
       }
