@@ -1,5 +1,4 @@
 import * as React from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -12,12 +11,8 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     const glowClass = glow === 'primary' ? 'glow-primary' : glow === 'secondary' ? 'glow-secondary' : '';
     
     return (
-      <motion.div
+      <div
         ref={ref}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={hover ? { scale: 1.01 } : undefined}
-        transition={{ type: "spring", stiffness: 120, damping: 20 }}
         className={cn(
           "glass-card p-5",
           hover && "glass-card-hover cursor-pointer",

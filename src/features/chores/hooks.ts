@@ -13,9 +13,14 @@ export const useChores = () => {
   const loadChores = useCallback(async () => {
     if (!family?.id) return;
     setLoading(true);
-    try { const data = await choresService.getChores(family.id); setChores(data); }
-    catch { console.error('Error loading chores:', error); }
-    finally { setLoading(false); }
+    try {
+      const data = await choresService.getChores(family.id);
+      setChores(data);
+    } catch (err) {
+      console.error('Error loading chores:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [family?.id]);
 
   const createChore = async (form: CreateChoreForm): Promise<Chore> => {
@@ -25,9 +30,23 @@ export const useChores = () => {
     return chore;
   };
 
-  const completeChore = async (choreId: string): Promise<void> => { await choresService.completeChore(choreId); setChores(prev => prev.map(c => c.id === choreId ? { ...c, status: 'completed' } : c)); };
-  const deleteChore = async (choreId: string): Promise<void> => { await choresService.deleteChore(choreId); setChores(prev => prev.filter(c => c.id !== choreId)); };
-  const getTodaysChores = (): Chore[] => { const today = new Date().toISOString().split('T')[0]; return chores.filter(c => { if (!c.dueDate) return c.status === 'pending'; return c.dueDate.split('T')[0] === today && c.status === 'pending'; }); };
+  const completeChore = async (choreId: string): Promise<void> => {
+    await choresService.completeChore(choreId);
+    setChores(prev => prev.map(c => c.id === choreId ? { ...c, status: 'completed' } : c));
+  };
+
+  const deleteChore = async (choreId: string): Promise<void> => {
+    await choresService.deleteChore(choreId);
+    setChores(prev => prev.filter(c => c.id !== choreId));
+  };
+
+  const getTodaysChores = (): Chore[] => {
+    const today = new Date().toISOString().split('T')[0];
+    return chores.filter(c => {
+      if (!c.dueDate) return c.status === 'pending';
+      return c.dueDate.split('T')[0] === today && c.status === 'pending';
+    });
+  };
 
   return { chores, loading, loadChores, createChore, completeChore, deleteChore, getTodaysChores };
 };

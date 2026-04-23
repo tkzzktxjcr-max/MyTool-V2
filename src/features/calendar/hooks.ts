@@ -13,9 +13,14 @@ export const useCalendar = () => {
   const loadEvents = useCallback(async () => {
     if (!family?.id) return;
     setLoading(true);
-    try { const data = await calendarService.getEvents(family.id); setEvents(data); }
-    catch { console.error('Error loading events:', error); }
-    finally { setLoading(false); }
+    try {
+      const data = await calendarService.getEvents(family.id);
+      setEvents(data);
+    } catch (err) {
+      console.error('Error loading events:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [family?.id]);
 
   const createEvent = async (form: CreateEventForm): Promise<CalendarEvent> => {
@@ -25,7 +30,10 @@ export const useCalendar = () => {
     return event;
   };
 
-  const deleteEvent = async (eventId: string): Promise<void> => { await calendarService.deleteEvent(eventId); setEvents(prev => prev.filter(e => e.id !== eventId)); };
+  const deleteEvent = async (eventId: string): Promise<void> => {
+    await calendarService.deleteEvent(eventId);
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+  };
 
   return { events, loading, loadEvents, createEvent, deleteEvent };
 };

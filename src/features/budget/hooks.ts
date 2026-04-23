@@ -13,9 +13,14 @@ export const useBudget = () => {
   const loadEntries = useCallback(async () => {
     if (!family?.id) return;
     setLoading(true);
-    try { const data = await budgetService.getEntries(family.id); setEntries(data); }
-    catch { console.error('Error loading entries:', error); }
-    finally { setLoading(false); }
+    try {
+      const data = await budgetService.getEntries(family.id);
+      setEntries(data);
+    } catch (err) {
+      console.error('Error loading entries:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [family?.id]);
 
   const createEntry = async (form: CreateBudgetEntryForm): Promise<BudgetEntry> => {
@@ -25,7 +30,10 @@ export const useBudget = () => {
     return entry;
   };
 
-  const deleteEntry = async (entryId: string): Promise<void> => { await budgetService.deleteEntry(entryId); setEntries(prev => prev.filter(e => e.id !== entryId)); };
+  const deleteEntry = async (entryId: string): Promise<void> => {
+    await budgetService.deleteEntry(entryId);
+    setEntries(prev => prev.filter(e => e.id !== entryId));
+  };
 
   const totalExpenses = useMemo(() => entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0), [entries]);
   const totalIncome = useMemo(() => entries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0), [entries]);
