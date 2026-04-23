@@ -48,13 +48,18 @@ export const useAlcohol = () => {
       // Get recently used (last 7 days)
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      const recentDrinks = logsData
-        .filter(l => l.drinkId && new Date(l.timestamp) >= weekAgo)
-        .map(l => drinksData.find(d => d.id === l.drinkId))
+      const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
+      
+      const uniqueRecent = recentLogs
+        .map(l => drinksData.find(d => d.id === `default-${l.drinkType}` || d.name === l.drinkName))
         .filter(Boolean) as CustomDrink[];
       
-      const uniqueRecent = recentDrinks.filter((d, i, arr) => arr.findIndex(r => r.id === d.id) === i).slice(0, 4);
-      setRecentlyUsed(uniqueRecent);
+      const seen = new Set();
+      setRecentlyUsed(uniqueRecent.filter(d => {
+        if (seen.has(d.id)) return false;
+        seen.add(d.id);
+        return true;
+      }).slice(0, 4));
     } catch (err) {
       console.error('Error loading alcohol data:', err);
     } finally {
@@ -80,7 +85,6 @@ export const useAlcohol = () => {
     if (!user?.$id) throw new Error('Not authenticated');
     
     const log = await alcoholService.createLog(user.$id, {
-      drinkId: drink.id.startsWith('default-') ? undefined : drink.id,
       drinkName: drink.name,
       drinkEmoji: drink.emoji || DRINK_TYPES[drink.type]?.icon || '🥤',
       drinkType: drink.type,
@@ -92,12 +96,6 @@ export const useAlcohol = () => {
     });
     
     setLogs(prev => [log, ...prev]);
-    
-    if (!drink.id.startsWith('default-')) {
-      setCustomDrinks(prev => prev.map(d => 
-        d.id === drink.id ? { ...d, usageCount: d.usageCount + 1 } : d
-      ));
-    }
     
     return log;
   }, [user?.$id]);

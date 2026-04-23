@@ -63,7 +63,7 @@ export const alcoholService = {
     await deleteDocument(COLLECTIONS.CUSTOM_DRINKS, drinkId);
   },
 
-  async getLogs(userId: string, limit = 50): Promise<AlcoholLog[]> {
+  async getLogs(userId: string): Promise<AlcoholLog[]> {
     const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
       Query.equal('userId', userId),
     ]);
@@ -71,17 +71,16 @@ export const alcoholService = {
     return response.documents.map((doc: any) => ({
       id: doc.$id,
       userId: doc.userId,
-      drinkId: doc.drinkId,
       drinkName: doc.drinkName,
       drinkEmoji: doc.drinkEmoji,
-      drinkType: doc.drinkType,
+      drinkType: doc.drinkType as DrinkType,
       quantity: doc.quantity,
       servingSize: doc.volumeCl || doc.servingSize,
       abv: doc.abv,
       units: doc.units,
       context: doc.context,
       mood: doc.mood,
-      timestamp: doc.date || doc.timestamp,
+      timestamp: doc.date,
       notes: doc.notes,
     }));
   },
@@ -89,7 +88,6 @@ export const alcoholService = {
   async createLog(
     userId: string,
     data: {
-      drinkId?: string;
       drinkName: string;
       drinkEmoji: string;
       drinkType: DrinkType;
@@ -102,44 +100,35 @@ export const alcoholService = {
     }
   ): Promise<AlcoholLog> {
     const units = (data.quantity * data.servingSize * data.abv) / 10;
-    const timestamp = new Date().toISOString();
     
     const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
       userId,
-      drinkId: data.drinkId || null,
-      drinkName: data.drinkName,
-      drinkEmoji: data.drinkEmoji,
+      date: new Date().toISOString(),
       drinkType: data.drinkType,
-      quantity: data.quantity,
-      volumeCl: data.servingSize, // Required field: volume in cl
-      servingSize: data.servingSize,
+      volumeCl: data.servingSize,
       abv: data.abv,
       units,
-      date: timestamp,
-      timestamp,
+      drinkName: data.drinkName,
+      drinkEmoji: data.drinkEmoji,
+      quantity: data.quantity,
       context: data.context || null,
       mood: data.mood || null,
       notes: data.notes || null,
     });
 
-    if (data.drinkId) {
-      await this.incrementUsageCount(data.drinkId);
-    }
-
     return {
       id: doc.$id,
       userId: doc.userId,
-      drinkId: doc.drinkId,
       drinkName: doc.drinkName,
       drinkEmoji: doc.drinkEmoji,
-      drinkType: doc.drinkType,
+      drinkType: doc.drinkType as DrinkType,
       quantity: doc.quantity,
-      servingSize: doc.volumeCl || doc.servingSize,
+      servingSize: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,
       context: doc.context,
       mood: doc.mood,
-      timestamp: doc.date || doc.timestamp,
+      timestamp: doc.date,
       notes: doc.notes,
     };
   },
@@ -214,11 +203,11 @@ export const alcoholService = {
       return day === 0 || day === 6;
     }).reduce((sum, l) => sum + l.units, 0);
     
-    const weekdayLogs = weeklyLogs.filter(l => {
+    const weekdayUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day !== 0 && day !== 6;
-    });
-    const weekdayUnits = weekdayLogs.reduce((sum, l) => sum + l.units, 0);
+    }).reduce((sum, l) => sum + l.units, 0);
+    
     const weekendCount = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day === 0 || day === 6;
@@ -232,10 +221,6 @@ export const alcoholService = {
     if (typeEntries[0] && typeEntries[0][1].units > 0) {
       const typeName = DRINK_TYPES[typeEntries[0][0] as DrinkType]?.label || typeEntries[0][0];
       patterns.push(`🍷 ${typeName} est votre préféré cette semaine`);
-    }
-
-    if (Object.keys(moodBreakdown).length > 0) {
-      patterns.push(`😊 Vous êtes plutôt ${Object.keys(moodBreakdown).length} humeurs cette semaine`);
     }
 
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
