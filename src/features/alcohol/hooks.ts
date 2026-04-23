@@ -29,23 +29,18 @@ export const useAlcohol = () => {
     if (!user?.$id) return;
     setLoading(true);
     try {
-      // Charger les drinks avec les préférences utilisateur
       const drinksData = await drinksService.getDrinksWithPreferences(user.$id);
       setDrinks(drinksData);
       
-      // Charger les logs
       const logsData = await alcoholService.getLogs(user.$id);
       setLogs(logsData);
       
-      // Charger le goal
       const goalData = await goalsService.getGoal(user.$id);
       setGoal(goalData);
       
-      // Charger le profile utilisateur
       const profileData = await profileService.getProfile(user.$id);
       setUserProfile(profileData);
       
-      // Calculer les recently used
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
@@ -71,9 +66,6 @@ export const useAlcohol = () => {
     setDrinks(newDrinks);
   }, [user?.$id]);
 
-  /**
-   * Créer un nouveau drink personnalisé
-   */
   const createDrink = useCallback(async (form: CreateDrinkForm, emoji?: string) => {
     if (!user?.$id) throw new Error('Not authenticated');
     const drink = await drinksService.createDrink({
@@ -88,9 +80,6 @@ export const useAlcohol = () => {
     return drink;
   }, [user?.$id]);
 
-  /**
-   * Personnaliser un drink existant (modifier taille, degré, etc.)
-   */
   const customizeDrink = useCallback(async (
     drinkType: DrinkType,
     data: {
@@ -105,22 +94,24 @@ export const useAlcohol = () => {
       type: drinkType,
       ...data,
     });
-    // Recharger tous les drinks pour avoir la vue fusionnée
     const allDrinks = await drinksService.getDrinksWithPreferences(user.$id);
     setDrinks(allDrinks);
     return drink;
   }, [user?.$id]);
 
   /**
-   * Ajouter une consommation rapide
+   * Ajouter une consommation rapide - stocke le nom/personnalisation
    */
   const quickLog = useCallback(async (drink: Drink, mood?: MoodType) => {
     if (!user?.$id) throw new Error('Not authenticated');
+    // Stocker les infos du drink au moment du log
     const log = await alcoholService.createLog(user.$id, {
       drinkType: drink.type,
       servingSize: drink.defaultServingSize,
       abv: drink.abv,
       mood,
+      drinkName: drink.name,      // ← AJOUTÉ
+      drinkEmoji: drink.emoji,    // ← AJOUTÉ
     });
     await drinksService.incrementUsage(drink.id);
     setLogs(prev => [log, ...prev]);
@@ -143,6 +134,8 @@ export const useAlcohol = () => {
       servingSize: lastDeletedLog.servingSize,
       abv: lastDeletedLog.abv,
       mood: lastDeletedLog.mood,
+      drinkName: lastDeletedLog.drinkName,
+      drinkEmoji: lastDeletedLog.drinkEmoji,
     });
     setLogs(prev => [restoredLog, ...prev]);
     setLastDeletedLog(null);
@@ -175,13 +168,11 @@ export const useAlcohol = () => {
     return updatedProfile;
   }, [user?.$id]);
 
-  // Calculate BAC state using centralized utility
   const bacState = useMemo(() => {
     const weightKg = userProfile?.weightKg || 70;
     const sex: SexType = userProfile?.sex || 'unspecified';
     const legalLimit = userProfile?.legalLimit || 0.5;
     
-    // Convert logs to drink data format (servingSize is in cl from DB)
     const drinksData: DrinkData[] = logs.map(log => ({
       volumeCl: log.servingSize,
       abv: log.abv,

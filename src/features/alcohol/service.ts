@@ -2,9 +2,6 @@ import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments,
 import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
 
-// Calculate units: (volume_ml * abv% * alcohol_density) / grams_per_unit
-// 1 unit = 10g of pure alcohol
-// alcohol_density ≈ 0.789 g/ml
 const calculateUnits = (volumeCl: number, abv: number): number => {
   return (volumeCl * abv / 100 * 0.789) / 10;
 };
@@ -18,8 +15,9 @@ export const alcoholService = {
     return response.documents.map((doc: any) => ({
       id: doc.$id,
       userId: doc.userId,
-      drinkName: DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
-      drinkEmoji: DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
+      // Utiliser le nom stocké, sinon le default
+      drinkName: doc.drinkName || DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
+      drinkEmoji: doc.drinkEmoji || DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
       drinkType: doc.drinkType as DrinkType,
       quantity: 1,
       servingSize: doc.volumeCl,
@@ -39,6 +37,8 @@ export const alcoholService = {
       abv: number;
       mood?: MoodType;
       notes?: string;
+      drinkName?: string;   // ← AJOUTÉ
+      drinkEmoji?: string;  // ← AJOUTÉ
     }
   ): Promise<AlcoholLog> {
     const units = calculateUnits(data.servingSize, data.abv);
@@ -52,13 +52,16 @@ export const alcoholService = {
       units,
       mood: data.mood || null,
       notes: data.notes || null,
+      // Stocker le nom et emoji personnalisé
+      drinkName: data.drinkName || DRINK_TYPES[data.drinkType]?.label,
+      drinkEmoji: data.drinkEmoji || DRINK_TYPES[data.drinkType]?.icon,
     });
 
     return {
       id: doc.$id,
       userId: doc.userId,
-      drinkName: DRINK_TYPES[data.drinkType]?.label || data.drinkType,
-      drinkEmoji: DRINK_TYPES[data.drinkType]?.icon || '🥤',
+      drinkName: doc.drinkName,
+      drinkEmoji: doc.drinkEmoji,
       drinkType: doc.drinkType as DrinkType,
       quantity: 1,
       servingSize: doc.volumeCl,
