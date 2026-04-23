@@ -23,12 +23,10 @@ const DEFAULT_SIZES: Record<DrinkType, number> = {
   cocktail: 20,  // Cocktail
   cider: 33,     // Cidre
   other: 25,     // Autre
+  custom: 25,    // Personnalisé
 };
 
 export const drinksService = {
-  /**
-   * Get all drinks (global + user's custom drinks)
-   */
   async getAllDrinks(): Promise<Drink[]> {
     const response = await listDocuments(COLLECTIONS.DRINKS, []);
     return response.documents.map((doc: any) => ({
@@ -45,9 +43,6 @@ export const drinksService = {
     }));
   },
 
-  /**
-   * Get drinks specific to a user (their custom drinks)
-   */
   async getDrinksByUser(userId: string): Promise<Drink[]> {
     const response = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
     return response.documents.map((doc: any) => ({
@@ -64,10 +59,6 @@ export const drinksService = {
     }));
   },
 
-  /**
-   * Get user's drink preferences for a specific drink type
-   * This lets users have their own preferred size/abv for each drink type
-   */
   async getUserDrinkPreference(userId: string, drinkType: DrinkType): Promise<Drink | null> {
     const response = await listDocuments(COLLECTIONS.DRINKS, [
       Query.equal('userId', userId),
@@ -92,9 +83,6 @@ export const drinksService = {
     return null;
   },
 
-  /**
-   * Create a new custom drink for a user
-   */
   async createDrink(data: {
     name: string;
     type: DrinkType;
@@ -129,10 +117,6 @@ export const drinksService = {
     };
   },
 
-  /**
-   * Create or update user's preferred drink for a type
-   * (e.g., user prefers 50cl beers instead of standard 33cl)
-   */
   async setUserDrinkPreference(
     userId: string,
     data: {
@@ -170,9 +154,6 @@ export const drinksService = {
     return this.createDrink({ ...data, userId });
   },
 
-  /**
-   * Increment usage count for a drink
-   */
   async incrementUsage(drinkId: string): Promise<void> {
     const response = await listDocuments(COLLECTIONS.DRINKS, []);
     const drink = response.documents.find((d: any) => d.$id === drinkId);
@@ -183,9 +164,6 @@ export const drinksService = {
     }
   },
 
-  /**
-   * Toggle favorite status
-   */
   async toggleFavorite(drinkId: string): Promise<boolean> {
     const response = await listDocuments(COLLECTIONS.DRINKS, []);
     const drink = response.documents.find((d: any) => d.$id === drinkId);
@@ -197,9 +175,6 @@ export const drinksService = {
     return false;
   },
 
-  /**
-   * Update drink properties
-   */
   async updateDrink(drinkId: string, data: Partial<Drink>): Promise<Drink> {
     const doc: any = await updateDocument(COLLECTIONS.DRINKS, drinkId, data);
     return {
@@ -216,16 +191,10 @@ export const drinksService = {
     };
   },
 
-  /**
-   * Delete a drink
-   */
   async deleteDrink(drinkId: string): Promise<void> {
     await deleteDocument(COLLECTIONS.DRINKS, drinkId);
   },
 
-  /**
-   * Delete all user's custom drinks
-   */
   async deleteAllUserDrinks(userId: string): Promise<void> {
     const drinks = await this.getDrinksByUser(userId);
     for (const drink of drinks) {
@@ -233,9 +202,6 @@ export const drinksService = {
     }
   },
 
-  /**
-   * Reset drinks to defaults for a user
-   */
   async resetToDefaults(userId: string): Promise<Drink[]> {
     await this.deleteAllUserDrinks(userId);
     
@@ -255,31 +221,20 @@ export const drinksService = {
     return drinks;
   },
 
-  /**
-   * Ensure user has drinks (create defaults if none exist)
-   * Returns merged list: user's custom drinks + defaults for missing types
-   */
   async ensureUserHasDrinks(userId: string): Promise<Drink[]> {
     const userDrinks = await this.getDrinksByUser(userId);
     
-    // Si l'utilisateur a déjà des drinks personnalisés, les retourner
     if (userDrinks.length > 0) {
       return userDrinks;
     }
     
-    // Sinon créer les drinks par défaut
     return this.resetToDefaults(userId);
   },
 
-  /**
-   * Get drinks merged with defaults (user preferences override defaults)
-   * Used for displaying drinks with user's customization applied
-   */
   async getDrinksWithPreferences(userId: string): Promise<Drink[]> {
     const userDrinks = await this.getDrinksByUser(userId);
     const userTypes = new Set(userDrinks.map(d => d.type));
     
-    // Trouver les types par défaut manquants
     const missingDefaults: Drink[] = [];
     for (const [type, data] of Object.entries(DRINK_TYPES)) {
       const drinkType = type as DrinkType;
@@ -293,13 +248,12 @@ export const drinksService = {
           emoji: data.icon,
           isFavorite: false,
           usageCount: 0,
-          userId: undefined, // C'est un default, pas personnalisé
+          userId: undefined,
           createdAt: '',
         });
       }
     }
     
-    // Fusionner: drinks de l'utilisateur + defaults manquants
     return [...userDrinks, ...missingDefaults];
   },
 };
