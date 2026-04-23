@@ -48,6 +48,11 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Debug: log profile changes
+  useEffect(() => {
+    console.log('[DEBUG] Profile updated:', profile);
+  }, [profile]);
+
   const loadFamily = useCallback(async () => {
     if (!profile?.familyId) {
       setFamily(null);
@@ -102,12 +107,20 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   }, [loadFamily]);
 
   const createFamily = async (name: string, monthlyBudget?: number): Promise<Family> => {
-    if (!profile) throw new Error('Not authenticated');
+    console.log('[DEBUG] createFamily called, profile:', profile);
+    
+    if (!profile) {
+      console.error('[DEBUG] No profile, throwing error');
+      throw new Error('Not authenticated');
+    }
 
     const inviteCode = generateSecureInviteCode();
+    console.log('[DEBUG] Generated code:', inviteCode);
 
     try {
-      console.log('Creating family with:', { name, inviteCode, monthlyBudget });
+      console.log('[DEBUG] Calling createDocument for families');
+      console.log('[DEBUG] Collection:', COLLECTIONS.FAMILIES);
+      console.log('[DEBUG] Database:', APPWRITE_CONFIG.databaseId);
       
       const familyDoc = await createDocument(COLLECTIONS.FAMILIES, {
         name,
@@ -117,9 +130,10 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         createdAt: new Date().toISOString(),
       });
 
-      console.log('Family created:', familyDoc.$id);
+      console.log('[DEBUG] Family created successfully:', familyDoc.$id);
 
       // Ajouter le créateur comme premier membre admin
+      console.log('[DEBUG] Adding member to family');
       await createDocument(COLLECTIONS.FAMILY_MEMBERS, {
         familyId: familyDoc.$id,
         userId: profile.userId,
@@ -129,6 +143,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
       });
 
       // Mettre à jour le profil utilisateur
+      console.log('[DEBUG] Updating user profile');
       await databases.updateDocument(
         APPWRITE_CONFIG.databaseId,
         COLLECTIONS.USERS_PROFILE,
@@ -148,7 +163,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         createdAt: familyDoc.$createdAt,
       };
     } catch (error: any) {
-      console.error('Error creating family:', error?.message || error, error?.response);
+      console.error('[DEBUG] Error creating family:', error?.message || error, error?.response);
       throw new Error(error?.message || 'Erreur lors de la création de la famille');
     }
   };
