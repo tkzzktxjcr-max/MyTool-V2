@@ -6,7 +6,8 @@ import {
   databases, 
   APPWRITE_CONFIG, 
   COLLECTIONS, 
-  ID 
+  ID,
+  Query,
 } from '@/lib/appwrite';
 import type { UserProfile, AuthUser } from '@/types';
 
@@ -52,10 +53,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user?.$id) return;
     
     try {
+      // Use proper server-side query with Query.equal()
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId,
         COLLECTIONS.USERS_PROFILE,
-        [`userId=${user.$id}`]
+        [Query.equal('userId', user.$id)]
       );
       
       if (response.documents.length > 0) {
