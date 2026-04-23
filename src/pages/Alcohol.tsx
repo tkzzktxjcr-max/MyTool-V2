@@ -7,171 +7,431 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Wine, AlertTriangle, CheckCircle, Droplet, Trash2, Activity, Sparkles } from 'lucide-react';
+import { Plus, Wine, X, Check, Activity, Sparkles, Heart, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import type { CreateAlcoholLogForm, DrinkType } from '@/features/alcohol/types';
+import type { CreateDrinkForm } from '@/features/alcohol/types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from '@/features/alcohol/types';
+import type { DrinkType } from '@/features/alcohol/types';
+
+// Mini bar chart component
+const MiniBar = ({ value, max }: { value: number; max: number }) => (
+  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+    <motion.div
+      initial={{ width: 0 }}
+      animate={{ width: `${Math.min((value / max) * 100, 100)}%` }}
+      className={cn(
+        "h-full rounded-full",
+        value <= 2 && "bg-green-500",
+        value > 2 && value <= 4 && "bg-purple-500",
+        value > 4 && "bg-red-500"
+      )}
+    />
+  </div>
+);
+
+// Drink pill button
+const DrinkPill = ({ drink, onClick }: { drink: any; onClick: () => void }) => (
+  <motion.button
+    whileTap={{ scale: 0.95 }}
+    onClick={onClick}
+    className="flex items-center gap-2 px-4 py-2 rounded-full glass-card hover:bg-white/10 transition-colors"
+  >
+    <span className="text-lg">{drink.emoji}</span>
+    <span className="text-sm font-medium">{drink.name}</span>
+  </motion.button>
+);
+
+// Mood selector
+const MoodSelector = ({ onSelect }: { onSelect: (mood: string) => void }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: 10 }}
+    className="grid grid-cols-4 gap-2 p-2"
+  >
+    {Object.entries({
+      happy: '😊',
+      relaxed: '😌',
+      social: '🥂',
+      celebrating: '🎉',
+      stressed: '😰',
+      sad: '😢',
+      tired: '😴',
+      neutral: '😐',
+    }).map(([mood, emoji]) => (
+      <button
+        key={mood}
+        onClick={() => onSelect(mood)}
+        className="flex flex-col items-center gap-1 p-2 rounded-xl hover:bg-white/10 transition-colors"
+      >
+        <span className="text-2xl">{emoji}</span>
+        <span className="text-xs text-muted-foreground capitalize">{mood}</span>
+      </button>
+    ))}
+  </motion.div>
+);
 
 export default function AlcoholPage() {
-  const { logs, insights, loadLogs, createLog, deleteLog, calculateUnits, getTodayUnits } = useAlcohol();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [formData, setFormData] = useState<CreateAlcoholLogForm>({ drinkType: 'beer', volumeCl: 50, abv: 5 });
+  const { 
+    allDrinks, 
+    recentlyUsed, 
+    logs, 
+    insights, 
+    loading, 
+    loadData, 
+    quickLog, 
+    deleteLog, 
+    createDrink,
+    getTodayUnits,
+    calculateUnits,
+  } = useAlcohol();
 
-  useEffect(() => { loadLogs(); }, [loadLogs]);
+  const [showMoodSelector, setShowMoodSelector] = useState(false);
+  const [showDrinkCreator, setShowDrinkCreator] = useState(false);
+  const [selectedDrink, setSelectedDrink] = useState<any>(null);
+  const [showLogSuccess, setShowLogSuccess] = useState(false);
+  const [selectedMood, setSelectedMood] = useState<string | undefined>();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await createLog(formData);
-    setIsDialogOpen(false);
-    setFormData({ drinkType: 'beer', volumeCl: 50, abv: 5 });
-  };
+  // New drink form
+  const [newDrink, setNewDrink] = useState<CreateDrinkForm>({
+    name: '',
+    type: 'beer',
+    abv: 5,
+    defaultServingSize: 50,
+  });
 
-  const handleDrinkChange = (type: string) => {
-    const defaultAbv = DRINK_TYPES[type as DrinkType].defaultAbv;
-    setFormData(prev => ({ ...prev, drinkType: type as DrinkType, abv: defaultAbv }));
-  };
+  useEffect(() => { loadData(); }, [loadData]);
 
   const todaysUnits = getTodayUnits();
-  const recentLogs = logs.slice(0, 5);
+
+  const handleQuickLog = (drink: any) => {
+    setSelectedDrink(drink);
+    setShowMoodSelector(true);
+  };
+
+  const confirmLog = async (mood?: string) => {
+    if (!selectedDrink) return;
+    await quickLog(selectedDrink, 1, mood as any);
+    setShowMoodSelector(false);
+    setSelectedDrink(null);
+    setSelectedMood(undefined);
+    setShowLogSuccess(true);
+    setTimeout(() => setShowLogSuccess(false), 1500);
+  };
+
+  const handleCreateDrink = async () => {
+    if (!newDrink.name) return;
+    await createDrink(newDrink, DRINK_TYPES[newDrink.type]?.icon);
+    setShowDrinkCreator(false);
+    setNewDrink({ name: '', type: 'beer', abv: 5, defaultServingSize: 50 });
+  };
+
+  const recentLogs = logs.slice(0, 7);
+  const todaysLogs = logs.filter(l => isToday(parseISO(l.timestamp));
 
   return (
-    <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
-              <Activity className="w-4 h-4 md:w-6 md:h-6 text-secondary" />
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-secondary/20 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-secondary" />
             </div>
-            <span className="hidden sm:inline">Insights Bien-être</span>
+            Insights Bien-être
           </h1>
-          <p className="text-muted-foreground text-sm">Suivi personnel</p>
+          <p className="text-sm text-muted-foreground">Suivi discret et personnel</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-1" />
-              <span className="hidden sm:inline">Ajouter un verre</span>
-              <span className="sm:hidden">Ajouter</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="mx-4">
-            <DialogHeader><DialogTitle>Enregistrer</DialogTitle></DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Type</label>
-                <Select value={formData.drinkType} onValueChange={handleDrinkChange}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{Object.entries(DRINK_TYPES).map(([key, drink]) => <SelectItem key={key} value={key}>{drink.icon} {drink.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Volume (cl)</label>
-                  <Input type="number" min="1" max="200" value={formData.volumeCl} onChange={(e) => setFormData(prev => ({ ...prev, volumeCl: parseInt(e.target.value) || 0 }))} required />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Degré (%)</label>
-                  <Input type="number" min="0.1" max="100" step="0.1" value={formData.abv} onChange={(e) => setFormData(prev => ({ ...prev, abv: parseFloat(e.target.value) || 0 }))} required />
-                </div>
-              </div>
-              <div className="p-3 rounded-xl bg-muted/50 text-center">
-                <span className="text-sm text-muted-foreground">Unités: </span>
-                <span className="text-lg font-bold">{calculateUnits(formData.volumeCl, formData.abv).toFixed(1)}</span>
-              </div>
-              <Button type="submit" className="w-full">Enregistrer</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button variant="ghost" size="icon" onClick={() => setShowDrinkCreator(true)}>
+          <Plus className="w-5 h-5" />
+        </Button>
       </div>
 
-      {/* Risk Level */}
-      {insights && (
-        <Card className={cn("border-2", insights.riskLevel === 'low' && "border-secondary/30 bg-secondary/5", insights.riskLevel === 'moderate' && "border-accent/30 bg-accent/5", insights.riskLevel === 'high' && "border-destructive/30 bg-destructive/5")}>
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-start gap-3 md:gap-4">
-              <div className={cn("w-10 h-10 md:w-14 md:h-14 rounded-xl flex items-center justify-center", insights.riskLevel === 'low' && "bg-secondary/20 text-secondary", insights.riskLevel === 'moderate' && "bg-accent/20 text-accent", insights.riskLevel === 'high' && "bg-destructive/20 text-destructive")}>
-                {insights.riskLevel === 'low' ? <Sparkles className="w-5 h-5 md:w-6 md:h-6" /> : <AlertTriangle className="w-5 h-5 md:w-6 md:h-6" />}
-              </div>
-              <div className="flex-1">
-                <h3 className={cn("text-lg md:text-xl font-bold mb-1", insights.riskLevel === 'low' && "text-secondary", insights.riskLevel === 'moderate' && "text-accent", insights.riskLevel === 'high' && "text-destructive")}>
-                  {insights.riskLevel === 'low' ? 'Risque faible' : insights.riskLevel === 'moderate' ? 'Risque modéré' : 'Risque élevé'}
-                </h3>
-                <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Semaine</p>
-                    <p className="font-semibold">{insights.totalWeeklyUnits.toFixed(1)} / {HEALTH_GUIDELINES.maxWeeklyUnits}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Moyenne/jour</p>
-                    <p className="font-semibold">{insights.averagePerDay.toFixed(1)}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Today's Progress */}
-      <Card>
-        <CardContent className="p-4 md:p-6">
-          <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm md:text-base"><Droplet className="h-4 w-4 md:h-5 md:w-5 text-secondary" />Aujourd'hui</h3>
-          <div className="flex items-center justify-between mb-2">
+      <Card className={cn(
+        "relative overflow-hidden transition-all duration-500",
+        showLogSuccess && "ring-2 ring-secondary"
+      )}>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-2xl md:text-4xl font-bold">{todaysUnits.toFixed(1)}</p>
-              <p className="text-xs text-muted-foreground">unités</p>
+              <p className="text-sm text-muted-foreground mb-1">Aujourd'hui</p>
+              <div className="flex items-baseline gap-1">
+                <span className={cn(
+                  "text-4xl font-bold",
+                  todaysUnits <= 2 && "text-secondary",
+                  todaysUnits > 2 && todaysUnits <= 4 && "text-accent",
+                  todaysUnits > 4 && "text-destructive"
+                )}>
+                  {todaysUnits.toFixed(1)}
+                </span>
+                <span className="text-muted-foreground">unités</span>
+              </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold">
-                {HEALTH_GUIDELINES.maxDailyUnits - todaysUnits > 0 ? `${(HEALTH_GUIDELINES.maxDailyUnits - todaysUnits).toFixed(1)} restantes` : `${(todaysUnits - HEALTH_GUIDELINES.maxDailyUnits).toFixed(1)} au-delà`}
+              <p className="text-sm">
+                {HEALTH_GUIDELINES.maxDailyUnits - todaysUnits > 0 ? (
+                  <span className="text-muted-foreground">{HEALTH_GUIDELINES.maxDailyUnits - todaysUnits.toFixed(1)} restantes</span>
+                ) : (
+                  <span className="text-destructive">{(todaysUnits - HEALTH_GUIDELINES.maxDailyUnits).toFixed(1)} au-delà</span>
+                )}
               </p>
-              <p className="text-xs text-muted-foreground">limite: {HEALTH_GUIDELINES.maxDailyUnits}</p>
+              <p className="text-xs text-muted-foreground">max: {HEALTH_GUIDELINES.maxDailyUnits}</p>
             </div>
           </div>
-          <div className="h-2 md:h-3 rounded-full bg-muted overflow-hidden">
-            <div className={cn("h-full rounded-full transition-all", todaysUnits <= HEALTH_GUIDELINES.lowRiskUnits && "bg-secondary", todaysUnits > HEALTH_GUIDELINES.lowRiskUnits && todaysUnits <= HEALTH_GUIDELINES.maxDailyUnits && "bg-accent", todaysUnits > HEALTH_GUIDELINES.maxDailyUnits && "bg-destructive")} style={{ width: `${Math.min((todaysUnits / HEALTH_GUIDELINES.maxDailyUnits) * 100, 100)}%` }} />
+          
+          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((todaysUnits / HEALTH_GUIDELINES.maxDailyUnits) * 100, 100}%` }}
+              transition={{ duration: 0.5 }}
+              className={cn(
+                "h-full rounded-full",
+                todaysUnits <= 2 && "bg-secondary",
+                todaysUnits > 2 && todaysUnits <= 4 && "bg-accent",
+                todaysUnits > 4 && "bg-destructive"
+              )}
+            />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* History */}
-      <Card>
-        <CardContent className="p-3 md:p-5">
-          <h3 className="font-semibold mb-3 text-sm md:text-base">Historique</h3>
-          <AnimatePresence mode="wait">
-            {recentLogs.length === 0 ? (
-              <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-center py-6">
-                <Wine className="w-8 h-8 md:w-10 md:h-10 mx-auto text-muted-foreground/30 mb-2" />
-                <p className="text-muted-foreground text-sm">Aucune consommation</p>
-              </motion.div>
-            ) : (
-              <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-2">
-                {recentLogs.map(log => (
-                  <div key={log.id} className="flex items-center gap-3 p-2 md:p-3 rounded-xl bg-white/[0.03]">
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-lg md:text-xl">
-                      {DRINK_TYPES[log.drinkType]?.icon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-xs md:text-sm">{DRINK_TYPES[log.drinkType]?.label} • {log.volumeCl}cl</p>
-                      <p className="text-xs text-muted-foreground">{format(parseISO(log.date), 'd MMM à HH:mm', { locale: fr })}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-sm md:text-base">{log.units.toFixed(1)}</p>
-                      <p className="text-xs text-muted-foreground">unités</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 md:h-7 md:w-7" onClick={() => deleteLog(log.id)}>
-                      <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
-                    </Button>
-                  </div>
-                ))}
+          <AnimatePresence>
+            {showLogSuccess && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="absolute inset-0 flex items-center justify-center bg-secondary/20 rounded-2xl"
+              >
+                <Check className="w-12 h-12 text-secondary" />
               </motion.div>
             )}
           </AnimatePresence>
         </CardContent>
       </Card>
+
+      {/* Quick Log Section */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium text-sm">Ajouter</h3>
+            {recentlyUsed.length > 0 && (
+              <span className="text-xs text-muted-foreground">Récents</span>
+            )}
+          </div>
+          
+          {recentlyUsed.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4">
+              {recentlyUsed.map(drink => (
+                <motion.button
+                  key={drink.id}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => handleQuickLog(drink)}
+                  className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-full bg-secondary/20 text-secondary"
+                >
+                  <span>{drink.emoji}</span>
+                  <span className="text-sm font-medium whitespace-nowrap">{drink.name}</span>
+                </motion.button>
+              ))}
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-2">
+            {allDrinks.slice(0, 8).map(drink => (
+              <DrinkPill 
+                key={drink.id} 
+                drink={drink} 
+                onClick={() => handleQuickLog(drink)} 
+              />
+            ))}
+          </div>
+
+          <AnimatePresence>
+            {showMoodSelector && (
+              <div className="mt-4 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Comment vous sentez-vous ?</span>
+                  <button onClick={() => confirmLog()} className="text-xs text-secondary">Passer</button>
+                </div>
+                <MoodSelector onSelect={confirmLog} />
+              </div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+
+      {/* Weekly Chart */}
+      {insights && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-sm">Cette semaine</h3>
+              <span className={cn(
+                "text-sm font-medium",
+                insights.riskLevel === 'low' && "text-secondary",
+                insights.riskLevel === 'moderate' && "text-accent",
+                insights.riskLevel === 'high' && "text-destructive"
+              )}>
+                {insights.riskLevel === 'low' && '✨ Dans les limites'}
+                {insights.riskLevel === 'moderate' && '⚠️ Modéré'}
+                {insights.riskLevel === 'high' && '⚠️ Élevé'}
+              </span>
+            </div>
+            
+            <div className="flex items-end justify-between h-16 gap-1 mb-3">
+              {insights.dailyTrend.map((day, i) => {
+                const maxUnits = Math.max(...insights.dailyTrend.map(d => d.units), 1);
+                const height = (day.units / maxUnits) * 100;
+                const isToday = i === 6;
+                
+                return (
+                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                    <div 
+                      className="w-full rounded-t-sm"
+                      style={{ height: `${Math.max(height, 4}%`, backgroundColor: day.units <= 2 ? 'hsl(142, 71%, 45%)' : day.units <= 4 ? 'hsl(263, 70%, 58%)' : 'hsl(0, 62%, 50%)' }}
+                    />
+                    <span className={cn("text-[10px]", isToday && "text-secondary font-medium")}>
+                      {format(new Date(day.date), 'EEE', { locale: fr }).charAt(0)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Limite: {HEALTH_GUIDELINES.maxDailyUnits} unités/jour</span>
+              <span>Total: {insights.totalWeeklyUnits.toFixed(1)} / {HEALTH_GUIDELINES.maxWeeklyUnits}</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Patterns */}
+      {insights && insights.patterns.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <h3 className="font-medium text-sm mb-3">Observations</h3>
+            <div className="space-y-2">
+              {insights.patterns.map((pattern, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="text-sm text-muted-foreground"
+                >
+                  {pattern}
+                </motion.div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Timeline */}
+      <Card>
+        <CardContent className="p-4">
+          <h3 className="font-medium text-sm mb-4">Historique récent</h3>
+          {recentLogs.length === 0 ? (
+            <div className="text-center py-8">
+              <Wine className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground">Aucun enregistrement</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentLogs.map((log, i) => (
+                <motion.div
+                  key={log.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex items-center gap-3"
+                >
+                  <div className="text-2xl">{log.drinkEmoji}</div>
+                  <div className="flex-1">
+                    <p className="font-medium text-sm">{log.drinkName}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(parseISO(log.timestamp), 'd MMM à HH:mm', { locale: fr })}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">{log.units.toFixed(1)}</p>
+                    <p className="text-xs text-muted-foreground">unités</p>
+                  </div>
+                  <button 
+                    onClick={() => deleteLog(log.id)}
+                    className="p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Create Drink Dialog */}
+      <Dialog open={showDrinkCreator} onOpenChange={setShowDrinkCreator}>
+        <DialogContent className="mx-4">
+          <DialogHeader>
+            <DialogTitle>Créer une recette</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nom</label>
+              <Input 
+                placeholder="Mon cocktail préféré"
+                value={newDrink.name}
+                onChange={(e) => setNewDrink(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type</label>
+                <Select 
+                  value={newDrink.type} 
+                  onValueChange={(v) => setNewDrink(prev => ({ ...prev, type: v as DrinkType, abv: DRINK_TYPES[v as DrinkType]?.defaultAbv || 5 }))}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(DRINK_TYPES).map(([type, data]) => (
+                      <SelectItem key={type} value={type}>
+                        {data.icon} {data.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Degré (%)</label>
+                <Input 
+                  type="number"
+                  min="0.1"
+                  max="100"
+                  value={newDrink.abv}
+                  onChange={(e) => setNewDrink(prev => ({ ...prev, abv: parseFloat(e.target.value) })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Volume (cl)</label>
+              <Input 
+                type="number"
+                min="1"
+                max="200"
+                value={newDrink.defaultServingSize}
+                onChange={(e) => setNewDrink(prev => ({ ...prev, defaultServingSize: parseInt(e.target.value) })}
+              />
+            </div>
+            <Button onClick={handleCreateDrink} className="w-full">
+              Créer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

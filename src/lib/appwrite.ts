@@ -13,7 +13,11 @@ export const COLLECTIONS = {
   EVENTS: import.meta.env.VITE_COLLECTION_EVENTS || 'events',
   CHORES: import.meta.env.VITE_COLLECTION_CHORES || 'chores',
   BUDGET_ENTRIES: import.meta.env.VITE_COLLECTION_BUDGET_ENTRIES || 'budget_entries',
+  
+  // Alcohol tracking
   ALCOHOL_LOGS: import.meta.env.VITE_COLLECTION_ALCOHOL_LOGS || 'alcohol_logs',
+  CUSTOM_DRINKS: import.meta.env.VITE_COLLECTION_CUSTOM_DRINKS || 'custom_drinks',
+  ALCOHOL_GOALS: import.meta.env.VITE_COLLECTION_ALCOHOL_GOALS || 'alcohol_goals',
 };
 
 const client = new Client()
