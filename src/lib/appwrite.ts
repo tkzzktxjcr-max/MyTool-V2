@@ -15,6 +15,7 @@ export const COLLECTIONS = {
   BUDGET_ENTRIES: import.meta.env.VITE_COLLECTION_BUDGET_ENTRIES || 'budget_entries',
   ALCOHOL_LOGS: import.meta.env.VITE_COLLECTION_ALCOHOL_LOGS || 'alcohol_logs',
   DRINKS: import.meta.env.VITE_COLLECTION_DRINKS || 'drinks',
+  GOALS: import.meta.env.VITE_COLLECTION_GOALS || 'goals',
 };
 
 const client = new Client()

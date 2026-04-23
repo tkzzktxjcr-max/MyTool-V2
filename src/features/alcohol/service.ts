@@ -1,5 +1,5 @@
 import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, deleteDocument, Query } from '@/lib/appwrite';
-import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight } from './types';
+import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
 
 export const alcoholService = {
@@ -67,7 +67,7 @@ export const alcoholService = {
     await deleteDocument(COLLECTIONS.ALCOHOL_LOGS, logId);
   },
 
-  calculateInsights(logs: AlcoholLog[]): AlcoholInsight | null {
+  calculateInsights(logs: AlcoholLog[], goal: AlcoholGoal | null): AlcoholInsight | null {
     if (logs.length === 0) return null;
 
     const now = new Date();
@@ -121,6 +121,7 @@ export const alcoholService = {
 
     const patterns: string[] = [];
     
+    // Weekend vs weekday pattern
     const weekendUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day === 0 || day === 6;
@@ -137,31 +138,61 @@ export const alcoholService = {
     }).length;
     
     if (weekendUnits > weekdayUnits * 1.5 && weekendCount > 2) {
-      patterns.push('🍺 Consommation plus élevée le week-end');
+      patterns.push('🍺 +50% le week-end');
     }
     
+    // Favorite drink pattern
     const typeEntries = Object.entries(drinkTypeBreakdown).sort((a, b) => b[1].units - a[1].units);
     if (typeEntries[0] && typeEntries[0][1].units > 0) {
       const typeName = DRINK_TYPES[typeEntries[0][0] as DrinkType]?.label || typeEntries[0][0];
-      patterns.push(`🍷 ${typeName} est votre préféré cette semaine`);
+      patterns.push(`🍷 ${typeName} favorit${typeEntries[0][0] === 'wine' ? 'e' : ''}`);
     }
 
+    // Mood correlation
+    if (Object.keys(moodBreakdown).length > 0) {
+      const topMood = Object.entries(moodBreakdown).sort((a, b) => b[1] - a[1])[0];
+      if (topMood) {
+        patterns.push(`😊 Principalement ${topMood[0]}`);
+      }
+    }
+
+    // Calculate risk level
+    const effectiveLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
-    if (weeklyUnits > HEALTH_GUIDELINES.maxWeeklyUnits * 1.5) {
+    if (weeklyUnits > effectiveLimit * 1.5) {
       riskLevel = 'high';
-    } else if (weeklyUnits > HEALTH_GUIDELINES.maxWeeklyUnits) {
+    } else if (weeklyUnits > effectiveLimit) {
       riskLevel = 'moderate';
     }
 
+    // Recommendations
     const recommendations: string[] = [];
-    if (weeklyUnits > HEALTH_GUIDELINES.maxWeeklyUnits) {
-      recommendations.push('⚠️ Dépassement des recommandations de santé');
+    if (weeklyUnits > effectiveLimit) {
+      recommendations.push('⚠️ Au-delà de votre objectif');
+    } else {
+      recommendations.push('✅ Dans les limites');
     }
-    if (weeklyUnits <= HEALTH_GUIDELINES.maxWeeklyUnits) {
-      recommendations.push('✅ Consommation dans les limites recommandées');
+    
+    if (weeklyUnits <= effectiveLimit * 0.5) {
+      recommendations.push('✨ Consommation modérée');
     }
 
-    const weeklyGoalProgress = Math.min((weeklyUnits / HEALTH_GUIDELINES.maxWeeklyUnits) * 100, 100);
+    const weeklyGoalProgress = Math.min((weeklyUnits / effectiveLimit) * 100, 100);
+
+    // Calculate streak (consecutive days without drinking)
+    let streak = 0;
+    const today = new Date().toISOString().split('T')[0];
+    for (let i = 0; i <= 30; i++) {
+      const checkDate = new Date(now);
+      checkDate.setDate(checkDate.getDate() - i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+      const hasDrinks = logs.some(l => l.timestamp.split('T')[0] === dateStr);
+      if (!hasDrinks) {
+        streak++;
+      } else if (i > 0) {
+        break;
+      }
+    }
 
     return {
       totalWeeklyUnits: weeklyUnits,
@@ -171,12 +202,12 @@ export const alcoholService = {
       weeklyTrend,
       drinkTypeBreakdown,
       moodBreakdown,
-      contextBreakdown: {} as Record<string, number>,
+      contextBreakdown: {},
       patterns,
       riskLevel,
       recommendations,
       weeklyGoalProgress,
-      streak: 0,
+      streak,
     };
   },
 };

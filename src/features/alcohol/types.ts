@@ -24,20 +24,7 @@ export const MOOD_TYPES: Record<MoodType, { label: string; emoji: string }> = {
   neutral: { label: 'Neutre', emoji: '😐' },
 };
 
-// Context types
-export type ContextType = 'meal' | 'aperitif' | 'party' | 'evening' | 'outdoor' | 'dinner' | 'other';
-
-export const CONTEXT_TYPES: Record<ContextType, { label: string; emoji: string }> = {
-  meal: { label: 'Repas', emoji: '🍽️' },
-  aperitif: { label: 'Apéro', emoji: '🍸' },
-  party: { label: 'Fête', emoji: '🎉' },
-  evening: { label: 'Soirée', emoji: '🌙' },
-  outdoor: { label: 'Extérieur', emoji: '☀️' },
-  dinner: { label: 'Dîner', emoji: '🍷' },
-  other: { label: 'Autre', emoji: '🥤' },
-};
-
-// Health guidelines
+// Health guidelines (WHO recommendations)
 export const HEALTH_GUIDELINES = {
   maxWeeklyUnits: 14,
   maxDailyUnits: 4,
@@ -70,10 +57,19 @@ export interface AlcoholLog {
   servingSize: number;
   abv: number;
   units: number;
-  context?: ContextType;
   mood?: MoodType;
   timestamp: string;
   notes?: string;
+}
+
+// Goals
+export interface AlcoholGoal {
+  id: string;
+  userId: string;
+  weeklyLimit: number; // in units
+  reductionGoal?: number; // percentage to reduce
+  isActive: boolean;
+  createdAt: string;
 }
 
 // Insights
@@ -85,7 +81,7 @@ export interface AlcoholInsight {
   weeklyTrend: { week: string; units: number }[];
   drinkTypeBreakdown: Record<DrinkType, { count: number; units: number }>;
   moodBreakdown: Record<MoodType, number>;
-  contextBreakdown: Record<ContextType, number>;
+  contextBreakdown: Record<string, number>;
   patterns: string[];
   riskLevel: 'low' | 'moderate' | 'high';
   recommendations: string[];
