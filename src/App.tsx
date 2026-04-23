@@ -13,19 +13,51 @@ import BudgetPage from "./pages/Budget";
 import AlcoholPage from "./pages/Alcohol";
 import FamilyPage from "./pages/Family";
 import NotFound from "./pages/NotFound";
+import AppLayout from "./components/layout/AppLayout";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" /></div>;
-  if (!isAuthenticated) return <Navigate to="/auth" replace />;
-  return <FamilyProvider>{children}</FamilyProvider>;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div 
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent"
+        />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return (
+    <FamilyProvider>
+      <AppLayout>{children}</AppLayout>
+    </FamilyProvider>
+  );
 };
 
 const AppRoutes = () => {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="h-12 w-12 rounded-full border-4 border-primary border-t-transparent animate-spin" /></div>;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div 
+          animate={{ rotate: 360, scale: [1, 1.2, 1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary to-accent"
+        />
+      </div>
+    );
+  }
+
   return (
     <Routes>
       <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
@@ -39,6 +71,8 @@ const AppRoutes = () => {
     </Routes>
   );
 };
+
+import { motion } from "framer-motion";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

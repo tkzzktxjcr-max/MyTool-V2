@@ -1,15 +1,16 @@
 import * as React from "react";
+import { motion } from "framer-motion";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const badgeVariants = cva("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors", {
+const badgeVariants = cva("inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors", {
   variants: {
     variant: {
-      default: "border-transparent bg-primary text-primary-foreground",
-      secondary: "border-transparent bg-secondary text-secondary-foreground",
-      destructive: "border-transparent bg-destructive text-destructive-foreground",
-      outline: "text-foreground",
-      accent: "border-transparent bg-accent text-accent-foreground",
+      default: "bg-primary/20 text-primary border border-primary/30",
+      secondary: "bg-secondary/20 text-secondary border border-secondary/30",
+      destructive: "bg-destructive/20 text-destructive border border-destructive/30",
+      outline: "border border-white/10 text-foreground bg-white/5",
+      accent: "bg-accent/20 text-accent border border-accent/30",
     },
   },
   defaultVariants: { variant: "default" },
