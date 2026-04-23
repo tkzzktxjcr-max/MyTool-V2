@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Wine, X, Check, Activity, Target, Undo2, Flame, TrendingUp, Calendar, AlertTriangle, Scale, User, Info, RotateCcw } from 'lucide-react';
+import { Plus, X, Check, Activity, Target, Undo2, Flame, TrendingUp, Calendar, AlertTriangle, Scale, User, Info, RotateCcw, Settings, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, ReferenceLine, CartesianGrid } from 'recharts';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
@@ -36,12 +36,13 @@ const MoodSelector = ({ onSelect }: { onSelect: (mood: string) => void }) => (
 export default function AlcoholPage() {
   const { 
     drinks, allDrinks, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState,
-    loadData, resetDrinks, quickLog, deleteLog, undoDelete, createDrink, 
+    loadData, resetDrinks, quickLog, deleteLog, undoDelete, createDrink, customizeDrink,
     getTodayUnits, getWeeklyUnits, setWeeklyGoal, updateUserProfile 
   } = useAlcohol();
   
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [showDrinkCreator, setShowDrinkCreator] = useState(false);
+  const [showDrinkCustomizer, setShowDrinkCustomizer] = useState(false);
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<any>(null);
@@ -49,6 +50,9 @@ export default function AlcoholPage() {
   const [goalForm, setGoalForm] = useState({ weeklyLimit: 14 });
   const [profileForm, setProfileForm] = useState({ weightKg: 70, sex: 'unspecified' as 'male' | 'female' | 'unspecified' });
   const [newDrink, setNewDrink] = useState<CreateDrinkForm>({ name: 'Bière', type: 'beer', abv: 5, defaultServingSize: 33 });
+  const [customizingDrinkType, setCustomizingDrinkType] = useState<DrinkType | null>(null);
+  const [customizeForm, setCustomizeForm] = useState({ name: '', abv: 5, defaultServingSize: 33, emoji: '🍺' });
+  const [expandedDrink, setExpandedDrink] = useState<string | null>(null);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -81,6 +85,27 @@ export default function AlcoholPage() {
     setNewDrink({ name: DRINK_TYPES[newDrink.type]?.label || 'Boisson', type: newDrink.type, abv: DRINK_TYPES[newDrink.type]?.defaultAbv || 5, defaultServingSize: DRINK_TYPES[newDrink.type]?.label === 'Vin' ? 12 : DRINK_TYPES[newDrink.type]?.label === 'Spiritueux' ? 4 : 33 });
   };
 
+  const openCustomizer = (drinkType: DrinkType) => {
+    const existingDrink = drinks.find(d => d.type === drinkType);
+    const defaultData = DRINK_TYPES[drinkType];
+    
+    setCustomizingDrinkType(drinkType);
+    setCustomizeForm({
+      name: existingDrink?.name || defaultData?.label || 'Boisson',
+      abv: existingDrink?.abv || defaultData?.defaultAbv || 5,
+      defaultServingSize: existingDrink?.defaultServingSize || 33,
+      emoji: existingDrink?.emoji || defaultData?.icon || '🥤',
+    });
+    setShowDrinkCustomizer(true);
+  };
+
+  const handleCustomizeDrink = async () => {
+    if (!customizingDrinkType) return;
+    await customizeDrink(customizingDrinkType, customizeForm);
+    setShowDrinkCustomizer(false);
+    setCustomizingDrinkType(null);
+  };
+
   const handleSetGoal = async () => {
     await setWeeklyGoal(goalForm.weeklyLimit);
     setShowGoalSetter(false);
@@ -102,6 +127,13 @@ export default function AlcoholPage() {
     time: format(point.time, 'HH:mm'),
     bac: point.bac,
   }));
+
+  // Grouper les drinks par type
+  const drinksByType = drinks.reduce((acc, drink) => {
+    if (!acc[drink.type]) acc[drink.type] = [];
+    acc[drink.type].push(drink);
+    return acc;
+  }, {} as Record<DrinkType, typeof drinks>);
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -140,6 +172,7 @@ export default function AlcoholPage() {
         )}
       </AnimatePresence>
 
+      {/* BAC Card */}
       <Card className={cn("overflow-hidden", bacState.isAboveLimit && "ring-2 ring-destructive/50", bacState.isNearLimit && "ring-2 ring-accent/50")}>
         <CardContent className="p-6">
           <div className="text-center mb-4">
@@ -215,6 +248,7 @@ export default function AlcoholPage() {
         </CardContent>
       </Card>
 
+      {/* Weekly Progress Card */}
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
@@ -240,15 +274,19 @@ export default function AlcoholPage() {
         </CardContent>
       </Card>
 
+      {/* Customizable Drinks Card */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium text-sm">Ajouter une consommation</h3>
-            <Button variant="ghost" size="sm" onClick={handleResetDrinks}><RotateCcw className="w-4 h-4" /></Button>
+            <h3 className="font-medium text-sm">Mes boissons</h3>
+            <Button variant="ghost" size="sm" onClick={handleResetDrinks}>
+              <RotateCcw className="w-4 h-4 mr-1" />
+              Réinitialiser
+            </Button>
           </div>
           
           {recentlyUsed.length > 0 && (
-            <div className="mb-3">
+            <div className="mb-4">
               <p className="text-xs text-muted-foreground mb-2">Récents</p>
               <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
                 {recentlyUsed.map(drink => (
@@ -262,16 +300,64 @@ export default function AlcoholPage() {
             </div>
           )}
           
-          <div className="grid grid-cols-2 gap-2">
-            {allDrinks.slice(0, 6).map(drink => (
-              <motion.button key={drink.id} whileTap={{ scale: 0.95 }} onClick={() => handleQuickLog(drink)}
-                className="flex items-center gap-2 p-3 rounded-xl glass-card hover:bg-white/10 transition-colors text-left">
-                <span className="text-2xl">{drink.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{drink.name}</p>
-                  <p className="text-xs text-muted-foreground">{drink.defaultServingSize} cl · {drink.abv}%</p>
-                </div>
-              </motion.button>
+          <div className="space-y-2">
+            {Object.entries(drinksByType).map(([type, typeDrinks]) => (
+              <div key={type} className="rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setExpandedDrink(expandedDrink === type ? null : type)}
+                  className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{typeDrinks[0]?.emoji}</span>
+                    <div className="text-left">
+                      <p className="font-medium text-sm">{typeDrinks[0]?.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {typeDrinks[0]?.defaultServingSize} cl · {typeDrinks[0]?.abv}%
+                        {typeDrinks[0]?.userId && <span className="ml-2 text-secondary">✎</span>}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={(e) => { e.stopPropagation(); openCustomizer(type as DrinkType); }}
+                      className="text-xs"
+                    >
+                      <Settings className="w-3 h-3" />
+                    </Button>
+                    {expandedDrink === type ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </div>
+                </button>
+                
+                <AnimatePresence>
+                  {expandedDrink === type && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 border-t border-white/10 space-y-2">
+                        <p className="text-xs text-muted-foreground mb-2">Consommation rapide</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {typeDrinks.map(drink => (
+                            <motion.button
+                              key={drink.id}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => handleQuickLog(drink)}
+                              className="p-3 rounded-xl bg-white/5 hover:bg-secondary/20 text-center"
+                            >
+                              <p className="text-lg font-bold">{drink.defaultServingSize}</p>
+                              <p className="text-xs text-muted-foreground">cl</p>
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ))}
           </div>
 
@@ -289,6 +375,7 @@ export default function AlcoholPage() {
         </CardContent>
       </Card>
 
+      {/* Insights Card */}
       {insights && (
         <Card>
           <CardContent className="p-4">
@@ -324,12 +411,13 @@ export default function AlcoholPage() {
         </Card>
       )}
 
+      {/* History Card */}
       <Card>
         <CardContent className="p-4">
           <h3 className="font-medium text-sm mb-4">Historique</h3>
           {recentLogs.length === 0 ? (
             <div className="text-center py-8">
-              <Wine className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
+              <Activity className="w-8 h-8 mx-auto text-muted-foreground/30 mb-2" />
               <p className="text-sm text-muted-foreground">Aucun enregistrement</p>
             </div>
           ) : (
@@ -354,6 +442,7 @@ export default function AlcoholPage() {
         </CardContent>
       </Card>
 
+      {/* Create Drink Dialog */}
       <Dialog open={showDrinkCreator} onOpenChange={setShowDrinkCreator}>
         <DialogContent className="mx-4">
           <DialogHeader><DialogTitle>Créer une consommation</DialogTitle></DialogHeader>
@@ -388,6 +477,59 @@ export default function AlcoholPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Customize Drink Dialog */}
+      <Dialog open={showDrinkCustomizer} onOpenChange={setShowDrinkCustomizer}>
+        <DialogContent className="mx-4">
+          <DialogHeader><DialogTitle>Personnaliser "{DRINK_TYPES[customizingDrinkType!]?.label}"</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nom personnalisé</label>
+              <Input placeholder="Ma bière du Friday" value={customizeForm.name} onChange={(e) => setCustomizeForm(prev => ({ ...prev, name: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Volume (cl)</label>
+                <Select value={String(customizeForm.defaultServingSize)} onValueChange={(v) => setCustomizeForm(prev => ({ ...prev, defaultServingSize: parseInt(v) }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[20, 25, 33, 40, 50, 75, 100].map(size => (
+                      <SelectItem key={size} value={String(size)}>{size} cl</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Degré (%)</label>
+                <Select value={String(customizeForm.abv)} onValueChange={(v) => setCustomizeForm(prev => ({ ...prev, abv: parseFloat(v) }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {[3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20, 40].map(abv => (
+                      <SelectItem key={abv} value={String(abv)}>{abv}%</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Émoji</label>
+              <div className="flex gap-2 flex-wrap">
+                {['🍺', '🍻', '🍷', '🥃', '🍹', '🍾', '🥂', '🍸', '🧃', '🥤'].map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => setCustomizeForm(prev => ({ ...prev, emoji }))}
+                    className={cn("w-10 h-10 rounded-lg text-xl flex items-center justify-center", customizeForm.emoji === emoji ? "bg-secondary/30 ring-2 ring-secondary" : "bg-white/10 hover:bg-white/20")}
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button onClick={handleCustomizeDrink} className="w-full">Enregistrer</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Goal Setter Dialog */}
       <Dialog open={showGoalSetter} onOpenChange={setShowGoalSetter}>
         <DialogContent className="mx-4">
           <DialogHeader><DialogTitle>Objectif hebdomadaire</DialogTitle></DialogHeader>
@@ -399,17 +541,18 @@ export default function AlcoholPage() {
                 <SelectContent>
                   <SelectItem value="7">7 (strict)</SelectItem>
                   <SelectItem value="10">10 (modéré)</SelectItem>
-                  <SelectItem value="14">14 (recommandé)</SelectItem>
+                  <SelectItem value="14">14 (recommandé OMS)</SelectItem>
                   <SelectItem value="21">21 (souple)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-muted-foreground">L'OMS recommande maximum 14 unités par semaine.</p>
+            <p className="text-xs text-muted-foreground">L'OMS recommande maximum 14 unités par semaine pour les hommes, 7 pour les femmes.</p>
             <Button onClick={handleSetGoal} className="w-full">Enregistrer</Button>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Profile Editor Dialog */}
       <Dialog open={showProfileEditor} onOpenChange={setShowProfileEditor}>
         <DialogContent className="mx-4">
           <DialogHeader><DialogTitle>Paramètres</DialogTitle></DialogHeader>
@@ -419,13 +562,13 @@ export default function AlcoholPage() {
               <Input type="number" min="30" max="200" value={profileForm.weightKg} onChange={(e) => setProfileForm(prev => ({ ...prev, weightKg: parseInt(e.target.value) }))} />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Sexe (pour estimation)</label>
+              <label className="text-sm font-medium">Sexe (pour estimation BAC)</label>
               <Select value={profileForm.sex} onValueChange={(v) => setProfileForm(prev => ({ ...prev, sex: v as 'male' | 'female' | 'unspecified' }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unspecified">Non spécifié</SelectItem>
-                  <SelectItem value="male">Homme</SelectItem>
-                  <SelectItem value="female">Femme</SelectItem>
+                  <SelectItem value="male">Homme (r=0.68)</SelectItem>
+                  <SelectItem value="female">Femme (r=0.55)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

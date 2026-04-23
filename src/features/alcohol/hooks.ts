@@ -6,11 +6,11 @@ import { goalsService } from './services/goals.service';
 import { profileService } from './services/profile.service';
 import type { UserProfile } from './services/profile.service';
 import type { AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
-import { HEALTH_GUIDELINES } from './types';
 import {
   getBACAnalysis,
   checkLegalLimit,
   type SexType,
+  type DrinkData,
 } from './utils/bac';
 
 export { type Drink };
@@ -29,18 +29,23 @@ export const useAlcohol = () => {
     if (!user?.$id) return;
     setLoading(true);
     try {
-      const drinksData = await drinksService.ensureUserHasDrinks(user.$id);
+      // Charger les drinks avec les préférences utilisateur
+      const drinksData = await drinksService.getDrinksWithPreferences(user.$id);
       setDrinks(drinksData);
       
+      // Charger les logs
       const logsData = await alcoholService.getLogs(user.$id);
       setLogs(logsData);
       
+      // Charger le goal
       const goalData = await goalsService.getGoal(user.$id);
       setGoal(goalData);
       
+      // Charger le profile utilisateur
       const profileData = await profileService.getProfile(user.$id);
       setUserProfile(profileData);
       
+      // Calculer les recently used
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
@@ -66,6 +71,9 @@ export const useAlcohol = () => {
     setDrinks(newDrinks);
   }, [user?.$id]);
 
+  /**
+   * Créer un nouveau drink personnalisé
+   */
   const createDrink = useCallback(async (form: CreateDrinkForm, emoji?: string) => {
     if (!user?.$id) throw new Error('Not authenticated');
     const drink = await drinksService.createDrink({
@@ -76,10 +84,36 @@ export const useAlcohol = () => {
       emoji: emoji || '🥤',
       userId: user.$id,
     });
-    setDrinks(prev => [drink, ...prev]);
+    setDrinks(prev => [...prev, drink]);
     return drink;
   }, [user?.$id]);
 
+  /**
+   * Personnaliser un drink existant (modifier taille, degré, etc.)
+   */
+  const customizeDrink = useCallback(async (
+    drinkType: DrinkType,
+    data: {
+      name: string;
+      abv: number;
+      defaultServingSize: number;
+      emoji: string;
+    }
+  ) => {
+    if (!user?.$id) throw new Error('Not authenticated');
+    const drink = await drinksService.setUserDrinkPreference(user.$id, {
+      type: drinkType,
+      ...data,
+    });
+    // Recharger tous les drinks pour avoir la vue fusionnée
+    const allDrinks = await drinksService.getDrinksWithPreferences(user.$id);
+    setDrinks(allDrinks);
+    return drink;
+  }, [user?.$id]);
+
+  /**
+   * Ajouter une consommation rapide
+   */
   const quickLog = useCallback(async (drink: Drink, mood?: MoodType) => {
     if (!user?.$id) throw new Error('Not authenticated');
     const log = await alcoholService.createLog(user.$id, {
@@ -148,8 +182,8 @@ export const useAlcohol = () => {
     const legalLimit = userProfile?.legalLimit || 0.5;
     
     // Convert logs to drink data format (servingSize is in cl from DB)
-    const drinksData = logs.map(log => ({
-      volumeCl: log.servingSize, // Already in cl
+    const drinksData: DrinkData[] = logs.map(log => ({
+      volumeCl: log.servingSize,
       abv: log.abv,
       timestamp: log.timestamp,
     }));
@@ -202,6 +236,7 @@ export const useAlcohol = () => {
     loadData,
     resetDrinks,
     createDrink,
+    customizeDrink,
     quickLog,
     deleteLog,
     undoDelete,
