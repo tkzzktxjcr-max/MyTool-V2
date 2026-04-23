@@ -7,98 +7,13 @@ import { profileService } from './services/profile.service';
 import type { UserProfile } from './services/profile.service';
 import type { AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { HEALTH_GUIDELINES } from './types';
+import {
+  getBACAnalysis,
+  checkLegalLimit,
+  type SexType,
+} from './utils/bac';
 
 export { type Drink };
-
-interface BACDataPoint {
-  time: Date;
-  bac: number;
-  isPast: boolean;
-}
-
-interface BACState {
-  currentBAC: number;
-  peakBAC: number;
-  peakTime: Date;
-  zeroTime: Date;
-  timeline: BACDataPoint[];
-  isAboveLimit: boolean;
-  isNearLimit: boolean;
-}
-
-const DEFAULT_USER_PROFILE = {
-  id: '',
-  userId: '',
-  weightKg: 70,
-  sex: 'unspecified' as const,
-  legalLimit: 0.5,
-  updatedAt: '',
-};
-
-const BODY_WATER_MALE = 0.58;
-const BODY_WATER_FEMALE = 0.49;
-const ALCOHOL_DENSITY = 0.789;
-const METABOLISM_RATE = 0.15;
-
-const calculateDrinkBAC = (
-  volumeMl: number,
-  abv: number,
-  weightKg: number,
-  sex: 'male' | 'female' | 'unspecified',
-  hoursAgo: number
-): number => {
-  const alcoholGrams = (volumeMl * abv / 100) * ALCOHOL_DENSITY;
-  const bodyWater = sex === 'female' ? BODY_WATER_FEMALE : 
-                    sex === 'male' ? BODY_WATER_MALE : 0.68;
-  const peakBAC = alcoholGrams / (weightKg * bodyWater);
-  return Math.max(0, peakBAC - (METABOLISM_RATE * hoursAgo));
-};
-
-const calculateCurrentBAC = (
-  drinks: { servingSize: number; abv: number; timestamp: string }[],
-  weightKg: number,
-  sex: 'male' | 'female' | 'unspecified'
-): number => {
-  const now = Date.now();
-  return drinks.reduce((total, drink) => {
-    const hoursAgo = (now - new Date(drink.timestamp).getTime()) / (1000 * 60 * 60);
-    if (hoursAgo < 0 || hoursAgo > 24) return total;
-    return total + calculateDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursAgo);
-  }, 0);
-};
-
-const calculatePeakInfo = (
-  drinks: { servingSize: number; abv: number; timestamp: string }[],
-  weightKg: number,
-  sex: 'male' | 'female' | 'unspecified'
-): { peakTime: Date; peakBAC: number } => {
-  if (drinks.length === 0) return { peakTime: new Date(), peakBAC: 0 };
-  
-  let lastDrinkTime = new Date(0);
-  drinks.forEach(drink => {
-    const drinkTime = new Date(drink.timestamp);
-    if (drinkTime > lastDrinkTime) lastDrinkTime = drinkTime;
-  });
-  
-  const peakTime = new Date(lastDrinkTime.getTime() + 45 * 60 * 1000);
-  
-  let peakBAC = 0;
-  drinks.forEach(drink => {
-    const drinkTime = new Date(drink.timestamp);
-    const hoursToPeak = (peakTime.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
-    if (hoursToPeak >= 0) {
-      peakBAC += calculateDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursToPeak);
-    }
-  });
-  
-  return { peakTime, peakBAC };
-};
-
-const calculateZeroTime = (peakBAC: number, peakTime: Date): Date => {
-  if (peakBAC <= 0) return new Date();
-  const hoursToZero = peakBAC / METABOLISM_RATE;
-  return new Date(peakTime.getTime() + hoursToZero * 60 * 60 * 1000);
-};
 
 export const useAlcohol = () => {
   const { user } = useAuth();
@@ -226,56 +141,31 @@ export const useAlcohol = () => {
     return updatedProfile;
   }, [user?.$id]);
 
-  const getBACState = useMemo((): BACState => {
+  // Calculate BAC state using centralized utility
+  const bacState = useMemo(() => {
     const weightKg = userProfile?.weightKg || 70;
-    const sex = userProfile?.sex || 'unspecified';
+    const sex: SexType = userProfile?.sex || 'unspecified';
     const legalLimit = userProfile?.legalLimit || 0.5;
     
-    const now = Date.now();
-    const activeDrinks = logs
-      .filter(log => {
-        const hoursAgo = (now - new Date(log.timestamp).getTime()) / (1000 * 60 * 60);
-        return hoursAgo < 24;
-      })
-      .map(log => ({
-        servingSize: log.servingSize,
-        abv: log.abv,
-        timestamp: log.timestamp,
-      }));
+    // Convert logs to drink data format (servingSize is in cl from DB)
+    const drinksData = logs.map(log => ({
+      volumeCl: log.servingSize, // Already in cl
+      abv: log.abv,
+      timestamp: log.timestamp,
+    }));
     
-    const currentBAC = calculateCurrentBAC(activeDrinks, weightKg, sex);
-    const { peakTime, peakBAC } = calculatePeakInfo(activeDrinks, weightKg, sex);
-    const zeroTime = calculateZeroTime(peakBAC, peakTime);
-    
-    const timeline: BACDataPoint[] = [];
-    const nowDate = new Date();
-    const startTime = new Date(nowDate.getTime() - 4 * 60 * 60 * 1000);
-    
-    for (let time = startTime.getTime(); time <= nowDate.getTime() + 12 * 60 * 60 * 1000; time += 15 * 60 * 1000) {
-      const currentDate = new Date(time);
-      let totalBAC = 0;
-      activeDrinks.forEach(drink => {
-        const drinkTime = new Date(drink.timestamp);
-        const hoursAgo = (currentDate.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
-        if (hoursAgo >= 0) {
-          totalBAC += calculateDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursAgo);
-        }
-      });
-      timeline.push({
-        time: currentDate,
-        bac: Math.round(totalBAC * 100) / 100,
-        isPast: time < nowDate.getTime(),
-      });
-    }
+    const userProfileForBAC = { weightKg, sex };
+    const analysis = getBACAnalysis(drinksData, userProfileForBAC);
+    const { isAbove, isNear } = checkLegalLimit(analysis.currentBAC, legalLimit);
     
     return {
-      currentBAC,
-      peakBAC,
-      peakTime,
-      zeroTime,
-      timeline,
-      isAboveLimit: currentBAC > legalLimit,
-      isNearLimit: currentBAC > legalLimit * 0.8 && currentBAC <= legalLimit,
+      currentBAC: analysis.currentBAC,
+      peakBAC: analysis.peakBAC,
+      peakTime: analysis.peakTime,
+      zeroTime: analysis.zeroTime,
+      timeline: analysis.timeline,
+      isAboveLimit: isAbove,
+      isNearLimit: isNear,
     };
   }, [logs, userProfile]);
 
@@ -308,7 +198,7 @@ export const useAlcohol = () => {
     loading,
     insights,
     lastDeletedLog,
-    bacState: getBACState,
+    bacState,
     loadData,
     resetDrinks,
     createDrink,
