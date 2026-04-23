@@ -14,7 +14,7 @@ export const COLLECTIONS = {
   CHORES: import.meta.env.VITE_COLLECTION_CHORES || 'chores',
   BUDGET_ENTRIES: import.meta.env.VITE_COLLECTION_BUDGET_ENTRIES || 'budget_entries',
   ALCOHOL_LOGS: import.meta.env.VITE_COLLECTION_ALCOHOL_LOGS || 'alcohol_logs',
-  CUSTOM_DRINKS: import.meta.env.VITE_COLLECTION_CUSTOM_DRINKS || 'custom_drinks',
+  DRINKS: import.meta.env.VITE_COLLECTION_DRINKS || 'drinks',
 };
 
 const client = new Client()

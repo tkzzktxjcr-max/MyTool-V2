@@ -1,58 +1,8 @@
-import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
-import type { CustomDrink, AlcoholLog, CreateDrinkForm, DrinkType, MoodType, ContextType, AlcoholInsight } from './types';
+import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, deleteDocument, Query } from '@/lib/appwrite';
+import type { AlcoholLog, DrinkType, MoodType, ContextType, AlcoholInsight } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
 
 export const alcoholService = {
-  async getCustomDrinks(userId: string): Promise<CustomDrink[]> {
-    const response = await listDocuments(COLLECTIONS.CUSTOM_DRINKS, [
-      Query.equal('userId', userId),
-    ]);
-    
-    return response.documents.map((doc: any) => ({
-      id: doc.$id,
-      userId: doc.userId,
-      name: doc.name,
-      type: doc.type as DrinkType,
-      abv: doc.abv,
-      defaultServingSize: doc.defaultServingSize,
-      emoji: doc.emoji,
-      isFavorite: doc.isFavorite || false,
-      usageCount: doc.usageCount || 0,
-      createdAt: doc.$createdAt,
-    }));
-  },
-
-  async createCustomDrink(userId: string, form: CreateDrinkForm, emoji?: string): Promise<CustomDrink> {
-    const doc: any = await createDocument(COLLECTIONS.CUSTOM_DRINKS, {
-      userId,
-      name: form.name,
-      type: form.type,
-      abv: form.abv,
-      defaultServingSize: form.defaultServingSize,
-      emoji: emoji || DRINK_TYPES[form.type].icon,
-      isFavorite: false,
-      usageCount: 0,
-      createdAt: new Date().toISOString(),
-    });
-    
-    return {
-      id: doc.$id,
-      userId: doc.userId,
-      name: doc.name,
-      type: doc.type as DrinkType,
-      abv: doc.abv,
-      defaultServingSize: doc.defaultServingSize,
-      emoji: doc.emoji,
-      isFavorite: doc.isFavorite || false,
-      usageCount: doc.usageCount || 0,
-      createdAt: doc.$createdAt,
-    };
-  },
-
-  async deleteCustomDrink(drinkId: string): Promise<void> {
-    await deleteDocument(COLLECTIONS.CUSTOM_DRINKS, drinkId);
-  },
-
   async getLogs(userId: string): Promise<AlcoholLog[]> {
     const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
       Query.equal('userId', userId),
@@ -64,7 +14,7 @@ export const alcoholService = {
       drinkName: DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
       drinkEmoji: DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
       drinkType: doc.drinkType as DrinkType,
-      quantity: doc.quantity,
+      quantity: 1,
       servingSize: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,
@@ -79,7 +29,6 @@ export const alcoholService = {
     userId: string,
     data: {
       drinkType: DrinkType;
-      quantity: number;
       servingSize: number;
       abv: number;
       mood?: MoodType;
@@ -87,7 +36,7 @@ export const alcoholService = {
       notes?: string;
     }
   ): Promise<AlcoholLog> {
-    const units = (data.quantity * data.servingSize * data.abv) / 10;
+    const units = (data.servingSize * data.abv) / 10;
     
     const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
       userId,
@@ -96,7 +45,6 @@ export const alcoholService = {
       volumeCl: data.servingSize,
       abv: data.abv,
       units,
-      quantity: data.quantity,
       context: data.context || null,
       mood: data.mood || null,
       notes: data.notes || null,
@@ -108,7 +56,7 @@ export const alcoholService = {
       drinkName: DRINK_TYPES[data.drinkType]?.label || data.drinkType,
       drinkEmoji: DRINK_TYPES[data.drinkType]?.icon || '🥤',
       drinkType: doc.drinkType as DrinkType,
-      quantity: doc.quantity,
+      quantity: 1,
       servingSize: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,

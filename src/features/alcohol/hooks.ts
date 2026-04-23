@@ -1,48 +1,28 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
 import { alcoholService } from './service';
-import type { CustomDrink, AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight } from './types';
-import { DRINK_TYPES } from './types';
+import { drinksService, type Drink } from './services/drinks.service';
+import type { AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight } from './types';
+
+export { type Drink } from './services/drinks.service';
 
 export const useAlcohol = () => {
   const { user } = useAuth();
-  const [customDrinks, setCustomDrinks] = useState<CustomDrink[]>([]);
+  const [drinks, setDrinks] = useState<Drink[]>([]);
   const [logs, setLogs] = useState<AlcoholLog[]>([]);
   const [loading, setLoading] = useState(false);
-  const [recentlyUsed, setRecentlyUsed] = useState<CustomDrink[]>([]);
+  const [recentlyUsed, setRecentlyUsed] = useState<Drink[]>([]);
 
-  // Default drinks (preset)
-  const defaultDrinks = useMemo(() => {
-    return Object.entries(DRINK_TYPES).map(([type, data]) => ({
-      id: `default-${type}`,
-      userId: '',
-      name: data.label,
-      type: type as DrinkType,
-      abv: data.defaultAbv,
-      defaultServingSize: 50,
-      emoji: data.icon,
-      isFavorite: false,
-      usageCount: 0,
-      createdAt: '',
-    }));
-  }, []);
-
-  // Combine custom drinks with defaults
-  const allDrinks = useMemo(() => {
-    const combined = [...customDrinks, ...defaultDrinks];
-    return combined.sort((a, b) => b.usageCount - a.usageCount);
-  }, [customDrinks, defaultDrinks]);
-
-  // Load data
   const loadData = useCallback(async () => {
     if (!user?.$id) return;
     setLoading(true);
     try {
-      const [drinksData, logsData] = await Promise.all([
-        alcoholService.getCustomDrinks(user.$id),
-        alcoholService.getLogs(user.$id),
-      ]);
-      setCustomDrinks(drinksData);
+      // Load drinks from database
+      const drinksData = await drinksService.ensureUserHasDrinks(user.$id);
+      setDrinks(drinksData);
+      
+      // Load logs from database
+      const logsData = await alcoholService.getLogs(user.$id);
       setLogs(logsData);
       
       // Get recently used (last 7 days)
@@ -51,8 +31,8 @@ export const useAlcohol = () => {
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
       
       const uniqueRecent = recentLogs
-        .map(l => drinksData.find(d => d.id === `default-${l.drinkType}` || d.name === l.drinkName))
-        .filter(Boolean) as CustomDrink[];
+        .map(l => drinksData.find(d => d.type === l.drinkType))
+        .filter(Boolean) as Drink[];
       
       const seen = new Set();
       setRecentlyUsed(uniqueRecent.filter(d => {
@@ -67,18 +47,21 @@ export const useAlcohol = () => {
     }
   }, [user?.$id]);
 
-  // Create custom drink
-  const createDrink = useCallback(async (form: CreateDrinkForm, emoji?: string) => {
-    if (!user?.$id) throw new Error('Not authenticated');
-    const drink = await alcoholService.createCustomDrink(user.$id, form, emoji);
-    setCustomDrinks(prev => [drink, ...prev]);
+  const createDrink = useCallback(async (form: CreateDrinkForm, emoji?: string, userId?: string) => {
+    const drink = await drinksService.createDrink({
+      name: form.name,
+      type: form.type,
+      abv: form.abv,
+      defaultServingSize: form.defaultServingSize,
+      emoji: emoji || '🥤',
+      userId,
+    });
+    setDrinks(prev => [drink, ...prev]);
     return drink;
-  }, [user?.$id]);
+  }, []);
 
-  // Quick log (one-tap)
   const quickLog = useCallback(async (
-    drink: CustomDrink,
-    quantity = 1,
+    drink: Drink,
     mood?: MoodType,
     context?: string
   ) => {
@@ -86,36 +69,33 @@ export const useAlcohol = () => {
     
     const log = await alcoholService.createLog(user.$id, {
       drinkType: drink.type,
-      quantity,
       servingSize: drink.defaultServingSize,
       abv: drink.abv,
       mood,
       context: context as any,
     });
     
-    setLogs(prev => [log, ...prev]);
+    // Increment usage count
+    await drinksService.incrementUsage(drink.id);
     
+    setLogs(prev => [log, ...prev]);
     return log;
   }, [user?.$id]);
 
-  // Delete log
   const deleteLog = useCallback(async (logId: string) => {
     await alcoholService.deleteLog(logId);
     setLogs(prev => prev.filter(l => l.id !== logId));
   }, []);
 
-  // Delete custom drink
   const deleteDrink = useCallback(async (drinkId: string) => {
-    await alcoholService.deleteCustomDrink(drinkId);
-    setCustomDrinks(prev => prev.filter(d => d.id !== drinkId));
+    await drinksService.deleteDrink(drinkId);
+    setDrinks(prev => prev.filter(d => d.id !== drinkId));
   }, []);
 
-  // Insights
   const insights = useMemo((): AlcoholInsight | null => {
     return alcoholService.calculateInsights(logs);
   }, [logs]);
 
-  // Today's units
   const getTodayUnits = useCallback((): number => {
     const today = new Date().toISOString().split('T')[0];
     return logs
@@ -124,9 +104,8 @@ export const useAlcohol = () => {
   }, [logs]);
 
   return {
-    customDrinks,
-    allDrinks,
-    defaultDrinks,
+    drinks,
+    allDrinks: drinks,
     recentlyUsed,
     logs,
     loading,

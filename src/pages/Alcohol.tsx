@@ -9,12 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Wine, X, Check, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO, isToday } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { CreateDrinkForm } from '@/features/alcohol/types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType } from '@/features/alcohol/types';
+import { useAuth } from '@/features/auth/context';
 
 const MOOD_EMOJIS: Record<string, string> = {
   happy: '😊', relaxed: '😌', social: '🥂', celebrating: '🎉',
@@ -40,7 +41,8 @@ const MoodSelector = ({ onSelect }: { onSelect: (mood: string) => void }) => (
 );
 
 export default function AlcoholPage() {
-  const { allDrinks, recentlyUsed, logs, insights, loadData, quickLog, deleteLog, createDrink, getTodayUnits } = useAlcohol();
+  const { user } = useAuth();
+  const { drinks, allDrinks, recentlyUsed, logs, insights, loadData, quickLog, deleteLog, createDrink, getTodayUnits } = useAlcohol();
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [showDrinkCreator, setShowDrinkCreator] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<any>(null);
@@ -55,13 +57,13 @@ export default function AlcoholPage() {
   const handleQuickLog = (drink: any) => { setSelectedDrink(drink); setShowMoodSelector(true); };
   const confirmLog = async (mood?: string) => {
     if (!selectedDrink) return;
-    await quickLog(selectedDrink, 1, mood as any);
+    await quickLog(selectedDrink, mood as any);
     setShowMoodSelector(false); setSelectedDrink(null); setShowLogSuccess(true);
     setTimeout(() => setShowLogSuccess(false), 1500);
   };
   const handleCreateDrink = async () => {
-    if (!newDrink.name) return;
-    await createDrink(newDrink, DRINK_TYPES[newDrink.type]?.icon);
+    if (!newDrink.name || !user?.$id) return;
+    await createDrink(newDrink, DRINK_TYPES[newDrink.type]?.icon, user.$id);
     setShowDrinkCreator(false);
     setNewDrink({ name: '', type: 'beer', abv: 5, defaultServingSize: 50 });
   };
