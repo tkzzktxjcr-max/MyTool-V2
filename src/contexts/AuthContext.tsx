@@ -30,38 +30,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkUser = useCallback(async () => {
-    try {
-      const appwriteUser = await account.get();
-      setUser({
-        $id: appwriteUser.$id,
-        email: appwriteUser.email,
-        name: appwriteUser.name,
-      });
-      
-      // Récupérer le profil depuis la collection
-      await refreshProfile();
-    } catch (error) {
-      setUser(null);
-      setProfile(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const refreshProfile = useCallback(async () => {
-    if (!user?.$id) return;
+    console.log('[DEBUG] refreshProfile called, user:', user?.$id);
+    
+    if (!user?.$id) {
+      console.log('[DEBUG] No user ID, skipping profile refresh');
+      return;
+    }
     
     try {
-      // Use proper server-side query with Query.equal()
+      console.log('[DEBUG] Querying for profile with userId:', user.$id);
+      
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId,
         COLLECTIONS.USERS_PROFILE,
         [Query.equal('userId', user.$id)]
       );
       
+      console.log('[DEBUG] Query response:', response.documents.length, 'documents');
+      
       if (response.documents.length > 0) {
         const doc = response.documents[0];
+        console.log('[DEBUG] Profile found:', doc.$id);
         setProfile({
           id: doc.$id,
           userId: doc.userId,
@@ -71,39 +61,90 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           avatar: doc.avatar,
           createdAt: doc.$createdAt,
         });
+      } else {
+        console.log('[DEBUG] No profile found, creating one...');
+        try {
+          const newProfile = await databases.createDocument(
+            APPWRITE_CONFIG.databaseId,
+            COLLECTIONS.USERS_PROFILE,
+            ID.unique(),
+            {
+              userId: user.$id,
+              email: user.email,
+              name: user.name,
+              createdAt: new Date().toISOString(),
+            }
+          );
+          console.log('[DEBUG] Profile created successfully:', newProfile.$id);
+          setProfile({
+            id: newProfile.$id,
+            userId: newProfile.userId,
+            email: newProfile.email,
+            name: newProfile.name,
+            createdAt: newProfile.$createdAt,
+          });
+        } catch (createError: any) {
+          console.error('[DEBUG] Error creating profile:', createError?.message || createError);
+        }
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('[DEBUG] Error in refreshProfile:', error);
     }
-  }, [user?.$id]);
+  }, [user?.$id, user?.email, user?.name]);
+
+  const checkUser = useCallback(async () => {
+    console.log('[DEBUG] checkUser called');
+    try {
+      const appwriteUser = await account.get();
+      console.log('[DEBUG] Got user:', appwriteUser.$id, appwriteUser.email);
+      
+      setUser({
+        $id: appwriteUser.$id,
+        email: appwriteUser.email,
+        name: appwriteUser.name,
+      });
+      
+      await refreshProfile();
+    } catch (error) {
+      console.log('[DEBUG] No user logged in');
+      setUser(null);
+      setProfile(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [refreshProfile]);
 
   useEffect(() => {
     checkUser();
   }, [checkUser]);
 
   const login = async (email: string, password: string) => {
+    console.log('[DEBUG] Login called with:', email);
     try {
+      console.log('[DEBUG] Creating session...');
       await account.createEmailPasswordSession(email, password);
+      console.log('[DEBUG] Session created, checking user...');
       await checkUser();
-    } catch (error) {
-      console.error('Login error:', error);
+      console.log('[DEBUG] Login complete, user:', user?.$id, 'profile:', profile?.id);
+    } catch (error: any) {
+      console.error('[DEBUG] Login error:', error?.message || error);
       throw error;
     }
   };
 
   const register = async (email: string, password: string, name: string) => {
+    console.log('[DEBUG] Register called');
     try {
-      // Créer l'utilisateur dans Appwrite Auth
+      console.log('[DEBUG] Creating account...');
       await account.create(ID.unique(), email, password, name);
-      
-      // Créer une session
+      console.log('[DEBUG] Account created, creating session...');
       await account.createEmailPasswordSession(email, password);
       
-      // Récupérer l'utilisateur créé
       const appwriteUser = await account.get();
+      console.log('[DEBUG] Got user after register:', appwriteUser.$id);
       
-      // Créer le profil utilisateur dans la collection
-      await databases.createDocument(
+      console.log('[DEBUG] Creating profile...');
+      const newProfile = await databases.createDocument(
         APPWRITE_CONFIG.databaseId,
         COLLECTIONS.USERS_PROFILE,
         ID.unique(),
@@ -114,10 +155,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           createdAt: new Date().toISOString(),
         }
       );
+      console.log('[DEBUG] Profile created:', newProfile.$id);
       
-      await checkUser();
-    } catch (error) {
-      console.error('Register error:', error);
+      setUser({
+        $id: appwriteUser.$id,
+        email: appwriteUser.email,
+        name: appwriteUser.name,
+      });
+      
+      setProfile({
+        id: newProfile.$id,
+        userId: newProfile.userId,
+        email: newProfile.email,
+        name: newProfile.name,
+        createdAt: newProfile.$createdAt,
+      });
+    } catch (error: any) {
+      console.error('[DEBUG] Register error:', error?.message || error);
       throw error;
     }
   };
