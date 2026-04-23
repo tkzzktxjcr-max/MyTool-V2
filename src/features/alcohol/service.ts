@@ -2,6 +2,13 @@ import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments,
 import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
 
+// Calculate units: (volume_ml * abv% * alcohol_density) / grams_per_unit
+// 1 unit = 10g of pure alcohol
+// alcohol_density ≈ 0.789 g/ml
+const calculateUnits = (volumeCl: number, abv: number): number => {
+  return (volumeCl * abv / 100 * 0.789) / 10;
+};
+
 export const alcoholService = {
   async getLogs(userId: string): Promise<AlcoholLog[]> {
     const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
@@ -34,7 +41,7 @@ export const alcoholService = {
       notes?: string;
     }
   ): Promise<AlcoholLog> {
-    const units = (data.servingSize * data.abv) / 10;
+    const units = calculateUnits(data.servingSize, data.abv);
     
     const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
       userId,
@@ -121,7 +128,6 @@ export const alcoholService = {
 
     const patterns: string[] = [];
     
-    // Weekend vs weekday pattern
     const weekendUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day === 0 || day === 6;
@@ -141,14 +147,12 @@ export const alcoholService = {
       patterns.push('🍺 +50% le week-end');
     }
     
-    // Favorite drink pattern
     const typeEntries = Object.entries(drinkTypeBreakdown).sort((a, b) => b[1].units - a[1].units);
     if (typeEntries[0] && typeEntries[0][1].units > 0) {
       const typeName = DRINK_TYPES[typeEntries[0][0] as DrinkType]?.label || typeEntries[0][0];
       patterns.push(`🍷 ${typeName} favorit${typeEntries[0][0] === 'wine' ? 'e' : ''}`);
     }
 
-    // Mood correlation
     if (Object.keys(moodBreakdown).length > 0) {
       const topMood = Object.entries(moodBreakdown).sort((a, b) => b[1] - a[1])[0];
       if (topMood) {
@@ -156,7 +160,6 @@ export const alcoholService = {
       }
     }
 
-    // Calculate risk level
     const effectiveLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
     if (weeklyUnits > effectiveLimit * 1.5) {
@@ -165,7 +168,6 @@ export const alcoholService = {
       riskLevel = 'moderate';
     }
 
-    // Recommendations
     const recommendations: string[] = [];
     if (weeklyUnits > effectiveLimit) {
       recommendations.push('⚠️ Au-delà de votre objectif');
@@ -179,7 +181,6 @@ export const alcoholService = {
 
     const weeklyGoalProgress = Math.min((weeklyUnits / effectiveLimit) * 100, 100);
 
-    // Calculate streak (consecutive days without drinking)
     let streak = 0;
     const today = new Date().toISOString().split('T')[0];
     for (let i = 0; i <= 30; i++) {

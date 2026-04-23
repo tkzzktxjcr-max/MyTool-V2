@@ -9,6 +9,8 @@ import { HEALTH_GUIDELINES } from './types';
 import type { Drink } from './services/drinks.service';
 import type { UserProfile } from './services/profile.service';
 
+export { type Drink };
+
 interface BACDataPoint {
   time: Date;
   bac: number;
@@ -26,37 +28,57 @@ interface BACState {
 }
 
 const DEFAULT_USER_PROFILE: UserProfile = {
+  id: '',
+  userId: '',
   weightKg: 70,
   sex: 'unspecified',
+  legalLimit: 0.05,
+  updatedAt: '',
 };
 
-const calculateAlcoholGrams = (servingSizeMl: number, abv: number): number => {
-  return (servingSizeMl * abv / 100) * 0.789;
+// Constants for BAC calculation
+const BODY_WATER_MALE = 0.58;
+const BODY_WATER_FEMALE = 0.49;
+const ALCOHOL_DENSITY = 0.789;
+const METABOLISM_RATE = 0.015; // % per hour
+
+// Calculate alcohol in grams from volume and ABV
+const calculateAlcoholGrams = (volumeMl: number, abv: number): number => {
+  return (volumeMl * abv / 100) * ALCOHOL_DENSITY;
 };
 
+// Calculate BAC for a single drink at a given time after consumption
+const calculateSingleDrinkBAC = (
+  volumeMl: number,
+  abv: number,
+  weightKg: number,
+  sex: 'male' | 'female' | 'unspecified',
+  hoursSinceDrink: number
+): number => {
+  const alcoholGrams = calculateAlcoholGrams(volumeMl, abv);
+  const bodyWater = sex === 'female' ? BODY_WATER_FEMALE : 
+                    sex === 'male' ? BODY_WATER_MALE : 0.68;
+  
+  // BAC = (alcohol_grams / (weight_kg * body_water_ratio)) * 10
+  const peakBAC = (alcoholGrams / (weightKg * bodyWater)) * 10;
+  
+  // Subtract metabolism over time
+  return Math.max(0, peakBAC - (METABOLISM_RATE * hoursSinceDrink));
+};
+
+// Calculate total BAC from all drinks
 const calculateTotalBAC = (
   drinks: { servingSize: number; abv: number; timestamp: string }[],
-  profile: { weightKg: number; sex: 'male' | 'female' | 'unspecified' }
+  weightKg: number,
+  sex: 'male' | 'female' | 'unspecified'
 ): number => {
   const now = new Date();
-  const BODY_WATER_MALE = 0.58;
-  const BODY_WATER_FEMALE = 0.49;
-  
   return drinks.reduce((total, drink) => {
     const hoursSince = (now.getTime() - new Date(drink.timestamp).getTime()) / (1000 * 60 * 60);
-    if (hoursSince < 0) return total;
-    
-    const alcoholGrams = calculateAlcoholGrams(drink.servingSize, drink.abv);
-    const bodyWater = profile.sex === 'female' ? BODY_WATER_FEMALE : 
-                     profile.sex === 'male' ? BODY_WATER_MALE : 0.68;
-    const peakBAC = (alcoholGrams / (profile.weightKg * bodyWater)) * 10;
-    const currentBAC = Math.max(0, peakBAC - (0.015 * hoursSince));
-    
-    return total + currentBAC;
+    if (hoursSince < 0 || hoursSince > 24) return total;
+    return total + calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursSince);
   }, 0);
 };
-
-export { type Drink };
 
 export const useAlcohol = () => {
   const { user } = useAuth();
@@ -189,10 +211,9 @@ export const useAlcohol = () => {
   }, [user?.$id]);
 
   const getBACState = useMemo((): BACState => {
-    const profile = userProfile ? {
-      weightKg: userProfile.weightKg,
-      sex: userProfile.sex,
-    } : DEFAULT_USER_PROFILE;
+    const weightKg = userProfile?.weightKg || 70;
+    const sex = userProfile?.sex || 'unspecified';
+    const legalLimit = userProfile?.legalLimit || 0.05;
     
     const activeDrinks = logs
       .filter(log => {
@@ -206,9 +227,6 @@ export const useAlcohol = () => {
       }));
     
     const now = new Date();
-    const BODY_WATER_MALE = 0.58;
-    const BODY_WATER_FEMALE = 0.49;
-    
     const timeline: BACDataPoint[] = [];
     const startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const intervalMs = 15 * 60 * 1000;
@@ -224,11 +242,7 @@ export const useAlcohol = () => {
       activeDrinks.forEach(drink => {
         const drinkHoursSince = (currentDate.getTime() - new Date(drink.timestamp).getTime()) / (1000 * 60 * 60);
         if (drinkHoursSince >= 0) {
-          const alcoholGrams = calculateAlcoholGrams(drink.servingSize, drink.abv);
-          const bodyWater = profile.sex === 'female' ? BODY_WATER_FEMALE : profile.sex === 'male' ? BODY_WATER_MALE : 0.68;
-          const bAC = (alcoholGrams / (profile.weightKg * bodyWater)) * 10;
-          const current = Math.max(0, bAC - (0.015 * drinkHoursSince));
-          totalBAC += current;
+          totalBAC += calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, drinkHoursSince);
         }
       });
       
@@ -252,8 +266,7 @@ export const useAlcohol = () => {
       }
     }
     
-    const currentBAC = calculateTotalBAC(activeDrinks, profile);
-    const legalLimit = userProfile?.legalLimit || 0.05;
+    const currentBAC = calculateTotalBAC(activeDrinks, weightKg, sex);
     
     return {
       currentBAC,
