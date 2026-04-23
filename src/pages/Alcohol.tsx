@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Wine, X, Check, Activity, Target, Undo2, Flame, TrendingUp, Calendar } from 'lucide-react';
+import { Plus, Wine, X, Check, Activity, Target, Undo2, Flame, TrendingUp, Calendar, AlertTriangle, Scale, User, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, parseISO } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, ReferenceLine } from 'recharts';
+import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import type { CreateDrinkForm } from '@/features/alcohol/types';
@@ -47,20 +48,28 @@ const MoodSelector = ({ onSelect }: { onSelect: (mood: string) => void }) => (
 export default function AlcoholPage() {
   const { user } = useAuth();
   const { 
-    drinks, allDrinks, recentlyUsed, logs, insights, goal, lastDeletedLog,
+    drinks, allDrinks, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState,
     loadData, quickLog, deleteLog, undoDelete, createDrink, 
-    getTodayUnits, getWeeklyUnits, setWeeklyGoal 
+    getTodayUnits, getWeeklyUnits, setWeeklyGoal, updateUserProfile 
   } = useAlcohol();
   
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [showDrinkCreator, setShowDrinkCreator] = useState(false);
   const [showGoalSetter, setShowGoalSetter] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<any>(null);
   const [showLogSuccess, setShowLogSuccess] = useState(false);
   const [goalForm, setGoalForm] = useState({ weeklyLimit: 14 });
+  const [profileForm, setProfileForm] = useState({ weightKg: 70, sex: 'unspecified' as 'male' | 'female' | 'unspecified' });
   const [newDrink, setNewDrink] = useState<CreateDrinkForm>({ name: '', type: 'beer', abv: 5, defaultServingSize: 50 });
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    if (userProfile) {
+      setProfileForm({ weightKg: userProfile.weightKg, sex: userProfile.sex });
+    }
+  }, [userProfile]);
 
   const todaysUnits = getTodayUnits();
   const weeklyUnits = getWeeklyUnits();
@@ -89,7 +98,20 @@ export default function AlcoholPage() {
     setShowGoalSetter(false);
   };
 
+  const handleUpdateProfile = async () => {
+    await updateUserProfile(profileForm);
+    setShowProfileEditor(false);
+  };
+
   const recentLogs = logs.slice(0, 7);
+  const legalLimit = userProfile?.legalLimit || 0.05;
+
+  // BAC chart data
+  const chartData = bacState.timeline.map(point => ({
+    time: format(point.time, 'HH:mm'),
+    bac: point.bac,
+    isPast: point.isPast,
+  }));
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -105,6 +127,9 @@ export default function AlcoholPage() {
           <p className="text-sm text-muted-foreground">Suivi discret et personnel</p>
         </div>
         <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)}>
+            <User className="w-5 h-5" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowGoalSetter(true)}>
             <Target className="w-5 h-5" />
           </Button>
@@ -112,6 +137,12 @@ export default function AlcoholPage() {
             <Plus className="w-5 h-5" />
           </Button>
         </div>
+      </div>
+
+      {/* Disclaimer */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/5 rounded-xl p-3">
+        <Info className="w-4 h-4 flex-shrink-0" />
+        <span>Estimations BAC basées sur des formules scientifiques — ne pas utiliser pour prendre des décisions de conduite</span>
       </div>
 
       {/* Undo Banner */}
@@ -134,6 +165,126 @@ export default function AlcoholPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* BAC Hero Card */}
+      <Card className={cn(
+        "overflow-hidden transition-all duration-500 relative",
+        bacState.isAboveLimit && "ring-2 ring-destructive/50",
+        bacState.isNearLimit && "ring-2 ring-accent/50"
+      )}>
+        <CardContent className="p-6">
+          {/* Current BAC */}
+          <div className="text-center mb-4">
+            <p className="text-sm text-muted-foreground mb-1">Alcoolémie estimée</p>
+            <motion.div 
+              key={bacState.currentBAC}
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "text-5xl md:text-6xl font-bold",
+                bacState.isAboveLimit && "text-destructive",
+                bacState.isNearLimit && "text-accent",
+                !bacState.isAboveLimit && !bacState.isNearLimit && bacState.currentBAC > 0 && "text-secondary",
+                bacState.currentBAC === 0 && "text-muted-foreground"
+              )}
+            >
+              {bacState.currentBAC.toFixed(3)}%
+            </motion.div>
+            <p className="text-xs text-muted-foreground mt-1">estimation — non exacte</p>
+          </div>
+
+          {/* Legal Limit Warning */}
+          {bacState.isAboveLimit && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-center gap-2 mb-4 p-3 rounded-xl bg-destructive/10 text-destructive"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm font-medium">Peut dépasser les limites légales</span>
+            </motion.div>
+          )}
+
+          {/* BAC Chart */}
+          {bacState.timeline.length > 0 && bacState.currentBAC > 0.001 && (
+            <div className="h-32 mb-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                  <defs>
+                    <linearGradient id="bacGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.3} />
+                      <stop offset="100%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="time" 
+                    tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    domain={[0, 'dataMax + 0.02']}
+                    tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(v) => v.toFixed(3)}
+                  />
+                  <ReferenceLine 
+                    y={legalLimit} 
+                    stroke="hsl(0, 62%, 50%)" 
+                    strokeDasharray="3 3"
+                    label={{ value: `Limite ${legalLimit}%`, fontSize: 10, fill: 'hsl(0, 62%, 50%)' }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="bac"
+                    stroke="hsl(142, 71%, 45%)"
+                    strokeWidth={2}
+                    fill="url(#bacGradient)"
+                    isAnimationActive={true}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="bac" 
+                    stroke="hsl(142, 71%, 45%)" 
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={true}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Timeline Info */}
+          <div className="flex items-center justify-around text-center border-t border-white/10 pt-4">
+            <div>
+              <p className="text-xs text-muted-foreground">Pic estimé</p>
+              <p className="text-sm font-medium">
+                {bacState.peakBAC > 0 ? format(bacState.peakTime, 'HH:mm') : '—'}
+              </p>
+              {bacState.peakBAC > bacState.currentBAC && (
+                <p className="text-xs text-accent">dans {formatDistanceToNow(bacState.peakTime)}</p>
+              )}
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div>
+              <p className="text-xs text-muted-foreground">Retour à 0</p>
+              <p className="text-sm font-medium">
+                {bacState.zeroTime ? format(bacState.zeroTime, 'HH:mm') : '—'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {bacState.zeroTime ? formatDistanceToNow(bacState.zeroTime, { addSuffix: true }) : ''}
+              </p>
+            </div>
+            <div className="w-px h-8 bg-white/10" />
+            <div>
+              <p className="text-xs text-muted-foreground">Limite légale</p>
+              <p className="text-sm font-medium">{legalLimit}%</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Weekly Progress */}
       <Card className="overflow-hidden">
@@ -180,7 +331,7 @@ export default function AlcoholPage() {
       </Card>
 
       {/* Today's Progress */}
-      <Card className={cn("relative overflow-hidden transition-all duration-500", showLogSuccess && "ring-2 ring-secondary")}>
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -472,6 +623,44 @@ export default function AlcoholPage() {
               L'OMS recommande maximum 14 unités par semaine pour un risque faible.
             </p>
             <Button onClick={handleSetGoal} className="w-full">Enregistrer</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Profile Editor Dialog */}
+      <Dialog open={showProfileEditor} onOpenChange={setShowProfileEditor}>
+        <DialogContent className="mx-4">
+          <DialogHeader><DialogTitle>Paramètres BAC</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Scale className="w-4 h-4" />
+                Poids (kg)
+              </label>
+              <Input 
+                type="number"
+                min="30"
+                max="200"
+                value={profileForm.weightKg}
+                onChange={(e) => setProfileForm(prev => ({ ...prev, weightKg: parseInt(e.target.value) }))}
+              />
+              <p className="text-xs text-muted-foreground">Utilisé pour le calcul de l'alcoolémie</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Sexe (pour estimation)</label>
+              <Select 
+                value={profileForm.sex} 
+                onValueChange={(v) => setProfileForm(prev => ({ ...prev, sex: v as 'male' | 'female' | 'unspecified' }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unspecified">Non spécifié</SelectItem>
+                  <SelectItem value="male">Homme</SelectItem>
+                  <SelectItem value="female">Femme</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleUpdateProfile} className="w-full">Enregistrer</Button>
           </div>
         </DialogContent>
       </Dialog>

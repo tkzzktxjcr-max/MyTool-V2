@@ -1,18 +1,69 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
 import { alcoholService } from './service';
-import { drinksService, type Drink } from './services/drinks.service';
+import { drinksService } from './services/drinks.service';
 import { goalsService } from './services/goals.service';
+import { profileService } from './services/profile.service';
 import type { AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { HEALTH_GUIDELINES } from './types';
+import type { Drink } from './services/drinks.service';
+import type { UserProfile } from './services/profile.service';
 
-export { type Drink } from './services/drinks.service';
+interface BACDataPoint {
+  time: Date;
+  bac: number;
+  isPast: boolean;
+}
+
+interface BACState {
+  currentBAC: number;
+  peakBAC: number;
+  peakTime: Date;
+  zeroTime: Date;
+  timeline: BACDataPoint[];
+  isAboveLimit: boolean;
+  isNearLimit: boolean;
+}
+
+const DEFAULT_USER_PROFILE: UserProfile = {
+  weightKg: 70,
+  sex: 'unspecified',
+};
+
+const calculateAlcoholGrams = (servingSizeMl: number, abv: number): number => {
+  return (servingSizeMl * abv / 100) * 0.789;
+};
+
+const calculateTotalBAC = (
+  drinks: { servingSize: number; abv: number; timestamp: string }[],
+  profile: { weightKg: number; sex: 'male' | 'female' | 'unspecified' }
+): number => {
+  const now = new Date();
+  const BODY_WATER_MALE = 0.58;
+  const BODY_WATER_FEMALE = 0.49;
+  
+  return drinks.reduce((total, drink) => {
+    const hoursSince = (now.getTime() - new Date(drink.timestamp).getTime()) / (1000 * 60 * 60);
+    if (hoursSince < 0) return total;
+    
+    const alcoholGrams = calculateAlcoholGrams(drink.servingSize, drink.abv);
+    const bodyWater = profile.sex === 'female' ? BODY_WATER_FEMALE : 
+                     profile.sex === 'male' ? BODY_WATER_MALE : 0.68;
+    const peakBAC = (alcoholGrams / (profile.weightKg * bodyWater)) * 10;
+    const currentBAC = Math.max(0, peakBAC - (0.015 * hoursSince));
+    
+    return total + currentBAC;
+  }, 0);
+};
+
+export { type Drink };
 
 export const useAlcohol = () => {
   const { user } = useAuth();
   const [drinks, setDrinks] = useState<Drink[]>([]);
   const [logs, setLogs] = useState<AlcoholLog[]>([]);
   const [goal, setGoal] = useState<AlcoholGoal | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [recentlyUsed, setRecentlyUsed] = useState<Drink[]>([]);
   const [lastDeletedLog, setLastDeletedLog] = useState<AlcoholLog | null>(null);
@@ -21,19 +72,18 @@ export const useAlcohol = () => {
     if (!user?.$id) return;
     setLoading(true);
     try {
-      // Load drinks from database
       const drinksData = await drinksService.ensureUserHasDrinks(user.$id);
       setDrinks(drinksData);
       
-      // Load logs from database
       const logsData = await alcoholService.getLogs(user.$id);
       setLogs(logsData);
       
-      // Load goal
       const goalData = await goalsService.getGoal(user.$id);
       setGoal(goalData);
       
-      // Get recently used (last 7 days)
+      const profileData = await profileService.getProfile(user.$id);
+      setUserProfile(profileData);
+      
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
@@ -87,17 +137,11 @@ export const useAlcohol = () => {
 
   const deleteLog = useCallback(async (logId: string) => {
     const logToDelete = logs.find(l => l.id === logId);
-    if (logToDelete) {
-      setLastDeletedLog(logToDelete);
-    }
+    if (logToDelete) setLastDeletedLog(logToDelete);
     
     await alcoholService.deleteLog(logId);
     setLogs(prev => prev.filter(l => l.id !== logId));
-    
-    // Auto-remove undo state after 5 seconds
-    setTimeout(() => {
-      setLastDeletedLog(null);
-    }, 5000);
+    setTimeout(() => setLastDeletedLog(null), 5000);
   }, [logs]);
 
   const undoDelete = useCallback(async () => {
@@ -132,6 +176,96 @@ export const useAlcohol = () => {
     return updatedGoal;
   }, [user?.$id]);
 
+  const updateUserProfile = useCallback(async (data: {
+    weightKg?: number;
+    sex?: 'male' | 'female' | 'unspecified';
+    legalLimit?: number;
+  }) => {
+    if (!user?.$id) throw new Error('Not authenticated');
+    
+    const updatedProfile = await profileService.createOrUpdateProfile(user.$id, data);
+    setUserProfile(updatedProfile);
+    return updatedProfile;
+  }, [user?.$id]);
+
+  const getBACState = useMemo((): BACState => {
+    const profile = userProfile ? {
+      weightKg: userProfile.weightKg,
+      sex: userProfile.sex,
+    } : DEFAULT_USER_PROFILE;
+    
+    const activeDrinks = logs
+      .filter(log => {
+        const hoursAgo = (Date.now() - new Date(log.timestamp).getTime()) / (1000 * 60 * 60);
+        return hoursAgo < 24;
+      })
+      .map(log => ({
+        servingSize: log.servingSize,
+        abv: log.abv,
+        timestamp: log.timestamp,
+      }));
+    
+    const now = new Date();
+    const BODY_WATER_MALE = 0.58;
+    const BODY_WATER_FEMALE = 0.49;
+    
+    const timeline: BACDataPoint[] = [];
+    const startTime = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+    const intervalMs = 15 * 60 * 1000;
+    const endTime = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    
+    let peakBAC = 0;
+    let peakTime = now;
+    
+    for (let time = startTime.getTime(); time <= endTime.getTime(); time += intervalMs) {
+      const currentDate = new Date(time);
+      let totalBAC = 0;
+      
+      activeDrinks.forEach(drink => {
+        const drinkHoursSince = (currentDate.getTime() - new Date(drink.timestamp).getTime()) / (1000 * 60 * 60);
+        if (drinkHoursSince >= 0) {
+          const alcoholGrams = calculateAlcoholGrams(drink.servingSize, drink.abv);
+          const bodyWater = profile.sex === 'female' ? BODY_WATER_FEMALE : profile.sex === 'male' ? BODY_WATER_MALE : 0.68;
+          const bAC = (alcoholGrams / (profile.weightKg * bodyWater)) * 10;
+          const current = Math.max(0, bAC - (0.015 * drinkHoursSince));
+          totalBAC += current;
+        }
+      });
+      
+      if (totalBAC > peakBAC) {
+        peakBAC = totalBAC;
+        peakTime = currentDate;
+      }
+      
+      timeline.push({
+        time: currentDate,
+        bac: Math.round(totalBAC * 1000) / 1000,
+        isPast: time < now.getTime(),
+      });
+    }
+    
+    let zeroTime = now;
+    for (let i = timeline.length - 1; i >= 0; i--) {
+      if (timeline[i].bac > 0) {
+        zeroTime = timeline[i + 1]?.time || timeline[i].time;
+        break;
+      }
+    }
+    
+    const currentBAC = calculateTotalBAC(activeDrinks, profile);
+    const legalLimit = userProfile?.legalLimit || 0.05;
+    
+    return {
+      currentBAC,
+      peakBAC: Math.round(peakBAC * 1000) / 1000,
+      peakTime,
+      zeroTime,
+      timeline,
+      isAboveLimit: currentBAC > legalLimit,
+      isNearLimit: currentBAC > legalLimit * 0.8 && currentBAC <= legalLimit,
+    };
+  }, [logs, userProfile]);
+
   const insights = useMemo((): AlcoholInsight | null => {
     return alcoholService.calculateInsights(logs, goal);
   }, [logs, goal]);
@@ -157,9 +291,11 @@ export const useAlcohol = () => {
     recentlyUsed,
     logs,
     goal,
+    userProfile,
     loading,
     insights,
     lastDeletedLog,
+    bacState: getBACState,
     loadData,
     createDrink,
     quickLog,
@@ -167,6 +303,7 @@ export const useAlcohol = () => {
     undoDelete,
     deleteDrink,
     setWeeklyGoal,
+    updateUserProfile,
     getTodayUnits,
     getWeeklyUnits,
   };
