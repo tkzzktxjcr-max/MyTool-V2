@@ -12,7 +12,7 @@ import { useAlcohol } from '@/features/alcohol/hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, CheckSquare, Plus, ArrowRight, PartyPopper, Users, TrendingUp, TrendingDown, Activity, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, CheckSquare, Plus, ArrowRight, PartyPopper, Users, Activity, Sparkles } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -68,11 +68,11 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-lg mx-auto text-center py-8 md:py-12"
+        className="max-w-lg mx-auto text-center py-8"
       >
         <motion.div 
           whileHover={{ scale: 1.02 }}
-          className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-4 mx-auto"
+          className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-4 mx-auto glow-primary"
         >
           {user?.name?.charAt(0).toUpperCase()}
         </motion.div>
@@ -141,7 +141,7 @@ export default function Dashboard() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl md:rounded-3xl glass-card p-4 md:p-8"
+        className="relative overflow-hidden rounded-2xl md:rounded-3xl glass-card-strong p-4 md:p-8"
       >
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10" />
         <div className="relative">
@@ -157,6 +157,11 @@ export default function Dashboard() {
                 {todaysChores.length + upcomingEvents.length} choses à faire aujourd'hui
               </p>
             </div>
+            <motion.div 
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              className="w-32 h-32 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 blur-3xl absolute -right-10 -top-10"
+            />
           </div>
         </div>
       </motion.div>
@@ -231,7 +236,7 @@ export default function Dashboard() {
               ) : (
                 <div className="space-y-2 md:space-y-3">
                   {todaysChores.slice(0, 3).map((chore) => (
-                    <div key={chore.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03]">
+                    <div key={chore.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
                       <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{chore.title}</p>
@@ -272,7 +277,7 @@ export default function Dashboard() {
 
               <div className="space-y-2 md:space-y-3">
                 {upcomingEvents.slice(0, 3).map((event) => (
-                  <div key={event.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03]">
+                  <div key={event.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
                     <div 
                       className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0"
                       style={{ backgroundColor: event.color }}

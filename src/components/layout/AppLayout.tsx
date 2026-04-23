@@ -33,8 +33,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
+      {/* Mobile Header - Glass effect */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
             F
@@ -43,14 +43,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </Link>
         <button 
           onClick={() => setMobileMenuOpen(true)}
-          className="p-2 rounded-lg hover:bg-white/10"
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>
       </header>
 
-      {/* Mobile Navigation - Bottom */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-white/10 px-2 py-2 flex justify-around items-center safe-area-inset-bottom">
+      {/* Mobile Bottom Navigation - Glass effect */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-t border-white/10 px-2 py-2 flex justify-around items-center">
         {navItems.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -78,14 +78,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 lg:hidden"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
             />
             <motion.div
               initial={{ x: -300 }}
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="fixed left-0 top-0 h-full w-80 max-w-[85vw] bg-background z-50 flex flex-col lg:hidden"
+              className="fixed left-0 top-0 h-full w-80 max-w-[85vw] glass-card backdrop-blur-xl z-50 flex flex-col lg:hidden"
             >
               <div className="flex justify-end p-4 border-b border-white/10">
                 <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg hover:bg-white/10">
@@ -93,7 +93,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               
-              {/* Mobile Logo */}
+              {/* Logo */}
               <div className="p-6 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl">
@@ -103,7 +103,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               </div>
 
-              {/* Mobile Navigation */}
+              {/* Navigation */}
               <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                 {navItems.map((item) => {
                   const isActive = location.pathname === item.path;
@@ -125,7 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 })}
               </nav>
 
-              {/* Mobile User section */}
+              {/* User section */}
               <div className="p-4 border-t border-white/10">
                 {user && (
                   <div className="flex items-center gap-3">
@@ -150,8 +150,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col bg-background border-r border-white/10 z-40">
+      {/* Desktop Sidebar - Glass effect */}
+      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-card backdrop-blur-xl border-r border-white/10 z-40">
         {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-3">
