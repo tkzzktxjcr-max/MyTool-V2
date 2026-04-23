@@ -107,7 +107,7 @@ export default function AlcoholPage() {
   };
 
   const recentLogs = logs.slice(0, 7);
-  const legalLimit = userProfile?.legalLimit || 0.05;
+  const legalLimit = userProfile?.legalLimit || 0.8; // g/L
 
   const chartData = bacState.timeline.map(point => ({
     time: format(point.time, 'HH:mm'),
@@ -189,8 +189,9 @@ export default function AlcoholPage() {
                 bacState.currentBAC === 0 && "text-muted-foreground"
               )}
             >
-              {bacState.currentBAC.toFixed(3)}%
+              {bacState.currentBAC.toFixed(2)}
             </motion.div>
+            <p className="text-lg text-muted-foreground">g/L</p>
           </div>
 
           {/* Legal Limit Warning */}
@@ -206,7 +207,7 @@ export default function AlcoholPage() {
           )}
 
           {/* BAC Chart */}
-          {bacState.timeline.length > 0 && bacState.currentBAC > 0.001 && (
+          {bacState.timeline.length > 0 && bacState.currentBAC > 0.01 && (
             <div className="h-32 mb-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
@@ -217,8 +218,8 @@ export default function AlcoholPage() {
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 'dataMax + 0.02']} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(3)} />
-                  <ReferenceLine y={legalLimit} stroke="hsl(0, 62%, 50%)" strokeDasharray="3 3" />
+                  <YAxis domain={[0, 'dataMax + 0.1']} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1) + 'g/L'} />
+                  <ReferenceLine y={legalLimit} stroke="hsl(0, 62%, 50%)" strokeDasharray="3 3" label={{ value: `Limite ${legalLimit}g/L`, fontSize: 10, fill: 'hsl(0, 62%, 50%)' }} />
                   <Area type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} fill="url(#bacGradient)" />
                   <Line type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} dot={false} />
                 </LineChart>
@@ -249,8 +250,8 @@ export default function AlcoholPage() {
             </div>
             <div className="w-px h-8 bg-white/10" />
             <div>
-              <p className="text-xs text-muted-foreground">Limite</p>
-              <p className="text-sm font-medium">{legalLimit}%</p>
+              <p className="text-xs text-muted-foreground">Limite légale</p>
+              <p className="text-sm font-medium">{legalLimit} g/L</p>
             </div>
           </div>
         </CardContent>

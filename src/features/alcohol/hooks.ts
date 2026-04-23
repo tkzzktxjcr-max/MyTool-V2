@@ -13,13 +13,13 @@ export { type Drink };
 
 interface BACDataPoint {
   time: Date;
-  bac: number;
+  bac: number; // in g/L
   isPast: boolean;
 }
 
 interface BACState {
-  currentBAC: number;
-  peakBAC: number;
+  currentBAC: number; // in g/L
+  peakBAC: number; // in g/L
   peakTime: Date;
   zeroTime: Date;
   timeline: BACDataPoint[];
@@ -32,7 +32,7 @@ const DEFAULT_USER_PROFILE: UserProfile = {
   userId: '',
   weightKg: 70,
   sex: 'unspecified',
-  legalLimit: 0.05,
+  legalLimit: 0.8, // in g/L (standard French limit)
   updatedAt: '',
 };
 
@@ -40,7 +40,7 @@ const DEFAULT_USER_PROFILE: UserProfile = {
 const BODY_WATER_MALE = 0.58;
 const BODY_WATER_FEMALE = 0.49;
 const ALCOHOL_DENSITY = 0.789;
-const METABOLISM_RATE = 0.015;
+const METABOLISM_RATE = 0.015; // % per hour
 
 const calculateSingleDrinkBAC = (
   volumeMl: number,
@@ -49,11 +49,18 @@ const calculateSingleDrinkBAC = (
   sex: 'male' | 'female' | 'unspecified',
   hoursSinceDrink: number
 ): number => {
+  // Calculate peak BAC in g/L directly
   const alcoholGrams = (volumeMl * abv / 100) * ALCOHOL_DENSITY;
   const bodyWater = sex === 'female' ? BODY_WATER_FEMALE : 
                     sex === 'male' ? BODY_WATER_MALE : 0.68;
-  const peakBAC = (alcoholGrams / (weightKg * bodyWater)) * 10;
-  return Math.max(0, peakBAC - (METABOLISM_RATE * hoursSinceDrink));
+  
+  // BAC formula: (grams / liters_of_body_water) = g/L
+  const bodyWaterLiters = weightKg * bodyWater;
+  const peakBAC_gL = (alcoholGrams / bodyWaterLiters);
+  
+  // Subtract metabolism over time (convert % to g/L: multiply by 10)
+  const metabolism_gL_per_hour = 0.15; // ~0.015% per hour = 0.15 g/L per hour
+  return Math.max(0, peakBAC_gL - (metabolism_gL_per_hour * hoursSinceDrink));
 };
 
 const calculateTotalBAC = (
@@ -67,11 +74,6 @@ const calculateTotalBAC = (
     if (hoursSince < 0 || hoursSince > 24) return total;
     return total + calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursSince);
   }, 0);
-};
-
-// Get user-friendly drink display name
-const getDrinkDisplayName = (drink: Drink): string => {
-  return `${drink.defaultServingSize} cl de ${drink.name}`;
 };
 
 export const useAlcohol = () => {
@@ -207,7 +209,7 @@ export const useAlcohol = () => {
   const getBACState = useMemo((): BACState => {
     const weightKg = userProfile?.weightKg || 70;
     const sex = userProfile?.sex || 'unspecified';
-    const legalLimit = userProfile?.legalLimit || 0.05;
+    const legalLimit = userProfile?.legalLimit || 0.8; // g/L
     
     const activeDrinks = logs
       .filter(log => {
@@ -247,7 +249,7 @@ export const useAlcohol = () => {
       
       timeline.push({
         time: currentDate,
-        bac: Math.round(totalBAC * 1000) / 1000,
+        bac: Math.round(totalBAC * 100) / 100, // round to 2 decimal places
         isPast: time < now.getTime(),
       });
     }
@@ -264,7 +266,7 @@ export const useAlcohol = () => {
     
     return {
       currentBAC,
-      peakBAC: Math.round(peakBAC * 1000) / 1000,
+      peakBAC: Math.round(peakBAC * 100) / 100,
       peakTime,
       zeroTime,
       timeline,
