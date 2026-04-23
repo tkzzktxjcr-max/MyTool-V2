@@ -9,6 +9,23 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 
 type AuthMode = 'login' | 'register';
 
+// Password validation
+const validatePassword = (password: string): { valid: boolean; message: string } => {
+  if (password.length < 8) {
+    return { valid: false, message: 'Le mot de passe doit contenir au moins 8 caractères' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: 'Le mot de passe doit contenir au moins une majuscule' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: 'Le mot de passe doit contenir au moins une minuscule' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'Le mot de passe doit contenir au moins un chiffre' };
+  }
+  return { valid: true, message: '' };
+};
+
 export default function AuthPage() {
   const navigate = useNavigate();
   const { login, register } = useAuth();
@@ -28,9 +45,18 @@ export default function AuthPage() {
     e.preventDefault();
     setError('');
 
-    if (mode === 'register' && formData.password !== formData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return;
+    // Password validation for registration
+    if (mode === 'register') {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.valid) {
+        setError(passwordValidation.message);
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Les mots de passe ne correspondent pas');
+        return;
+      }
     }
 
     setLoading(true);
@@ -43,7 +69,8 @@ export default function AuthPage() {
       }
       navigate('/');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      // Return generic error message to avoid leaking information
+      setError('Identifiants incorrects. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -51,8 +78,28 @@ export default function AuthPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
-    setError('');
+    // Clear error when user starts typing
+    if (error) setError('');
   };
+
+  // Password strength indicator
+  const getPasswordStrength = (password: string): { level: number; label: string; color: string } => {
+    if (password.length === 0) return { level: 0, label: '', color: '' };
+    
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.length >= 12) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+    if (strength <= 2) return { level: 1, label: 'Faible', color: 'bg-destructive' };
+    if (strength <= 4) return { level: 2, label: 'Moyen', color: 'bg-accent' };
+    return { level: 3, label: 'Fort', color: 'bg-secondary' };
+  };
+
+  const passwordStrength = mode === 'register' ? getPasswordStrength(formData.password) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 flex items-center justify-center p-4">
@@ -153,6 +200,18 @@ export default function AuthPage() {
                     )}
                   </button>
                 </div>
+                {mode === 'register' && formData.password && passwordStrength && (
+                  <div className="space-y-1">
+                    <div className="flex gap-1">
+                      <div className={`h-1 flex-1 rounded-full ${passwordStrength.level >= 1 ? passwordStrength.color : 'bg-muted'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${passwordStrength.level >= 2 ? passwordStrength.color : 'bg-muted'}`} />
+                      <div className={`h-1 flex-1 rounded-full ${passwordStrength.level >= 3 ? passwordStrength.color : 'bg-muted'}`} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Force: {passwordStrength.label}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {mode === 'register' && (

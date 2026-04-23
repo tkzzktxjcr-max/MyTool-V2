@@ -6,6 +6,9 @@ import {
   listDocuments, 
   deleteDocument,
   COLLECTIONS,
+  databases,
+  APPWRITE_CONFIG,
+  Query,
 } from '@/lib/appwrite';
 import { useFamily } from '@/contexts/FamilyContext';
 import type { CalendarEvent, CreateEventForm, EventCategory } from '@/types';
@@ -20,23 +23,26 @@ export const useCalendar = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.EVENTS);
+      // Use proper server-side query filtering
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        COLLECTIONS.EVENTS,
+        [Query.equal('familyId', family.id)]
+      );
       
-      const familyEvents = response.documents
-        .filter((doc: any) => doc.familyId === family.id)
-        .map((doc: any) => ({
-          id: doc.$id,
-          familyId: doc.familyId,
-          title: doc.title,
-          description: doc.description,
-          date: doc.date,
-          endDate: doc.endDate,
-          color: doc.color,
-          category: doc.category as EventCategory,
-          assignedTo: doc.assignedTo,
-          reminder: doc.reminder,
-          createdBy: doc.createdBy,
-        }));
+      const familyEvents = response.documents.map((doc: any) => ({
+        id: doc.$id,
+        familyId: doc.familyId,
+        title: doc.title,
+        description: doc.description,
+        date: doc.date,
+        endDate: doc.endDate,
+        color: doc.color,
+        category: doc.category as EventCategory,
+        assignedTo: doc.assignedTo,
+        reminder: doc.reminder,
+        createdBy: doc.createdBy,
+      }));
       
       setEvents(familyEvents);
     } catch (error) {

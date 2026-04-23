@@ -9,10 +9,10 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname,
-    );
+    // Only log in development mode to avoid information disclosure
+    if (import.meta.env.DEV) {
+      console.warn("404 attempted:", location.pathname);
+    }
   }, [location.pathname]);
 
   return (

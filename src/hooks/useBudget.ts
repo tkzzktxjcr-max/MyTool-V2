@@ -6,6 +6,9 @@ import {
   listDocuments, 
   deleteDocument,
   COLLECTIONS,
+  databases,
+  APPWRITE_CONFIG,
+  Query,
 } from '@/lib/appwrite';
 import { useFamily } from '@/contexts/FamilyContext';
 import type { BudgetEntry, CreateBudgetEntryForm, BudgetCategory } from '@/types';
@@ -20,20 +23,23 @@ export const useBudget = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.BUDGET_ENTRIES);
+      // Use proper server-side query filtering
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        COLLECTIONS.BUDGET_ENTRIES,
+        [Query.equal('familyId', family.id)]
+      );
       
-      const familyEntries = response.documents
-        .filter((doc: any) => doc.familyId === family.id)
-        .map((doc: any) => ({
-          id: doc.$id,
-          familyId: doc.familyId,
-          amount: doc.amount,
-          category: doc.category as BudgetCategory,
-          description: doc.description,
-          date: doc.date,
-          type: doc.type,
-          createdBy: doc.createdBy,
-        }));
+      const familyEntries = response.documents.map((doc: any) => ({
+        id: doc.$id,
+        familyId: doc.familyId,
+        amount: doc.amount,
+        category: doc.category as BudgetCategory,
+        description: doc.description,
+        date: doc.date,
+        type: doc.type,
+        createdBy: doc.createdBy,
+      }));
       
       setEntries(familyEntries);
     } catch (error) {

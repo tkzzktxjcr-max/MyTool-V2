@@ -6,6 +6,9 @@ import {
   listDocuments, 
   deleteDocument,
   COLLECTIONS,
+  databases,
+  APPWRITE_CONFIG,
+  Query,
 } from '@/lib/appwrite';
 import { useAuth } from '@/contexts/AuthContext';
 import type { 
@@ -30,20 +33,22 @@ export const useAlcohol = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS);
+      // Use proper server-side query filtering
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        COLLECTIONS.ALCOHOL_LOGS,
+        [Query.equal('userId', user.$id)]
+      );
       
-      // Filter locally since query syntax is problematic
-      const userLogs = response.documents
-        .filter((doc: any) => doc.userId === user.$id)
-        .map((doc: any) => ({
-          id: doc.$id,
-          userId: doc.userId,
-          date: doc.date,
-          drinkType: doc.drinkType as DrinkType,
-          volumeCl: doc.volumeCl,
-          abv: doc.abv,
-          units: doc.units,
-        }));
+      const userLogs = response.documents.map((doc: any) => ({
+        id: doc.$id,
+        userId: doc.userId,
+        date: doc.date,
+        drinkType: doc.drinkType as DrinkType,
+        volumeCl: doc.volumeCl,
+        abv: doc.abv,
+        units: doc.units,
+      }));
       
       setLogs(userLogs);
     } catch (error) {
@@ -82,6 +87,17 @@ export const useAlcohol = () => {
   };
 
   const deleteLog = async (logId: string): Promise<void> => {
+    if (!user?.$id) throw new Error('Not authenticated');
+
+    // Authorization check: verify ownership before deletion
+    const log = logs.find(l => l.id === logId);
+    if (!log) {
+      throw new Error('Log not found');
+    }
+    if (log.userId !== user.$id) {
+      throw new Error('Unauthorized: Cannot delete another user\'s log');
+    }
+
     await deleteDocument(COLLECTIONS.ALCOHOL_LOGS, logId);
     setLogs(prev => prev.filter(l => l.id !== logId));
   };

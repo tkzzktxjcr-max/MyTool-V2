@@ -10,6 +10,7 @@ import {
   updateDocument,
   deleteDocument,
   ID,
+  Query,
 } from '@/lib/appwrite';
 import { useAuth } from './AuthContext';
 import type { Family, FamilyMember } from '@/types';
@@ -29,6 +30,18 @@ interface FamilyContextType {
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined);
 
+// Secure invite code generation using crypto
+const generateSecureInviteCode = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  const randomValues = new Uint8Array(6);
+  crypto.getRandomValues(randomValues);
+  for (let i = 0; i < 6; i++) {
+    code += chars[randomValues[i] % chars.length];
+  }
+  return code;
+};
+
 export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const { profile, refreshProfile } = useAuth();
   const [family, setFamily] = useState<Family | null>(null);
@@ -44,7 +57,7 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
 
     setLoading(true);
     try {
-      // Charger la famille
+      // Charger la famille avec proper Query
       const familyDoc = await databases.getDocument(
         APPWRITE_CONFIG.databaseId,
         COLLECTIONS.FAMILIES,
@@ -60,18 +73,21 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
         createdAt: familyDoc.$createdAt,
       });
 
-      // Charger les membres - filtrer côté client
-      const membersResponse = await listDocuments(COLLECTIONS.FAMILY_MEMBERS);
-      const familyMembers = membersResponse.documents
-        .filter((doc: any) => doc.familyId === profile.familyId)
-        .map((doc: any) => ({
-          id: doc.$id,
-          familyId: doc.familyId,
-          userId: doc.userId,
-          role: doc.role,
-          name: doc.name,
-          avatar: doc.avatar,
-        }));
+      // Charger les membres avec server-side filtering
+      const membersResponse = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        COLLECTIONS.FAMILY_MEMBERS,
+        [Query.equal('familyId', profile.familyId)]
+      );
+      
+      const familyMembers = membersResponse.documents.map((doc: any) => ({
+        id: doc.$id,
+        familyId: doc.familyId,
+        userId: doc.userId,
+        role: doc.role,
+        name: doc.name,
+        avatar: doc.avatar,
+      }));
       
       setMembers(familyMembers);
     } catch (error) {
@@ -90,7 +106,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const createFamily = async (name: string, monthlyBudget?: number): Promise<Family> => {
     if (!profile) throw new Error('Not authenticated');
 
-    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Use secure random code generation
+    const inviteCode = generateSecureInviteCode();
 
     const familyDoc = await createDocument(COLLECTIONS.FAMILIES, {
       name,
@@ -133,14 +150,31 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const joinFamily = async (inviteCode: string): Promise<void> => {
     if (!profile) throw new Error('Not authenticated');
 
-    // Trouver la famille avec ce code - filtrer côté client
-    const familiesResponse = await listDocuments(COLLECTIONS.FAMILIES);
-    const familyDoc = familiesResponse.documents.find(
-      (doc: any) => doc.inviteCode === inviteCode
+    // Find family with this code using proper server-side query
+    const familiesResponse = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      COLLECTIONS.FAMILIES,
+      [Query.equal('inviteCode', inviteCode.toUpperCase())]
     );
 
-    if (!familyDoc) {
+    if (familiesResponse.documents.length === 0) {
       throw new Error('Code invitation invalide');
+    }
+
+    const familyDoc = familiesResponse.documents[0];
+
+    // Check if already a member
+    const existingMembership = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      COLLECTIONS.FAMILY_MEMBERS,
+      [
+        Query.equal('familyId', familyDoc.$id),
+        Query.equal('userId', profile.userId)
+      ]
+    );
+
+    if (existingMembership.documents.length > 0) {
+      throw new Error('Vous êtes déjà membre de cette famille');
     }
 
     // Ajouter le membre
@@ -167,14 +201,18 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const leaveFamily = async (): Promise<void> => {
     if (!profile || !profile.familyId) return;
 
-    // Trouver le membership - filtrer côté client
-    const membershipsResponse = await listDocuments(COLLECTIONS.FAMILY_MEMBERS);
-    const membership = membershipsResponse.documents.find(
-      (doc: any) => doc.familyId === profile.familyId && doc.userId === profile.userId
+    // Find membership with proper query
+    const membershipsResponse = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      COLLECTIONS.FAMILY_MEMBERS,
+      [
+        Query.equal('familyId', profile.familyId),
+        Query.equal('userId', profile.userId)
+      ]
     );
 
-    if (membership) {
-      await deleteDocument(COLLECTIONS.FAMILY_MEMBERS, membership.$id);
+    if (membershipsResponse.documents.length > 0) {
+      await deleteDocument(COLLECTIONS.FAMILY_MEMBERS, membershipsResponse.documents[0].$id);
     }
 
     // Retirer la famille du profil
@@ -214,6 +252,18 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeMember = async (memberId: string): Promise<void> => {
+    // Authorization check: only admin can remove members
+    const memberToRemove = members.find(m => m.id === memberId);
+    const currentUserMember = members.find(m => m.userId === profile?.userId);
+    
+    if (!currentUserMember || currentUserMember.role !== 'admin') {
+      throw new Error('Seuls les administrateurs peuvent retirer des membres');
+    }
+    
+    if (memberToRemove?.role === 'admin' && members.filter(m => m.role === 'admin').length <= 1) {
+      throw new Error('Impossible de retirer le dernier administrateur');
+    }
+
     await deleteDocument(COLLECTIONS.FAMILY_MEMBERS, memberId);
     await loadFamily();
   };
@@ -221,7 +271,8 @@ export const FamilyProvider = ({ children }: { children: ReactNode }) => {
   const generateInviteCode = async (): Promise<string> => {
     if (!family) throw new Error('No family selected');
 
-    const newCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    // Use secure random code generation
+    const newCode = generateSecureInviteCode();
 
     await updateDocument(COLLECTIONS.FAMILIES, family.id, {
       inviteCode: newCode,

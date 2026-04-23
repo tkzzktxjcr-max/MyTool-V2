@@ -7,6 +7,9 @@ import {
   updateDocument, 
   deleteDocument,
   COLLECTIONS,
+  databases,
+  APPWRITE_CONFIG,
+  Query,
 } from '@/lib/appwrite';
 import { useFamily } from '@/contexts/FamilyContext';
 import type { Chore, CreateChoreForm, ChoreStatus } from '@/types';
@@ -21,22 +24,25 @@ export const useChores = () => {
 
     setLoading(true);
     try {
-      const response = await listDocuments(COLLECTIONS.CHORES);
+      // Use proper server-side query filtering
+      const response = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        COLLECTIONS.CHORES,
+        [Query.equal('familyId', family.id)]
+      );
       
-      const familyChores = response.documents
-        .filter((doc: any) => doc.familyId === family.id)
-        .map((doc: any) => ({
-          id: doc.$id,
-          familyId: doc.familyId,
-          title: doc.title,
-          description: doc.description,
-          frequency: doc.frequency,
-          points: doc.points,
-          assignedTo: doc.assignedTo,
-          dueDate: doc.dueDate,
-          status: doc.status as ChoreStatus,
-          createdBy: doc.createdBy,
-        }));
+      const familyChores = response.documents.map((doc: any) => ({
+        id: doc.$id,
+        familyId: doc.familyId,
+        title: doc.title,
+        description: doc.description,
+        frequency: doc.frequency,
+        points: doc.points,
+        assignedTo: doc.assignedTo,
+        dueDate: doc.dueDate,
+        status: doc.status as ChoreStatus,
+        createdBy: doc.createdBy,
+      }));
       
       setChores(familyChores);
     } catch (error) {
