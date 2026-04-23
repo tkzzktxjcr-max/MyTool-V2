@@ -81,7 +81,7 @@ export const alcoholService = {
       units: doc.units,
       context: doc.context,
       mood: doc.mood,
-      timestamp: doc.timestamp,
+      timestamp: doc.date || doc.timestamp, // Use date if available
       notes: doc.notes,
     }));
   },
@@ -102,6 +102,7 @@ export const alcoholService = {
     }
   ): Promise<AlcoholLog> {
     const units = (data.quantity * data.servingSize * data.abv) / 10;
+    const timestamp = new Date().toISOString();
     
     const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
       userId,
@@ -113,9 +114,10 @@ export const alcoholService = {
       servingSize: data.servingSize,
       abv: data.abv,
       units,
+      date: timestamp, // Required field for Appwrite
+      timestamp, // Keep for internal use
       context: data.context || null,
       mood: data.mood || null,
-      timestamp: new Date().toISOString(),
       notes: data.notes || null,
     });
 
@@ -136,7 +138,7 @@ export const alcoholService = {
       units: doc.units,
       context: doc.context,
       mood: doc.mood,
-      timestamp: doc.timestamp,
+      timestamp: doc.date || doc.timestamp,
       notes: doc.notes,
     };
   },
