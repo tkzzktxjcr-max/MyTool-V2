@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
 import { alcoholService } from './service';
 import type { CustomDrink, AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight } from './types';
-import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
+import { DRINK_TYPES } from './types';
 
 export const useAlcohol = () => {
   const { user } = useAuth();
@@ -85,8 +85,6 @@ export const useAlcohol = () => {
     if (!user?.$id) throw new Error('Not authenticated');
     
     const log = await alcoholService.createLog(user.$id, {
-      drinkName: drink.name,
-      drinkEmoji: drink.emoji || DRINK_TYPES[drink.type]?.icon || '🥤',
       drinkType: drink.type,
       quantity,
       servingSize: drink.defaultServingSize,
@@ -125,11 +123,6 @@ export const useAlcohol = () => {
       .reduce((sum, l) => sum + l.units, 0);
   }, [logs]);
 
-  // Calculate units for a drink
-  const calculateUnits = useCallback((servingSize: number, abv: number): number => {
-    return (servingSize * abv) / 10;
-  }, []);
-
   return {
     customDrinks,
     allDrinks,
@@ -144,6 +137,5 @@ export const useAlcohol = () => {
     deleteLog,
     deleteDrink,
     getTodayUnits,
-    calculateUnits,
   };
 };

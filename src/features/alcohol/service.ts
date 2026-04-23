@@ -49,16 +49,6 @@ export const alcoholService = {
     };
   },
 
-  async incrementUsageCount(drinkId: string): Promise<void> {
-    const drinks = await listDocuments(COLLECTIONS.CUSTOM_DRINKS, []);
-    const drink = drinks.documents.find((d: any) => d.$id === drinkId);
-    if (drink) {
-      await updateDocument(COLLECTIONS.CUSTOM_DRINKS, drinkId, {
-        usageCount: (drink.usageCount || 0) + 1,
-      });
-    }
-  },
-
   async deleteCustomDrink(drinkId: string): Promise<void> {
     await deleteDocument(COLLECTIONS.CUSTOM_DRINKS, drinkId);
   },
@@ -71,11 +61,11 @@ export const alcoholService = {
     return response.documents.map((doc: any) => ({
       id: doc.$id,
       userId: doc.userId,
-      drinkName: doc.drinkName,
-      drinkEmoji: doc.drinkEmoji,
+      drinkName: DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
+      drinkEmoji: DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
       drinkType: doc.drinkType as DrinkType,
       quantity: doc.quantity,
-      servingSize: doc.volumeCl || doc.servingSize,
+      servingSize: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,
       context: doc.context,
@@ -88,14 +78,12 @@ export const alcoholService = {
   async createLog(
     userId: string,
     data: {
-      drinkName: string;
-      drinkEmoji: string;
       drinkType: DrinkType;
       quantity: number;
       servingSize: number;
       abv: number;
-      context?: ContextType;
       mood?: MoodType;
+      context?: ContextType;
       notes?: string;
     }
   ): Promise<AlcoholLog> {
@@ -108,8 +96,6 @@ export const alcoholService = {
       volumeCl: data.servingSize,
       abv: data.abv,
       units,
-      drinkName: data.drinkName,
-      drinkEmoji: data.drinkEmoji,
       quantity: data.quantity,
       context: data.context || null,
       mood: data.mood || null,
@@ -119,8 +105,8 @@ export const alcoholService = {
     return {
       id: doc.$id,
       userId: doc.userId,
-      drinkName: doc.drinkName,
-      drinkEmoji: doc.drinkEmoji,
+      drinkName: DRINK_TYPES[data.drinkType]?.label || data.drinkType,
+      drinkEmoji: DRINK_TYPES[data.drinkType]?.icon || '🥤',
       drinkType: doc.drinkType as DrinkType,
       quantity: doc.quantity,
       servingSize: doc.volumeCl,
