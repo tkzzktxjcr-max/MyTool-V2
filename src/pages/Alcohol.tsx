@@ -30,7 +30,10 @@ const DrinkPill = ({ drink, onClick }: { drink: any; onClick: () => void }) => (
     className="flex items-center gap-2 px-4 py-2 rounded-full glass-card hover:bg-white/10 transition-colors"
   >
     <span className="text-lg">{drink.emoji}</span>
-    <span className="text-sm font-medium">{drink.name}</span>
+    <div className="text-left">
+      <span className="text-sm font-medium block">{drink.name}</span>
+      <span className="text-xs text-muted-foreground">{drink.defaultServingSize} cl · {drink.abv}%</span>
+    </div>
   </motion.button>
 );
 
@@ -61,7 +64,7 @@ export default function AlcoholPage() {
   const [showLogSuccess, setShowLogSuccess] = useState(false);
   const [goalForm, setGoalForm] = useState({ weeklyLimit: 14 });
   const [profileForm, setProfileForm] = useState({ weightKg: 70, sex: 'unspecified' as 'male' | 'female' | 'unspecified' });
-  const [newDrink, setNewDrink] = useState<CreateDrinkForm>({ name: '', type: 'beer', abv: 5, defaultServingSize: 50 });
+  const [newDrink, setNewDrink] = useState<CreateDrinkForm>({ name: 'Bière', type: 'beer', abv: 5, defaultServingSize: 50 });
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -90,7 +93,7 @@ export default function AlcoholPage() {
     if (!newDrink.name || !user?.$id) return;
     await createDrink(newDrink, DRINK_TYPES[newDrink.type]?.icon, user.$id);
     setShowDrinkCreator(false);
-    setNewDrink({ name: '', type: 'beer', abv: 5, defaultServingSize: 50 });
+    setNewDrink({ name: DRINK_TYPES[newDrink.type]?.label || 'Boisson', type: newDrink.type, abv: DRINK_TYPES[newDrink.type]?.defaultAbv || 5, defaultServingSize: 50 });
   };
 
   const handleSetGoal = async () => {
@@ -106,11 +109,9 @@ export default function AlcoholPage() {
   const recentLogs = logs.slice(0, 7);
   const legalLimit = userProfile?.legalLimit || 0.05;
 
-  // BAC chart data
   const chartData = bacState.timeline.map(point => ({
     time: format(point.time, 'HH:mm'),
     bac: point.bac,
-    isPast: point.isPast,
   }));
 
   return (
@@ -142,7 +143,7 @@ export default function AlcoholPage() {
       {/* Disclaimer */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/5 rounded-xl p-3">
         <Info className="w-4 h-4 flex-shrink-0" />
-        <span>Estimations BAC basées sur des formules scientifiques — ne pas utiliser pour prendre des décisions de conduite</span>
+        <span>Estimations BAC — ne pas utiliser pour prendre des décisions de conduite</span>
       </div>
 
       {/* Undo Banner */}
@@ -190,7 +191,6 @@ export default function AlcoholPage() {
             >
               {bacState.currentBAC.toFixed(3)}%
             </motion.div>
-            <p className="text-xs text-muted-foreground mt-1">estimation — non exacte</p>
           </div>
 
           {/* Legal Limit Warning */}
@@ -216,41 +216,11 @@ export default function AlcoholPage() {
                       <stop offset="100%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <XAxis 
-                    dataKey="time" 
-                    tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    domain={[0, 'dataMax + 0.02']}
-                    tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(v) => v.toFixed(3)}
-                  />
-                  <ReferenceLine 
-                    y={legalLimit} 
-                    stroke="hsl(0, 62%, 50%)" 
-                    strokeDasharray="3 3"
-                    label={{ value: `Limite ${legalLimit}%`, fontSize: 10, fill: 'hsl(0, 62%, 50%)' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="bac"
-                    stroke="hsl(142, 71%, 45%)"
-                    strokeWidth={2}
-                    fill="url(#bacGradient)"
-                    isAnimationActive={true}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="bac" 
-                    stroke="hsl(142, 71%, 45%)" 
-                    strokeWidth={2}
-                    dot={false}
-                    isAnimationActive={true}
-                  />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 'dataMax + 0.02']} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(3)} />
+                  <ReferenceLine y={legalLimit} stroke="hsl(0, 62%, 50%)" strokeDasharray="3 3" />
+                  <Area type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} fill="url(#bacGradient)" />
+                  <Line type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -279,7 +249,7 @@ export default function AlcoholPage() {
             </div>
             <div className="w-px h-8 bg-white/10" />
             <div>
-              <p className="text-xs text-muted-foreground">Limite légale</p>
+              <p className="text-xs text-muted-foreground">Limite</p>
               <p className="text-sm font-medium">{legalLimit}%</p>
             </div>
           </div>
@@ -287,28 +257,25 @@ export default function AlcoholPage() {
       </Card>
 
       {/* Weekly Progress */}
-      <Card className="overflow-hidden">
+      <Card>
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Cette semaine</span>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm">
-                <span className={cn("font-bold", weeklyUnits > weeklyLimit ? "text-destructive" : "text-secondary")}>
-                  {weeklyUnits.toFixed(1)}
-                </span>
-                <span className="text-muted-foreground"> / {weeklyLimit}</span>
+            <span className="text-sm">
+              <span className={cn("font-bold", weeklyUnits > weeklyLimit ? "text-destructive" : "text-secondary")}>
+                {weeklyUnits.toFixed(1)}
               </span>
-            </div>
+              <span className="text-muted-foreground"> / {weeklyLimit} unités</span>
+            </span>
           </div>
           
           <div className="h-3 rounded-full bg-white/10 overflow-hidden mb-3">
             <motion.div 
               initial={{ width: 0 }}
               animate={{ width: `${weeklyProgress}%` }}
-              transition={{ duration: 0.5 }}
               className={cn(
                 "h-full rounded-full",
                 weeklyProgress < 70 && "bg-secondary",
@@ -330,94 +297,46 @@ export default function AlcoholPage() {
         </CardContent>
       </Card>
 
-      {/* Today's Progress */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Aujourd'hui</p>
-              <div className="flex items-baseline gap-1">
-                <span className={cn(
-                  "text-4xl font-bold",
-                  todaysUnits <= 2 && "text-secondary",
-                  todaysUnits > 2 && todaysUnits <= 4 && "text-accent",
-                  todaysUnits > 4 && "text-destructive"
-                )}>{todaysUnits.toFixed(1)}</span>
-                <span className="text-muted-foreground">unités</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-sm">
-                {remainingUnits > 0 ? (
-                  <span className="text-muted-foreground">{remainingUnits.toFixed(1)} restantes</span>
-                ) : (
-                  <span className="text-destructive">{Math.abs(remainingUnits).toFixed(1)} au-delà</span>
-                )}
-              </p>
-              <p className="text-xs text-muted-foreground">max: {HEALTH_GUIDELINES.maxDailyUnits}</p>
-            </div>
-          </div>
-          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-            <motion.div 
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min((todaysUnits / HEALTH_GUIDELINES.maxDailyUnits) * 100, 100)}%` }}
-              transition={{ duration: 0.5 }}
-              className={cn(
-                "h-full rounded-full",
-                todaysUnits <= 2 && "bg-secondary",
-                todaysUnits > 2 && todaysUnits <= 4 && "bg-accent",
-                todaysUnits > 4 && "bg-destructive"
-              )}
-            />
-          </div>
-          <AnimatePresence>
-            {showLogSuccess && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="absolute inset-0 flex items-center justify-center bg-secondary/20 rounded-2xl"
-              >
-                <Check className="w-12 h-12 text-secondary" />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </CardContent>
-      </Card>
-
       {/* Quick Log */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-medium text-sm">Ajouter</h3>
-            {recentlyUsed.length > 0 && (
-              <span className="text-xs text-muted-foreground">Récents</span>
-            )}
+            <h3 className="font-medium text-sm">Ajouter une consommation</h3>
           </div>
           
           {recentlyUsed.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4">
-              {recentlyUsed.map(drink => (
-                <motion.button
-                  key={drink.id}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => handleQuickLog(drink)}
-                  className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-full bg-secondary/20 text-secondary"
-                >
-                  <span>{drink.emoji}</span>
-                  <span className="text-sm font-medium whitespace-nowrap">{drink.name}</span>
-                </motion.button>
-              ))}
+            <div className="mb-3">
+              <p className="text-xs text-muted-foreground mb-2">Récents</p>
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4">
+                {recentlyUsed.map(drink => (
+                  <motion.button
+                    key={drink.id}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleQuickLog(drink)}
+                    className="flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-full bg-secondary/20 text-secondary"
+                  >
+                    <span>{drink.emoji}</span>
+                    <span className="text-sm font-medium whitespace-nowrap">{drink.name}</span>
+                  </motion.button>
+                ))}
+              </div>
             </div>
           )}
           
-          <div className="flex flex-wrap gap-2">
-            {allDrinks.slice(0, 8).map(drink => (
-              <DrinkPill 
-                key={drink.id} 
-                drink={drink} 
-                onClick={() => handleQuickLog(drink)} 
-              />
+          <div className="grid grid-cols-2 gap-2">
+            {allDrinks.slice(0, 6).map(drink => (
+              <motion.button
+                key={drink.id}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleQuickLog(drink)}
+                className="flex items-center gap-2 p-3 rounded-xl glass-card hover:bg-white/10 transition-colors text-left"
+              >
+                <span className="text-2xl">{drink.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{drink.name}</p>
+                  <p className="text-xs text-muted-foreground">{drink.defaultServingSize} cl · {drink.abv}%</p>
+                </div>
+              </motion.button>
             ))}
           </div>
 
@@ -493,11 +412,6 @@ export default function AlcoholPage() {
                 ))}
               </div>
             )}
-
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t border-white/10">
-              <span>Limite: {HEALTH_GUIDELINES.maxDailyUnits}/jour</span>
-              <span>Total: {insights.totalWeeklyUnits.toFixed(1)} / {weeklyLimit}</span>
-            </div>
           </CardContent>
         </Card>
       )}
@@ -519,7 +433,7 @@ export default function AlcoholPage() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="flex items-center gap-3"
+                  className="flex items-center gap-3 p-3 rounded-xl bg-white/5"
                 >
                   <div className="text-2xl">{log.drinkEmoji}</div>
                   <div className="flex-1">
@@ -532,10 +446,7 @@ export default function AlcoholPage() {
                     <p className="font-bold">{log.units.toFixed(1)}</p>
                     <p className="text-xs text-muted-foreground">unités</p>
                   </div>
-                  <button 
-                    onClick={() => deleteLog(log.id)}
-                    className="p-1 text-muted-foreground hover:text-destructive"
-                  >
+                  <button onClick={() => deleteLog(log.id)} className="p-1 text-muted-foreground hover:text-destructive">
                     <X className="w-4 h-4" />
                   </button>
                 </motion.div>
@@ -548,7 +459,7 @@ export default function AlcoholPage() {
       {/* Create Drink Dialog */}
       <Dialog open={showDrinkCreator} onOpenChange={setShowDrinkCreator}>
         <DialogContent className="mx-4">
-          <DialogHeader><DialogTitle>Créer une recette</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Créer une consommation</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nom</label>
@@ -563,7 +474,12 @@ export default function AlcoholPage() {
                 <label className="text-sm font-medium">Type</label>
                 <Select 
                   value={newDrink.type} 
-                  onValueChange={(v) => setNewDrink(prev => ({ ...prev, type: v as DrinkType, abv: DRINK_TYPES[v as DrinkType]?.defaultAbv || 5 }))}
+                  onValueChange={(v) => setNewDrink(prev => ({ 
+                    ...prev, 
+                    type: v as DrinkType, 
+                    abv: DRINK_TYPES[v as DrinkType]?.defaultAbv || 5,
+                    name: DRINK_TYPES[v as DrinkType]?.label || 'Boisson'
+                  }))}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -579,6 +495,7 @@ export default function AlcoholPage() {
                   type="number"
                   min="0.1"
                   max="100"
+                  step="0.1"
                   value={newDrink.abv}
                   onChange={(e) => setNewDrink(prev => ({ ...prev, abv: parseFloat(e.target.value) }))}
                 />
@@ -630,7 +547,7 @@ export default function AlcoholPage() {
       {/* Profile Editor Dialog */}
       <Dialog open={showProfileEditor} onOpenChange={setShowProfileEditor}>
         <DialogContent className="mx-4">
-          <DialogHeader><DialogTitle>Paramètres BAC</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Paramètres</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -644,7 +561,6 @@ export default function AlcoholPage() {
                 value={profileForm.weightKg}
                 onChange={(e) => setProfileForm(prev => ({ ...prev, weightKg: parseInt(e.target.value) }))}
               />
-              <p className="text-xs text-muted-foreground">Utilisé pour le calcul de l'alcoolémie</p>
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Sexe (pour estimation)</label>

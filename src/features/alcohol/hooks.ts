@@ -36,18 +36,12 @@ const DEFAULT_USER_PROFILE: UserProfile = {
   updatedAt: '',
 };
 
-// Constants for BAC calculation
+// BAC calculation constants
 const BODY_WATER_MALE = 0.58;
 const BODY_WATER_FEMALE = 0.49;
 const ALCOHOL_DENSITY = 0.789;
-const METABOLISM_RATE = 0.015; // % per hour
+const METABOLISM_RATE = 0.015;
 
-// Calculate alcohol in grams from volume and ABV
-const calculateAlcoholGrams = (volumeMl: number, abv: number): number => {
-  return (volumeMl * abv / 100) * ALCOHOL_DENSITY;
-};
-
-// Calculate BAC for a single drink at a given time after consumption
 const calculateSingleDrinkBAC = (
   volumeMl: number,
   abv: number,
@@ -55,18 +49,13 @@ const calculateSingleDrinkBAC = (
   sex: 'male' | 'female' | 'unspecified',
   hoursSinceDrink: number
 ): number => {
-  const alcoholGrams = calculateAlcoholGrams(volumeMl, abv);
+  const alcoholGrams = (volumeMl * abv / 100) * ALCOHOL_DENSITY;
   const bodyWater = sex === 'female' ? BODY_WATER_FEMALE : 
                     sex === 'male' ? BODY_WATER_MALE : 0.68;
-  
-  // BAC = (alcohol_grams / (weight_kg * body_water_ratio)) * 10
   const peakBAC = (alcoholGrams / (weightKg * bodyWater)) * 10;
-  
-  // Subtract metabolism over time
   return Math.max(0, peakBAC - (METABOLISM_RATE * hoursSinceDrink));
 };
 
-// Calculate total BAC from all drinks
 const calculateTotalBAC = (
   drinks: { servingSize: number; abv: number; timestamp: string }[],
   weightKg: number,
@@ -78,6 +67,11 @@ const calculateTotalBAC = (
     if (hoursSince < 0 || hoursSince > 24) return total;
     return total + calculateSingleDrinkBAC(drink.servingSize, drink.abv, weightKg, sex, hoursSince);
   }, 0);
+};
+
+// Get user-friendly drink display name
+const getDrinkDisplayName = (drink: Drink): string => {
+  return `${drink.defaultServingSize} cl de ${drink.name}`;
 };
 
 export const useAlcohol = () => {
