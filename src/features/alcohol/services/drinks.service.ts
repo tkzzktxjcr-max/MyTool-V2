@@ -15,6 +15,16 @@ export interface Drink {
   createdAt: string;
 }
 
+// Default serving sizes in France (cl)
+const DEFAULT_SERVING_SIZES: Record<DrinkType, number> = {
+  beer: 33,      // 33cl bottle/half pint
+  wine: 12,       // Standard wine glass
+  spirit: 4,      // Whisky shot
+  cocktail: 20,   // Cocktail glass
+  cider: 33,      // Cider bottle
+  other: 25,     // Default
+};
+
 export const drinksService = {
   async getAllDrinks(): Promise<Drink[]> {
     const response = await listDocuments(COLLECTIONS.DRINKS, []);
@@ -98,15 +108,17 @@ export const drinksService = {
     await deleteDocument(COLLECTIONS.DRINKS, drinkId);
   },
 
+  // Seed default drinks with CORRECT serving sizes
   async seedDefaultDrinks(userId: string): Promise<Drink[]> {
     const drinks: Drink[] = [];
     
     for (const [type, data] of Object.entries(DRINK_TYPES)) {
+      const drinkType = type as DrinkType;
       const drink = await this.createDrink({
         name: data.label,
-        type: type as DrinkType,
+        type: drinkType,
         abv: data.defaultAbv,
-        defaultServingSize: 50,
+        defaultServingSize: DEFAULT_SERVING_SIZES[drinkType], // Correct size!
         emoji: data.icon,
         userId,
       });
