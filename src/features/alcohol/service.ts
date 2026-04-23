@@ -1,5 +1,5 @@
 import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, deleteDocument, Query } from '@/lib/appwrite';
-import type { AlcoholLog, DrinkType, MoodType, ContextType, AlcoholInsight } from './types';
+import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
 
 export const alcoholService = {
@@ -18,7 +18,6 @@ export const alcoholService = {
       servingSize: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,
-      context: doc.context,
       mood: doc.mood,
       timestamp: doc.date,
       notes: doc.notes,
@@ -32,7 +31,6 @@ export const alcoholService = {
       servingSize: number;
       abv: number;
       mood?: MoodType;
-      context?: ContextType;
       notes?: string;
     }
   ): Promise<AlcoholLog> {
@@ -45,7 +43,6 @@ export const alcoholService = {
       volumeCl: data.servingSize,
       abv: data.abv,
       units,
-      context: data.context || null,
       mood: data.mood || null,
       notes: data.notes || null,
     });
@@ -60,7 +57,6 @@ export const alcoholService = {
       servingSize: doc.volumeCl,
       abv: doc.abv,
       units: doc.units,
-      context: doc.context,
       mood: doc.mood,
       timestamp: doc.date,
       notes: doc.notes,
@@ -123,13 +119,6 @@ export const alcoholService = {
       }
     });
 
-    const contextBreakdown = {} as Record<ContextType, number>;
-    weeklyLogs.forEach(log => {
-      if (log.context) {
-        contextBreakdown[log.context] = (contextBreakdown[log.context] || 0) + 1;
-      }
-    });
-
     const patterns: string[] = [];
     
     const weekendUnits = weeklyLogs.filter(l => {
@@ -182,7 +171,7 @@ export const alcoholService = {
       weeklyTrend,
       drinkTypeBreakdown,
       moodBreakdown,
-      contextBreakdown,
+      contextBreakdown: {} as Record<string, number>,
       patterns,
       riskLevel,
       recommendations,

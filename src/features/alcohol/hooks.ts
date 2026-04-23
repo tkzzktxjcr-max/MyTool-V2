@@ -17,15 +17,12 @@ export const useAlcohol = () => {
     if (!user?.$id) return;
     setLoading(true);
     try {
-      // Load drinks from database
       const drinksData = await drinksService.ensureUserHasDrinks(user.$id);
       setDrinks(drinksData);
       
-      // Load logs from database
       const logsData = await alcoholService.getLogs(user.$id);
       setLogs(logsData);
       
-      // Get recently used (last 7 days)
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
@@ -60,11 +57,7 @@ export const useAlcohol = () => {
     return drink;
   }, []);
 
-  const quickLog = useCallback(async (
-    drink: Drink,
-    mood?: MoodType,
-    context?: string
-  ) => {
+  const quickLog = useCallback(async (drink: Drink, mood?: MoodType) => {
     if (!user?.$id) throw new Error('Not authenticated');
     
     const log = await alcoholService.createLog(user.$id, {
@@ -72,10 +65,8 @@ export const useAlcohol = () => {
       servingSize: drink.defaultServingSize,
       abv: drink.abv,
       mood,
-      context: context as any,
     });
     
-    // Increment usage count
     await drinksService.incrementUsage(drink.id);
     
     setLogs(prev => [log, ...prev]);
