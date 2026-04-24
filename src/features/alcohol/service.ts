@@ -8,25 +8,29 @@ const calculateUnits = (volumeCl: number, abv: number): number => {
 
 export const alcoholService = {
   async getLogs(userId: string): Promise<AlcoholLog[]> {
-    const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
-      Query.equal('userId', userId),
-    ]);
-    
-    return response.documents.map((doc: any) => ({
-      id: doc.$id,
-      userId: doc.userId,
-      // Utiliser le nom stocké, sinon le default
-      drinkName: doc.drinkName || DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
-      drinkEmoji: doc.drinkEmoji || DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
-      drinkType: doc.drinkType as DrinkType,
-      quantity: 1,
-      servingSize: doc.volumeCl,
-      abv: doc.abv,
-      units: doc.units,
-      mood: doc.mood,
-      timestamp: doc.date,
-      notes: doc.notes,
-    }));
+    try {
+      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
+        Query.equal('userId', userId),
+      ]);
+      
+      return response.documents.map((doc: any) => ({
+        id: doc.$id,
+        userId: doc.userId,
+        drinkName: doc.drinkName || DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
+        drinkEmoji: doc.drinkEmoji || DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
+        drinkType: doc.drinkType as DrinkType,
+        quantity: 1,
+        servingSize: doc.volumeCl,
+        abv: doc.abv,
+        units: doc.units,
+        mood: doc.mood,
+        timestamp: doc.date,
+        notes: doc.notes,
+      }));
+    } catch (error) {
+      console.warn('[alcoholService] getLogs failed', error);
+      return [];
+    }
   },
 
   async createLog(
@@ -37,8 +41,8 @@ export const alcoholService = {
       abv: number;
       mood?: MoodType;
       notes?: string;
-      drinkName?: string;   // ← AJOUTÉ
-      drinkEmoji?: string;  // ← AJOUTÉ
+      drinkName?: string;
+      drinkEmoji?: string;
     }
   ): Promise<AlcoholLog> {
     const units = calculateUnits(data.servingSize, data.abv);
@@ -52,7 +56,6 @@ export const alcoholService = {
       units,
       mood: data.mood || null,
       notes: data.notes || null,
-      // Stocker le nom et emoji personnalisé
       drinkName: data.drinkName || DRINK_TYPES[data.drinkType]?.label,
       drinkEmoji: data.drinkEmoji || DRINK_TYPES[data.drinkType]?.icon,
     });
@@ -74,11 +77,39 @@ export const alcoholService = {
   },
 
   async deleteLog(logId: string): Promise<void> {
-    await deleteDocument(COLLECTIONS.ALCOHOL_LOGS, logId);
+    try {
+      await deleteDocument(COLLECTIONS.ALCOHOL_LOGS, logId);
+    } catch (error) {
+      console.warn('[alcoholService] deleteLog failed', error);
+    }
   },
 
   calculateInsights(logs: AlcoholLog[], goal: AlcoholGoal | null): AlcoholInsight | null {
-    if (logs.length === 0) return null;
+    if (logs.length === 0) {
+      // Retourner des insights vides mais valides
+      const now = new Date();
+      const dailyTrend = Array.from({ length: 7 }, (_, i) => {
+        const date = new Date(now);
+        date.setDate(date.getDate() - (6 - i));
+        return { date: date.toISOString().split('T')[0], units: 0 };
+      });
+      
+      return {
+        totalWeeklyUnits: 0,
+        totalMonthlyUnits: 0,
+        averagePerDay: 0,
+        dailyTrend,
+        weeklyTrend: [],
+        drinkTypeBreakdown: {} as Record<DrinkType, { count: number; units: number }>,
+        moodBreakdown: {} as Record<MoodType, number>,
+        contextBreakdown: {},
+        patterns: [],
+        riskLevel: 'low',
+        recommendations: ['✅ Aucune donnée pour le moment'],
+        weeklyGoalProgress: 0,
+        streak: 0,
+      };
+    }
 
     const now = new Date();
     const weekAgo = new Date(now);
@@ -118,8 +149,10 @@ export const alcoholService = {
     }, {} as Record<DrinkType, { count: number; units: number }>);
     
     weeklyLogs.forEach(log => {
-      drinkTypeBreakdown[log.drinkType].count++;
-      drinkTypeBreakdown[log.drinkType].units += log.units;
+      if (drinkTypeBreakdown[log.drinkType]) {
+        drinkTypeBreakdown[log.drinkType].count++;
+        drinkTypeBreakdown[log.drinkType].units += log.units;
+      }
     });
 
     const moodBreakdown = {} as Record<MoodType, number>;
@@ -130,7 +163,6 @@ export const alcoholService = {
     });
 
     const patterns: string[] = [];
-    
     const weekendUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day === 0 || day === 6;
@@ -141,12 +173,7 @@ export const alcoholService = {
       return day !== 0 && day !== 6;
     }).reduce((sum, l) => sum + l.units, 0);
     
-    const weekendCount = weeklyLogs.filter(l => {
-      const day = new Date(l.timestamp).getDay();
-      return day === 0 || day === 6;
-    }).length;
-    
-    if (weekendUnits > weekdayUnits * 1.5 && weekendCount > 2) {
+    if (weekendUnits > weekdayUnits * 1.5 && weekendUnits > 5) {
       patterns.push('🍺 +50% le week-end');
     }
     
@@ -154,13 +181,6 @@ export const alcoholService = {
     if (typeEntries[0] && typeEntries[0][1].units > 0) {
       const typeName = DRINK_TYPES[typeEntries[0][0] as DrinkType]?.label || typeEntries[0][0];
       patterns.push(`🍷 ${typeName} favorit${typeEntries[0][0] === 'wine' ? 'e' : ''}`);
-    }
-
-    if (Object.keys(moodBreakdown).length > 0) {
-      const topMood = Object.entries(moodBreakdown).sort((a, b) => b[1] - a[1])[0];
-      if (topMood) {
-        patterns.push(`😊 Principalement ${topMood[0]}`);
-      }
     }
 
     const effectiveLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
@@ -174,18 +194,13 @@ export const alcoholService = {
     const recommendations: string[] = [];
     if (weeklyUnits > effectiveLimit) {
       recommendations.push('⚠️ Au-delà de votre objectif');
-    } else {
+    } else if (weeklyUnits > 0) {
       recommendations.push('✅ Dans les limites');
-    }
-    
-    if (weeklyUnits <= effectiveLimit * 0.5) {
-      recommendations.push('✨ Consommation modérée');
     }
 
     const weeklyGoalProgress = Math.min((weeklyUnits / effectiveLimit) * 100, 100);
 
     let streak = 0;
-    const today = new Date().toISOString().split('T')[0];
     for (let i = 0; i <= 30; i++) {
       const checkDate = new Date(now);
       checkDate.setDate(checkDate.getDate() - i);
