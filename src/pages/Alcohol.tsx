@@ -7,6 +7,7 @@ import { Activity, Target, User, Undo2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType } from '@/features/alcohol/types';
+import type { Drink } from '@/features/alcohol/services/drinks.service';
 
 import QuickDrinkPanel from './alcohol/QuickDrinkPanel';
 import BACCardComponent from './alcohol/BACCardComponent';
@@ -31,8 +32,8 @@ export default function AlcoholPage() {
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
 
-  const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
-    await createDrink(data, data.emoji);
+  const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }): Promise<Drink> => {
+    return createDrink(data, data.emoji);
   };
 
   return (
@@ -91,11 +92,11 @@ export default function AlcoholPage() {
         goal={goal}
         userProfile={userProfile}
         bacState={bacState}
-        onQuickLog={quickLog as any}
+        onQuickLog={quickLog}
         onCreateDrink={handleCreateDrink}
-        onDeleteLog={deleteLog as any}
-        onSetWeeklyGoal={setWeeklyGoal as any}
-        onUpdateProfile={updateUserProfile as any}
+        onDeleteLog={deleteLog}
+        onSetWeeklyGoal={setWeeklyGoal}
+        onUpdateProfile={updateUserProfile}
         weeklyUnits={weeklyUnits}
         weeklyLimit={weeklyLimit}
       />
@@ -107,14 +108,14 @@ export default function AlcoholPage() {
       <GoalSetterDialog
         open={showGoalSetter}
         onOpenChange={setShowGoalSetter}
-        onSetGoal={setWeeklyGoal as any}
+        onSetGoal={setWeeklyGoal}
         initialLimit={weeklyLimit}
       />
 
       <ProfileEditorDialog
         open={showProfileEditor}
         onOpenChange={setShowProfileEditor}
-        onUpdateProfile={updateUserProfile as any}
+        onUpdateProfile={updateUserProfile}
         initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }}
       />
     </div>
