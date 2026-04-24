@@ -5,7 +5,7 @@ import { drinksService, type Drink } from './services/drinks.service';
 import { goalsService } from './services/goals.service';
 import { profileService } from './services/profile.service';
 import type { UserProfile } from './services/profile.service';
-import type { AlcoholLog, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
+import type { CountryCode, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
 import {
   getBACAnalysis,
   checkLegalLimit,
@@ -17,69 +17,112 @@ export { type Drink };
 
 // Popular drinks that will be seeded into the database
 export const POPULAR_DRINKS_TO_SEED = [
-  // Bières internationales
-  { name: 'Lager classique', type: 'lager' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺' },
-  { name: 'Pilsner', type: 'pilsner' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺' },
-  { name: 'Stout (Guinness)', type: 'stout' as DrinkType, abv: 7, servingSize: 44, emoji: '🖤' },
-  { name: 'IPA', type: 'ipa' as DrinkType, abv: 6.5, servingSize: 33, emoji: '🍺' },
-  { name: 'Blanche (Weissbier)', type: 'wheat_beer' as DrinkType, abv: 5, servingSize: 50, emoji: '🍺' },
-  { name: 'Ale anglaise', type: 'ale' as DrinkType, abv: 5.5, servingSize: 33, emoji: '🍺' },
-  { name: 'Bière blonde', type: 'beer' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺' },
-  { name: 'Bière ambrée', type: 'beer' as DrinkType, abv: 6, servingSize: 33, emoji: '🍺' },
+  // France
+  { name: 'Bordeaux', type: 'red_wine' as DrinkType, abv: 13, servingSize: 15, emoji: '🍷', country: 'FR' as CountryCode },
+  { name: 'Chateau Margaux', type: 'red_wine' as DrinkType, abv: 13.5, servingSize: 15, emoji: '🍷', country: 'FR' as CountryCode },
+  { name: 'Chianti', type: 'red_wine' as DrinkType, abv: 13, servingSize: 15, emoji: '🍷', country: 'FR' as CountryCode },
+  { name: 'Champagne Veuve Clicquot', type: 'champagne' as DrinkType, abv: 12, servingSize: 10, emoji: '🍾', country: 'FR' as CountryCode },
+  { name: 'Moet & Chandon', type: 'champagne' as DrinkType, abv: 12, servingSize: 10, emoji: '🍾', country: 'FR' as CountryCode },
+  { name: 'Rose de Provence', type: 'rose_wine' as DrinkType, abv: 12.5, servingSize: 15, emoji: '🌸', country: 'FR' as CountryCode },
+  { name: 'Chablis', type: 'white_wine' as DrinkType, abv: 12, servingSize: 15, emoji: '🥂', country: 'FR' as CountryCode },
+  { name: 'Cognac Hennessy', type: 'cognac' as DrinkType, abv: 40, servingSize: 4, emoji: '🏰', country: 'FR' as CountryCode },
+  { name: 'Remy Martin', type: 'cognac' as DrinkType, abv: 40, servingSize: 4, emoji: '🏰', country: 'FR' as CountryCode },
+  { name: 'Calvados', type: 'calvados' as DrinkType, abv: 40, servingSize: 4, emoji: '🍎', country: 'FR' as CountryCode },
+  { name: 'Armagnac', type: 'brandy' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃', country: 'FR' as CountryCode },
+  
+  // United Kingdom
+  { name: 'Whisky Scotch', type: 'whisky' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃', country: 'GB' as CountryCode },
+  { name: 'Glenfiddich', type: 'whisky' as DrinkType, abv: 43, servingSize: 4, emoji: '🥃', country: 'GB' as CountryCode },
+  { name: 'Macallan', type: 'whisky' as DrinkType, abv: 43, servingSize: 4, emoji: '🥃', country: 'GB' as CountryCode },
+  { name: 'Gin London Dry', type: 'gin' as DrinkType, abv: 40, servingSize: 4, emoji: '🌿', country: 'GB' as CountryCode },
+  { name: 'Tanqueray', type: 'gin' as DrinkType, abv: 43.1, servingSize: 4, emoji: '🌿', country: 'GB' as CountryCode },
+  { name: 'IPA Craft', type: 'ipa' as DrinkType, abv: 6.5, servingSize: 33, emoji: '🍺', country: 'GB' as CountryCode },
+  { name: "Fuller's London Pride", type: 'ale' as DrinkType, abv: 5.2, servingSize: 33, emoji: '🍺', country: 'GB' as CountryCode },
+  { name: 'Guinness', type: 'stout' as DrinkType, abv: 7, servingSize: 44, emoji: '🖤', country: 'IE' as CountryCode },
+  
+  // Germany
+  { name: 'Weissbier', type: 'wheat_beer' as DrinkType, abv: 5, servingSize: 50, emoji: '🍺', country: 'DE' as CountryCode },
+  { name: 'Paulaner', type: 'wheat_beer' as DrinkType, abv: 5.5, servingSize: 50, emoji: '🍺', country: 'DE' as CountryCode },
+  { name: 'Hofbrauhaus', type: 'lager' as DrinkType, abv: 6, servingSize: 50, emoji: '🍺', country: 'DE' as CountryCode },
+  { name: 'Pilsner German', type: 'pilsner' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺', country: 'DE' as CountryCode },
+  
+  // Italy
+  { name: 'Martini Bianco', type: 'martini' as DrinkType, abv: 15, servingSize: 10, emoji: '🍸', country: 'IT' as CountryCode },
+  { name: 'Martini Rosso', type: 'martini' as DrinkType, abv: 15, servingSize: 10, emoji: '🍸', country: 'IT' as CountryCode },
+  { name: 'Negroni', type: 'cocktail' as DrinkType, abv: 28, servingSize: 10, emoji: '🍸', country: 'IT' as CountryCode },
+  { name: 'Aperol Spritz', type: 'aperol_spritz' as DrinkType, abv: 11, servingSize: 20, emoji: '🍊', country: 'IT' as CountryCode },
+  { name: 'Campari Spritz', type: 'sparkling' as DrinkType, abv: 11, servingSize: 20, emoji: '🍊', country: 'IT' as CountryCode },
+  { name: 'Prosecco', type: 'sparkling' as DrinkType, abv: 11, servingSize: 10, emoji: '🥂', country: 'IT' as CountryCode },
+  { name: 'Grappa', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🍇', country: 'IT' as CountryCode },
+  
+  // Spain
+  { name: 'Sangria', type: 'sangria' as DrinkType, abv: 10, servingSize: 25, emoji: '🍷', country: 'ES' as CountryCode },
+  { name: 'Rioja', type: 'red_wine' as DrinkType, abv: 13.5, servingSize: 15, emoji: '🍷', country: 'ES' as CountryCode },
+  { name: 'Jerez (Sherry)', type: 'sherry' as DrinkType, abv: 17, servingSize: 8, emoji: '🍷', country: 'ES' as CountryCode },
+  { name: 'Mahou', type: 'lager' as DrinkType, abv: 5.5, servingSize: 33, emoji: '🍺', country: 'ES' as CountryCode },
+  { name: 'Estrella Damm', type: 'lager' as DrinkType, abv: 5.4, servingSize: 33, emoji: '🍺', country: 'ES' as CountryCode },
+  
+  // Portugal
+  { name: 'Porto Vintage', type: 'port' as DrinkType, abv: 20, servingSize: 8, emoji: '🍷', country: 'PT' as CountryCode },
+  { name: 'Porto Tawny', type: 'port' as DrinkType, abv: 19.5, servingSize: 8, emoji: '🍷', country: 'PT' as CountryCode },
+  
+  // Cuba
+  { name: 'Mojito', type: 'mojito' as DrinkType, abv: 15, servingSize: 30, emoji: '🍹', country: 'CU' as CountryCode },
+  { name: 'Daiquiri', type: 'daiquiri' as DrinkType, abv: 15, servingSize: 15, emoji: '🍹', country: 'CU' as CountryCode },
+  { name: 'Cuba Libre', type: 'cocktail' as DrinkType, abv: 15, servingSize: 30, emoji: '🥤', country: 'CU' as CountryCode },
+  { name: 'Havana Club', type: 'rum' as DrinkType, abv: 40, servingSize: 4, emoji: '🏝️', country: 'CU' as CountryCode },
+  
+  // Mexico
+  { name: 'Margarita', type: 'margarita' as DrinkType, abv: 20, servingSize: 25, emoji: '🍹', country: 'MX' as CountryCode },
+  { name: 'Tequila Don Julio', type: 'tequila' as DrinkType, abv: 38, servingSize: 4, emoji: '🌵', country: 'MX' as CountryCode },
+  { name: 'Patron Silver', type: 'tequila' as DrinkType, abv: 40, servingSize: 4, emoji: '🌵', country: 'MX' as CountryCode },
+  { name: 'Mezcal', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🌵', country: 'MX' as CountryCode },
+  
+  // United States
+  { name: 'Old Fashioned', type: 'old_fashioned' as DrinkType, abv: 35, servingSize: 8, emoji: '🥃', country: 'US' as CountryCode },
+  { name: 'Manhattan', type: 'cocktail' as DrinkType, abv: 30, servingSize: 10, emoji: '🥃', country: 'US' as CountryCode },
+  { name: 'Cosmopolitan', type: 'cosmopolitan' as DrinkType, abv: 20, servingSize: 15, emoji: '🍸', country: 'US' as CountryCode },
+  { name: 'Whisky Sour', type: 'cocktail' as DrinkType, abv: 25, servingSize: 15, emoji: '🍋', country: 'US' as CountryCode },
+  { name: "Bourbon Jack Daniel's", type: 'whisky' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃', country: 'US' as CountryCode },
+  { name: 'Jim Beam', type: 'whisky' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃', country: 'US' as CountryCode },
+  
+  // Puerto Rico
+  { name: 'Pina Colada', type: 'pina_colada' as DrinkType, abv: 15, servingSize: 30, emoji: '🍍', country: 'PR' as CountryCode },
+  { name: 'Bacardi', type: 'rum' as DrinkType, abv: 40, servingSize: 4, emoji: '🏝️', country: 'PR' as CountryCode },
+  
+  // Russia
+  { name: 'Vodka Stolichnaya', type: 'vodka' as DrinkType, abv: 40, servingSize: 4, emoji: '💧', country: 'RU' as CountryCode },
+  { name: 'Vodka Beluga', type: 'vodka' as DrinkType, abv: 40, servingSize: 4, emoji: '💧', country: 'RU' as CountryCode },
+  { name: 'Vodka Grey Goose', type: 'vodka' as DrinkType, abv: 40, servingSize: 4, emoji: '💧', country: 'FR' as CountryCode },
+  
+  // Japan
+  { name: 'Sake Junmai', type: 'sake' as DrinkType, abv: 15, servingSize: 10, emoji: '🍶', country: 'JP' as CountryCode },
+  { name: 'Sake Daiginjo', type: 'sake' as DrinkType, abv: 16, servingSize: 10, emoji: '🍶', country: 'JP' as CountryCode },
+  { name: 'Japanese Highball', type: 'whisky' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃', country: 'JP' as CountryCode },
+  
+  // South Korea
+  { name: 'Soju', type: 'soju' as DrinkType, abv: 20, servingSize: 4, emoji: '🥃', country: 'KR' as CountryCode },
+  { name: 'Choi Yun', type: 'soju' as DrinkType, abv: 17, servingSize: 4, emoji: '🥃', country: 'KR' as CountryCode },
+  
+  // Greece
+  { name: 'Ouzo', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🏺', country: 'GR' as CountryCode },
+  { name: 'Mastiha', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🌿', country: 'GR' as CountryCode },
+  
+  // Netherlands
+  { name: 'Heineken', type: 'lager' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺', country: 'NL' as CountryCode },
+  { name: 'Amstel', type: 'lager' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺', country: 'NL' as CountryCode },
+  { name: 'Grolsch', type: 'lager' as DrinkType, abv: 5.8, servingSize: 45, emoji: '🍺', country: 'NL' as CountryCode },
+  
+  // China
+  { name: 'Baijiu', type: 'spirit' as DrinkType, abv: 52, servingSize: 4, emoji: '🍶', country: 'CN' as CountryCode },
+  { name: 'Moutai', type: 'spirit' as DrinkType, abv: 53, servingSize: 4, emoji: '🏺', country: 'CN' as CountryCode },
+  
+  // Generic
+  { name: 'Biere blonde', type: 'beer' as DrinkType, abv: 5, servingSize: 33, emoji: '🍺' },
+  { name: 'Biere ambre', type: 'beer' as DrinkType, abv: 6, servingSize: 33, emoji: '🍺' },
   { name: 'Cidre', type: 'cider' as DrinkType, abv: 5, servingSize: 33, emoji: '🍎' },
-  
-  // Vins internationaux
-  { name: 'Bordeaux', type: 'red_wine' as DrinkType, abv: 13, servingSize: 15, emoji: '🍷' },
-  { name: 'Chianti', type: 'red_wine' as DrinkType, abv: 13, servingSize: 15, emoji: '🍷' },
-  { name: 'Rioja', type: 'red_wine' as DrinkType, abv: 13.5, servingSize: 15, emoji: '🍷' },
-  { name: 'Pinot Noir', type: 'red_wine' as DrinkType, abv: 12.5, servingSize: 15, emoji: '🍷' },
-  { name: 'Chardonnay', type: 'white_wine' as DrinkType, abv: 12.5, servingSize: 15, emoji: '🥂' },
-  { name: 'Sauvignon Blanc', type: 'white_wine' as DrinkType, abv: 12, servingSize: 15, emoji: '🥂' },
-  { name: 'Vinho Verde', type: 'white_wine' as DrinkType, abv: 11, servingSize: 15, emoji: '🥂' },
-  { name: 'Rosé de Provence', type: 'rose_wine' as DrinkType, abv: 12.5, servingSize: 15, emoji: '🌸' },
-  { name: 'Champagne', type: 'champagne' as DrinkType, abv: 12, servingSize: 10, emoji: '🍾' },
-  { name: 'Prosecco', type: 'sparkling' as DrinkType, abv: 11, servingSize: 10, emoji: '🥂' },
-  
-  // Spiritueux internationaux
-  { name: 'Whisky Scotch', type: 'whisky' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃' },
-  { name: 'Bourbon', type: 'whisky' as DrinkType, abv: 45, servingSize: 4, emoji: '🥃' },
-  { name: 'Irish Whiskey', type: 'whisky' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃' },
-  { name: 'Vodka', type: 'vodka' as DrinkType, abv: 40, servingSize: 4, emoji: '💧' },
-  { name: 'Vodka Russo', type: 'vodka' as DrinkType, abv: 40, servingSize: 4, emoji: '💧' },
-  { name: 'Rhum blanc', type: 'rum' as DrinkType, abv: 40, servingSize: 4, emoji: '🏝️' },
-  { name: 'Rhum ambré', type: 'rum' as DrinkType, abv: 42, servingSize: 4, emoji: '🏝️' },
-  { name: 'Tequila blanche', type: 'tequila' as DrinkType, abv: 38, servingSize: 4, emoji: '🌵' },
-  { name: 'Tequila Reposado', type: 'tequila' as DrinkType, abv: 40, servingSize: 4, emoji: '🌵' },
-  { name: 'Gin London Dry', type: 'gin' as DrinkType, abv: 40, servingSize: 4, emoji: '🌿' },
-  { name: 'Gin Botanique', type: 'gin' as DrinkType, abv: 42, servingSize: 4, emoji: '🌿' },
-  { name: 'Cognac', type: 'cognac' as DrinkType, abv: 40, servingSize: 4, emoji: '🏰' },
-  { name: 'Armagnac', type: 'brandy' as DrinkType, abv: 40, servingSize: 4, emoji: '🥃' },
-  { name: 'Calvados', type: 'calvados' as DrinkType, abv: 40, servingSize: 4, emoji: '🍎' },
-  
-  // Cocktails populaires
-  { name: 'Mojito', type: 'mojito' as DrinkType, abv: 15, servingSize: 30, emoji: '🍹' },
-  { name: 'Margarita', type: 'margarita' as DrinkType, abv: 20, servingSize: 25, emoji: '🍹' },
-  { name: 'Old Fashioned', type: 'old_fashioned' as DrinkType, abv: 35, servingSize: 8, emoji: '🥃' },
-  { name: 'Martini', type: 'martini' as DrinkType, abv: 25, servingSize: 10, emoji: '🍸' },
-  { name: 'Cosmopolitan', type: 'cosmopolitan' as DrinkType, abv: 20, servingSize: 15, emoji: '🍸' },
-  { name: 'Daiquiri', type: 'daiquiri' as DrinkType, abv: 15, servingSize: 15, emoji: '🍹' },
-  { name: 'Piña Colada', type: 'pina_colada' as DrinkType, abv: 15, servingSize: 30, emoji: '🍍' },
-  { name: 'Aperol Spritz', type: 'aperol_spritz' as DrinkType, abv: 11, servingSize: 20, emoji: '🍊' },
-  { name: 'Negroni', type: 'cocktail' as DrinkType, abv: 28, servingSize: 10, emoji: '🍸' },
-  { name: 'Manhattan', type: 'cocktail' as DrinkType, abv: 30, servingSize: 10, emoji: '🥃' },
-  { name: 'Gin Tonic', type: 'cocktail' as DrinkType, abv: 15, servingSize: 25, emoji: '🌿' },
-  { name: 'Whisky Coke', type: 'cocktail' as DrinkType, abv: 15, servingSize: 30, emoji: '🥃' },
-  
-  // Spécialités régionales
-  { name: 'Saké', type: 'sake' as DrinkType, abv: 15, servingSize: 10, emoji: '🍶' },
-  { name: 'Soju', type: 'soju' as DrinkType, abv: 20, servingSize: 4, emoji: '🥃' },
-  { name: 'Sangria', type: 'sangria' as DrinkType, abv: 10, servingSize: 25, emoji: '🍷' },
-  { name: 'Sherry', type: 'sherry' as DrinkType, abv: 17, servingSize: 8, emoji: '🍷' },
-  { name: 'Porto', type: 'port' as DrinkType, abv: 20, servingSize: 8, emoji: '🍷' },
-  { name: 'Ouzo', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🏺' },
-  { name: 'Grappa', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🍇' },
-  { name: 'Pisco', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🦅' },
-  { name: 'Mezcal', type: 'spirit' as DrinkType, abv: 40, servingSize: 4, emoji: '🌵' },
+  { name: 'Vin rouge', type: 'red_wine' as DrinkType, abv: 13, servingSize: 15, emoji: '🍷' },
+  { name: 'Vin blanc', type: 'white_wine' as DrinkType, abv: 12, servingSize: 15, emoji: '🥂' },
 ];
 
 export const useAlcohol = () => {
@@ -118,9 +161,10 @@ export const useAlcohol = () => {
             abv: drinkData.abv,
             defaultServingSize: drinkData.servingSize,
             emoji: drinkData.emoji,
-            userId: undefined, // Global drinks have no userId
+            country: drinkData.country,
+            userId: undefined,
           });
-          console.log(`[Seed] Created: ${drinkData.name}`);
+          console.log(`[Seed] Created: ${drinkData.name} (${drinkData.country || 'International'})`);
         } catch (error) {
           console.error(`[Seed] Failed to create ${drinkData.name}:`, error);
         }
@@ -140,7 +184,7 @@ export const useAlcohol = () => {
       // First, ensure drinks are seeded
       await seedDrinksToDatabase();
       
-      // Now load all drinks from database (only from database!)
+      // Now load all drinks from database
       const drinksData = await drinksService.getAllDrinks();
       setDrinks(drinksData);
       console.log(`[Alcohol] Loaded ${drinksData.length} drinks from database`);
@@ -173,7 +217,6 @@ export const useAlcohol = () => {
       setRecentlyUsed(recentDrinks.slice(0, 4));
     } catch (err) {
       console.error('Error loading alcohol data:', err);
-      // No fallback - drinks will be empty until database is ready
       setDrinks([]);
     } finally {
       setLoading(false);
@@ -181,7 +224,6 @@ export const useAlcohol = () => {
   }, [user?.$id, seedDrinksToDatabase]);
 
   const resetDrinks = useCallback(async () => {
-    // Just reload from database - no local fallback
     const allDrinks = await drinksService.getAllDrinks();
     setDrinks(allDrinks);
   }, []);
@@ -194,7 +236,8 @@ export const useAlcohol = () => {
       abv: form.abv,
       defaultServingSize: form.defaultServingSize,
       emoji: emoji || '🥤',
-      userId: user.$id, // User-specific drink
+      country: form.country,
+      userId: user.$id,
     });
     setDrinks(prev => [...prev, drink]);
     return drink;
@@ -207,6 +250,7 @@ export const useAlcohol = () => {
       abv: number;
       defaultServingSize: number;
       emoji: string;
+      country?: CountryCode;
     }
   ) => {
     if (!user?.$id) throw new Error('Not authenticated');
@@ -214,7 +258,6 @@ export const useAlcohol = () => {
       type: drinkType,
       ...data,
     });
-    // Refresh all drinks from database
     const allDrinks = await drinksService.getAllDrinks();
     setDrinks(allDrinks);
     return drink;
@@ -338,6 +381,20 @@ export const useAlcohol = () => {
       .reduce((sum, l) => sum + l.units, 0);
   }, [logs]);
 
+  const getDrinksByCountry = useCallback(() => {
+    const grouped: Record<string, Drink[]> = {};
+    
+    for (const drink of drinks) {
+      const country = drink.country || 'INT';
+      if (!grouped[country]) {
+        grouped[country] = [];
+      }
+      grouped[country].push(drink);
+    }
+    
+    return grouped;
+  }, [drinks]);
+
   return {
     drinks,
     allDrinks: drinks,
@@ -361,5 +418,6 @@ export const useAlcohol = () => {
     updateUserProfile,
     getTodayUnits,
     getWeeklyUnits,
+    getDrinksByCountry,
   };
 };

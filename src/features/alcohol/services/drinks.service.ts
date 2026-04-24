@@ -1,7 +1,6 @@
 import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
-import type { DrinkType } from '../types';
-import { DRINK_TYPES } from '../types';
+import type { DrinkType, CountryCode } from '../types';
 
 export interface Drink {
   id: string;
@@ -10,6 +9,7 @@ export interface Drink {
   abv: number;
   defaultServingSize: number;
   emoji: string;
+  country?: CountryCode;
   isFavorite: boolean;
   usageCount: number;
   userId?: string;
@@ -80,6 +80,7 @@ export const drinksService = {
         abv: doc.abv,
         defaultServingSize: doc.defaultServingSize,
         emoji: doc.emoji,
+        country: doc.country as CountryCode | undefined,
         isFavorite: doc.isFavorite || false,
         usageCount: doc.usageCount || 0,
         userId: doc.userId || undefined,
@@ -104,6 +105,7 @@ export const drinksService = {
         abv: doc.abv,
         defaultServingSize: doc.defaultServingSize,
         emoji: doc.emoji,
+        country: doc.country as CountryCode | undefined,
         isFavorite: doc.isFavorite || false,
         usageCount: doc.usageCount || 0,
         userId: doc.userId,
@@ -134,6 +136,7 @@ export const drinksService = {
           abv: doc.abv,
           defaultServingSize: doc.defaultServingSize,
           emoji: doc.emoji,
+          country: doc.country as CountryCode | undefined,
           isFavorite: doc.isFavorite || false,
           usageCount: doc.usageCount || 0,
           userId: doc.userId,
@@ -156,6 +159,7 @@ export const drinksService = {
     abv: number;
     defaultServingSize: number;
     emoji: string;
+    country?: CountryCode;
     userId?: string;
   }): Promise<Drink> {
     const doc: any = await createDocument(COLLECTIONS.DRINKS, {
@@ -164,6 +168,7 @@ export const drinksService = {
       abv: data.abv,
       defaultServingSize: data.defaultServingSize,
       emoji: data.emoji,
+      country: data.country || null,
       isFavorite: false,
       usageCount: 0,
       userId: data.userId || null,
@@ -176,6 +181,7 @@ export const drinksService = {
       abv: doc.abv,
       defaultServingSize: doc.defaultServingSize,
       emoji: doc.emoji,
+      country: doc.country as CountryCode | undefined,
       isFavorite: false,
       usageCount: 0,
       userId: doc.userId || undefined,
@@ -194,6 +200,7 @@ export const drinksService = {
       abv: number;
       defaultServingSize: number;
       emoji: string;
+      country?: CountryCode;
     }
   ): Promise<Drink> {
     const existing = await this.getUserDrinkPreference(userId, data.type);
@@ -204,6 +211,7 @@ export const drinksService = {
         abv: data.abv,
         defaultServingSize: data.defaultServingSize,
         emoji: data.emoji,
+        country: data.country || null,
       });
       
       return {
@@ -213,6 +221,7 @@ export const drinksService = {
         abv: doc.abv,
         defaultServingSize: doc.defaultServingSize,
         emoji: doc.emoji,
+        country: doc.country as CountryCode | undefined,
         isFavorite: doc.isFavorite || false,
         usageCount: doc.usageCount || 0,
         userId: doc.userId,
@@ -275,5 +284,24 @@ export const drinksService = {
     const globalDrinks = allDrinks.filter(d => !d.userId && !userTypes.has(d.type));
     
     return [...userDrinks, ...globalDrinks];
+  },
+
+  /**
+   * Get drinks grouped by country
+   */
+  async getDrinksByCountry(): Promise<Record<CountryCode, Drink[]>> {
+    const allDrinks = await this.getAllDrinks();
+    
+    const grouped: Record<string, Drink[]> = {};
+    
+    for (const drink of allDrinks) {
+      const country = drink.country || 'OTHER';
+      if (!grouped[country]) {
+        grouped[country] = [];
+      }
+      grouped[country].push(drink);
+    }
+    
+    return grouped as Record<CountryCode, Drink[]>;
   },
 };
