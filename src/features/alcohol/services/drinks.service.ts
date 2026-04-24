@@ -1,4 +1,5 @@
-import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
+import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
+import { COLLECTIONS } from '@/lib/appwrite';
 import type { DrinkType } from '../types';
 import { DRINK_TYPES } from '../types';
 
@@ -42,7 +43,7 @@ export const drinksService = {
         createdAt: doc.$createdAt,
       }));
     } catch (error) {
-      console.warn('[drinksService] Collection drinks non trouvée, utilisation des defaults', error);
+      console.warn('[drinksService] Collection drinks non trouvée', error);
       return this.getDefaultDrinks();
     }
   },
@@ -114,7 +115,6 @@ export const drinksService = {
       isFavorite: false,
       usageCount: 0,
       userId: data.userId || null,
-      createdAt: new Date().toISOString(),
     });
     
     return {
@@ -169,7 +169,6 @@ export const drinksService = {
       return this.createDrink({ ...data, userId });
     } catch (error) {
       console.warn('[drinksService] setUserDrinkPreference failed', error);
-      // Retourner un drink local en cas d'erreur
       return {
         id: `local-${data.type}`,
         name: data.name,
@@ -191,7 +190,7 @@ export const drinksService = {
         usageCount: { increment: 1 },
       });
     } catch (error) {
-      console.warn('[drinksService] incrementUsage failed for', drinkId, error);
+      console.warn('[drinksService] incrementUsage failed', error);
     }
   },
 
@@ -203,20 +202,20 @@ export const drinksService = {
     }
   },
 
-  async ensureUserHasDrinks(userId: string): Promise<Drink[]> {
+  async deleteAllUserDrinks(userId: string): Promise<void> {
     try {
-      const userDrinks = await this.getDrinksByUser(userId);
-      if (userDrinks.length > 0) {
-        return userDrinks;
+      const drinks = await this.getDrinksByUser(userId);
+      for (const drink of drinks) {
+        await this.deleteDrink(drink.id);
       }
-      return this.resetToDefaults(userId);
     } catch (error) {
-      console.warn('[drinksService] ensureUserHasDrinks failed, returning defaults', error);
-      return this.getDefaultDrinks();
+      console.warn('[drinksService] deleteAllUserDrinks failed', error);
     }
   },
 
   async resetToDefaults(userId: string): Promise<Drink[]> {
+    await this.deleteAllUserDrinks(userId);
+    
     const drinks: Drink[] = [];
     for (const [type, data] of Object.entries(DRINK_TYPES)) {
       const drinkType = type as DrinkType;
@@ -232,21 +231,22 @@ export const drinksService = {
         drinks.push(drink);
       } catch (error) {
         console.warn('[drinksService] Failed to create drink', drinkType, error);
-        drinks.push({
-          id: `local-${drinkType}`,
-          name: data.label,
-          type: drinkType,
-          abv: data.defaultAbv,
-          defaultServingSize: DEFAULT_SIZES[drinkType],
-          emoji: data.icon,
-          isFavorite: false,
-          usageCount: 0,
-          userId,
-          createdAt: new Date().toISOString(),
-        });
       }
     }
     return drinks;
+  },
+
+  async ensureUserHasDrinks(userId: string): Promise<Drink[]> {
+    try {
+      const userDrinks = await this.getDrinksByUser(userId);
+      if (userDrinks.length > 0) {
+        return userDrinks;
+      }
+      return this.resetToDefaults(userId);
+    } catch (error) {
+      console.warn('[drinksService] ensureUserHasDrinks failed', error);
+      return this.getDefaultDrinks();
+    }
   },
 
   async getDrinksWithPreferences(userId: string): Promise<Drink[]> {
@@ -275,7 +275,7 @@ export const drinksService = {
       
       return [...userDrinks, ...missingDefaults];
     } catch (error) {
-      console.warn('[drinksService] getDrinksWithPreferences failed, returning defaults', error);
+      console.warn('[drinksService] getDrinksWithPreferences failed', error);
       return this.getDefaultDrinks();
     }
   },

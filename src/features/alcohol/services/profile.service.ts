@@ -1,4 +1,5 @@
-import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, updateDocument, Query } from '@/lib/appwrite';
+import { createDocument, listDocuments, updateDocument, Query } from '@/lib/appwrite';
+import { COLLECTIONS } from '@/lib/appwrite';
 
 export interface UserProfile {
   id: string;
@@ -63,7 +64,6 @@ export const profileService = {
         weightKg: data.weightKg || 70,
         sex: data.sex || 'unspecified',
         legalLimit: data.legalLimit || 0.5,
-        createdAt: new Date().toISOString(),
       });
       
       return {
@@ -75,7 +75,7 @@ export const profileService = {
         updatedAt: doc.$createdAt,
       };
     } catch (error) {
-      console.warn('[profileService] createOrUpdateProfile failed, returning local profile', error);
+      console.warn('[profileService] createOrUpdateProfile failed', error);
       return {
         id: 'local-profile',
         userId,

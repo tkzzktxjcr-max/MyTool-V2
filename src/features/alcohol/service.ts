@@ -1,4 +1,5 @@
-import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, deleteDocument, Query } from '@/lib/appwrite';
+import { createDocument, listDocuments, deleteDocument, Query } from '@/lib/appwrite';
+import { COLLECTIONS } from '@/lib/appwrite';
 import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
 
@@ -86,7 +87,6 @@ export const alcoholService = {
 
   calculateInsights(logs: AlcoholLog[], goal: AlcoholGoal | null): AlcoholInsight | null {
     if (logs.length === 0) {
-      // Retourner des insights vides mais valides
       const now = new Date();
       const dailyTrend = Array.from({ length: 7 }, (_, i) => {
         const date = new Date(now);
@@ -100,7 +100,10 @@ export const alcoholService = {
         averagePerDay: 0,
         dailyTrend,
         weeklyTrend: [],
-        drinkTypeBreakdown: {} as Record<DrinkType, { count: number; units: number }>,
+        drinkTypeBreakdown: Object.keys(DRINK_TYPES).reduce((acc, type) => {
+          acc[type as DrinkType] = { count: 0, units: 0 };
+          return acc;
+        }, {} as Record<DrinkType, { count: number; units: number }>),
         moodBreakdown: {} as Record<MoodType, number>,
         contextBreakdown: {},
         patterns: [],

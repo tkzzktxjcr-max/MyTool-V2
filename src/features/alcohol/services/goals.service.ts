@@ -1,4 +1,5 @@
-import { databases, APPWRITE_CONFIG, COLLECTIONS, createDocument, listDocuments, updateDocument, Query } from '@/lib/appwrite';
+import { createDocument, listDocuments, updateDocument, Query } from '@/lib/appwrite';
+import { COLLECTIONS } from '@/lib/appwrite';
 import type { AlcoholGoal } from '../types';
 
 export const goalsService = {
@@ -53,7 +54,6 @@ export const goalsService = {
         weeklyLimit: data.weeklyLimit,
         reductionGoal: data.reductionGoal ?? null,
         isActive: data.isActive ?? true,
-        createdAt: new Date().toISOString(),
       });
       
       return {
@@ -65,7 +65,7 @@ export const goalsService = {
         createdAt: doc.$createdAt,
       };
     } catch (error) {
-      console.warn('[goalsService] createOrUpdateGoal failed, returning default goal', error);
+      console.warn('[goalsService] createOrUpdateGoal failed', error);
       return {
         id: 'local-goal',
         userId,
