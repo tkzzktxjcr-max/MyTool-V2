@@ -3,31 +3,27 @@
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Plus, Undo2 } from 'lucide-react';
+import { Activity, Target, User, Undo2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HEALTH_GUIDELINES, DRINK_TYPES } from '@/features/alcohol/types';
-import type { DrinkType, CreateDrinkForm } from '@/features/alcohol/types';
+import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
+import type { DrinkType } from '@/features/alcohol/types';
 
+import QuickDrinkPanel from './alcohol/QuickDrinkPanel';
 import BACCardComponent from './alcohol/BACCardComponent';
 import WeeklyProgressComponent from './alcohol/WeeklyProgressComponent';
-import DrinksList from './alcohol/DrinksList';
 import InsightsComponent from './alcohol/InsightsComponent';
 import HistoryComponent from './alcohol/HistoryComponent';
-import { CreateDrinkDialog, CustomizeDrinkDialog, GoalSetterDialog, ProfileEditorDialog } from './alcohol/DialogsComponent';
+import { GoalSetterDialog, ProfileEditorDialog } from './alcohol/DialogsComponent';
 
 export default function AlcoholPage() {
   const { 
     drinks, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState,
-    loadData, resetDrinks, createDrink, customizeDrink, quickLog, deleteLog, undoDelete, deleteDrink,
-    setWeeklyGoal, updateUserProfile, getTodayUnits, getWeeklyUnits,
+    loadData, createDrink, quickLog, deleteLog, undoDelete,
+    setWeeklyGoal, updateUserProfile, getWeeklyUnits,
   } = useAlcohol();
 
-  const [showDrinkCreator, setShowDrinkCreator] = useState(false);
-  const [showDrinkCustomizer, setShowDrinkCustomizer] = useState(false);
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
-  const [customizingDrinkType, setCustomizingDrinkType] = useState<DrinkType | null>(null);
-  const [customizeForm, setCustomizeForm] = useState({ name: '', abv: 5, defaultServingSize: 33, emoji: '🍺' });
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -35,33 +31,12 @@ export default function AlcoholPage() {
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
 
-  const handleCreateDrink = async (form: CreateDrinkForm, emoji?: string) => {
-    await createDrink(form, emoji);
-    setShowDrinkCreator(false);
-  };
-
-  const openCustomizer = (drinkType: DrinkType) => {
-    const existingDrink = drinks.find(d => d.type === drinkType && d.userId);
-    const defaultData = DRINK_TYPES[drinkType];
-    setCustomizingDrinkType(drinkType);
-    setCustomizeForm({
-      name: existingDrink?.name || defaultData?.label || 'Boisson',
-      abv: existingDrink?.abv || defaultData?.defaultAbv || 5,
-      defaultServingSize: existingDrink?.defaultServingSize || 33,
-      emoji: existingDrink?.emoji || defaultData?.icon || '🥤',
-    });
-    setShowDrinkCustomizer(true);
-  };
-
-  const handleDeleteDrink = async (drinkId: string) => {
-    if (confirm('Supprimer cette consommation personnalisée ?')) {
-      await deleteDrink(drinkId);
-    }
+  const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
+    await createDrink(data, data.emoji);
   };
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -70,7 +45,7 @@ export default function AlcoholPage() {
             </div>
             Bien-être
           </h1>
-          <p className="text-sm text-muted-foreground">Suivi discret et personnel</p>
+          <p className="text-sm text-muted-foreground">Ton suivi personnalisé</p>
         </div>
         <div className="flex gap-1">
           <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)}>
@@ -79,27 +54,12 @@ export default function AlcoholPage() {
           <Button variant="ghost" size="icon" onClick={() => setShowGoalSetter(true)}>
             <Target className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowDrinkCreator(true)}>
-            <Plus className="w-5 h-5" />
-          </Button>
         </div>
       </div>
 
-      {/* Info Banner */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground bg-white/5 rounded-xl p-3">
-        <span>💡</span>
-        <span>Estimations BAC — ne pas utiliser pour prendre des décisions de conduite</span>
-      </div>
-
-      {/* Undo Toast */}
       <AnimatePresence>
         {lastDeletedLog && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-accent/20 border border-accent/30 rounded-xl p-3 flex items-center justify-between"
-          >
+          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-accent/20 border border-accent/30 rounded-xl p-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-lg">{lastDeletedLog.drinkEmoji}</span>
               <span className="text-sm">"{lastDeletedLog.drinkName}" supprimé</span>
@@ -112,7 +72,6 @@ export default function AlcoholPage() {
         )}
       </AnimatePresence>
 
-      {/* Main Components */}
       <BACCardComponent
         currentBAC={bacState.currentBAC}
         peakBAC={bacState.peakBAC}
@@ -124,61 +83,39 @@ export default function AlcoholPage() {
         legalLimit={legalLimit}
       />
 
-      <WeeklyProgressComponent
-        weeklyUnits={weeklyUnits}
-        weeklyLimit={weeklyLimit}
-        streak={insights?.streak}
-      />
-
-      <DrinksList
+      <QuickDrinkPanel
         drinks={drinks}
         recentlyUsed={recentlyUsed}
-        onQuickLog={quickLog}
-        onCustomize={openCustomizer}
-        onDelete={handleDeleteDrink}
-        onReset={resetDrinks}
+        logs={logs}
+        insights={insights}
+        goal={goal}
+        userProfile={userProfile}
+        bacState={bacState}
+        onQuickLog={quickLog as any}
+        onCreateDrink={handleCreateDrink}
+        onDeleteLog={deleteLog as any}
+        onSetWeeklyGoal={setWeeklyGoal as any}
+        onUpdateProfile={updateUserProfile as any}
+        weeklyUnits={weeklyUnits}
+        weeklyLimit={weeklyLimit}
       />
 
+      <WeeklyProgressComponent weeklyUnits={weeklyUnits} weeklyLimit={weeklyLimit} streak={insights?.streak} />
       <InsightsComponent insights={insights} />
-
       <HistoryComponent logs={logs} onDeleteLog={deleteLog} />
-
-      {/* Dialogs */}
-      <CreateDrinkDialog
-        open={showDrinkCreator}
-        onOpenChange={setShowDrinkCreator}
-        onCreate={handleCreateDrink}
-      />
-
-      <CustomizeDrinkDialog
-        open={showDrinkCustomizer}
-        onOpenChange={setShowDrinkCustomizer}
-        onCustomize={async (data) => { 
-          if (customizingDrinkType) { 
-            await customizeDrink(customizingDrinkType, data); 
-            setShowDrinkCustomizer(false); 
-            setCustomizingDrinkType(null); 
-          } 
-        }}
-        drinkType={customizingDrinkType}
-        initialData={customizeForm}
-      />
 
       <GoalSetterDialog
         open={showGoalSetter}
         onOpenChange={setShowGoalSetter}
-        onSetGoal={setWeeklyGoal}
-        initialLimit={goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits}
+        onSetGoal={setWeeklyGoal as any}
+        initialLimit={weeklyLimit}
       />
 
       <ProfileEditorDialog
         open={showProfileEditor}
         onOpenChange={setShowProfileEditor}
-        onUpdateProfile={updateUserProfile}
-        initialData={{
-          weightKg: userProfile?.weightKg || 70,
-          sex: userProfile?.sex || 'unspecified',
-        }}
+        onUpdateProfile={updateUserProfile as any}
+        initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }}
       />
     </div>
   );
