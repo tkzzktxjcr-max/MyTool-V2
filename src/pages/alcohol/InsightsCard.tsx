@@ -11,7 +11,10 @@ import type { AlcoholInsight } from '@/features/alcohol/types';
 interface InsightsCardProps { insights: AlcoholInsight | null; }
 
 export default function InsightsCard({ insights }: InsightsCardProps) {
+  console.log('[InsightsCard] Rendering with insights:', insights);
+
   if (!insights) {
+    console.log('[InsightsCard] insights is null, showing fallback');
     return (
       <Card>
         <CardContent className="p-4">
@@ -26,6 +29,12 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
       </Card>
     );
   }
+
+  console.log('[InsightsCard] Rendering with valid insights:', {
+    weeklyUnits: insights.totalWeeklyUnits,
+    recommendations: insights.recommendations,
+    patterns: insights.patterns
+  });
 
   return (
     <Card>
@@ -99,6 +108,23 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
                 className="text-xs p-2 rounded-lg bg-white/5"
               >
                 {pattern}
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {/* Recommendations */}
+        {insights.recommendations.length > 0 && (
+          <div className="mt-3 space-y-1.5">
+            {insights.recommendations.map((rec, i) => (
+              <motion.div 
+                key={i} 
+                initial={{ opacity: 0, x: -10 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                transition={{ delay: i * 0.1 }} 
+                className="text-xs p-2 rounded-lg bg-secondary/10 text-secondary"
+              >
+                {rec}
               </motion.div>
             ))}
           </div>

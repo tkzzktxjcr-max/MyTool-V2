@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Undo2, Info, FlaskConical } from 'lucide-react';
+import { Activity, Target, User, Undo2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
@@ -22,7 +22,7 @@ import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
 
 export default function AlcoholPage() {
-  console.log('[AlcoholPage] Component rendered');
+  console.log('[AlcoholPage] Component rendering');
   
   const {
       drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
@@ -30,7 +30,13 @@ export default function AlcoholPage() {
       setWeeklyGoal, updateUserProfile, getWeeklyUnits,
     } = useAlcohol();
 
-  console.log('[AlcoholPage] drinks from hook:', drinks.length, 'libraryDrinks:', libraryDrinks.length);
+  console.log('[AlcoholPage] After useAlcohol hook:', { 
+    drinksCount: drinks.length, 
+    libraryDrinksCount: libraryDrinks.length,
+    logsCount: logs.length,
+    insightsExists: !!insights,
+    insightsValue: insights
+  });
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -52,6 +58,8 @@ export default function AlcoholPage() {
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
+
+  console.log('[AlcoholPage] Before render:', { weeklyUnits, weeklyLimit, legalLimit });
 
   const handleSelectDrink = (drink: Drink) => {
     setSelectedDrink(drink);
@@ -252,7 +260,7 @@ export default function AlcoholPage() {
                   setSelectedDrink(null);
                   setQuantity(1);
                   setSelectedTime(undefined);
-                }}
+                }} 
                 className="w-full"
               >
                 Annuler

@@ -14,6 +14,8 @@ export const alcoholService = {
         Query.equal('userId', userId),
       ]);
       
+      console.log('[alcoholService.getLogs] Found logs:', response.documents.length);
+      
       return response.documents.map((doc: any) => ({
         id: doc.$id,
         userId: doc.userId,
@@ -29,7 +31,7 @@ export const alcoholService = {
         notes: doc.notes,
       }));
     } catch (error) {
-      console.warn('[alcoholService] getLogs failed', error);
+      console.warn('[alcoholService.getLogs] Error:', error);
       return [];
     }
   },
@@ -86,11 +88,16 @@ export const alcoholService = {
     try {
       await deleteDocument(COLLECTIONS.ALCOHOL_LOGS, logId);
     } catch (error) {
-      console.warn('[alcoholService] deleteLog failed', error);
+      console.warn('[alcoholService.deleteLog] Error:', error);
     }
   },
 
   calculateInsights(logs: AlcoholLog[], goal: AlcoholGoal | null): AlcoholInsight | null {
+    console.log('[alcoholService.calculateInsights] Called with:', { 
+      logsCount: logs.length, 
+      goal: goal ? 'exists' : 'null' 
+    });
+    
     if (logs.length === 0) {
       const now = new Date();
       const dailyTrend = Array.from({ length: 7 }, (_, i) => {
@@ -99,7 +106,7 @@ export const alcoholService = {
         return { date: date.toISOString().split('T')[0], units: 0 };
       });
       
-      return {
+      const emptyInsight = {
         totalWeeklyUnits: 0,
         totalMonthlyUnits: 0,
         averagePerDay: 0,
@@ -112,11 +119,14 @@ export const alcoholService = {
         moodBreakdown: {} as Record<MoodType, number>,
         contextBreakdown: {},
         patterns: [],
-        riskLevel: 'low',
+        riskLevel: 'low' as const,
         recommendations: ['✅ Aucune donnée pour le moment'],
         weeklyGoalProgress: 0,
         streak: 0,
       };
+      
+      console.log('[alcoholService.calculateInsights] Returning empty insight');
+      return emptyInsight;
     }
 
     const now = new Date();
@@ -129,6 +139,8 @@ export const alcoholService = {
     const weeklyUnits = weeklyLogs.reduce((sum, l) => sum + l.units, 0);
     const monthlyUnits = logs.filter(l => new Date(l.timestamp) >= monthAgo).reduce((sum, l) => sum + l.units, 0);
     const averagePerDay = weeklyLogs.length > 0 ? weeklyUnits / 7 : 0;
+
+    console.log('[alcoholService.calculateInsights] Calculated:', { weeklyUnits, monthlyUnits, averagePerDay });
 
     const dailyTrend = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(now);
@@ -221,7 +233,7 @@ export const alcoholService = {
       }
     }
 
-    return {
+    const insight = {
       totalWeeklyUnits: weeklyUnits,
       totalMonthlyUnits: monthlyUnits,
       averagePerDay,
@@ -236,5 +248,8 @@ export const alcoholService = {
       weeklyGoalProgress,
       streak,
     };
+    
+    console.log('[alcoholService.calculateInsights] Returning insight:', insight);
+    return insight;
   },
 };

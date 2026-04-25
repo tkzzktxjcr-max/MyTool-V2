@@ -27,31 +27,29 @@ export const useAlcohol = () => {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadData = useCallback(async () => {
-    if (!user?.$id) return;
+    console.log('[useAlcohol.loadData] Starting...', { userId: user?.$id });
+    if (!user?.$id) {
+      console.log('[useAlcohol.loadData] No user, skipping');
+      return;
+    }
     setLoading(true);
     
     try {
       // Fetch ALL drinks from database
       const drinksData = await drinksService.getAllDrinks();
-      console.log('[DEBUG] ===== DRINKS FROM DATABASE =====');
-      console.log('[DEBUG] Total drinks in DB:', drinksData.length);
-      console.log('[DEBUG] All drinks:', drinksData.map(d => ({ name: d.name, userId: d.userId || 'global', isGlobal: d.isGlobal })));
-      
-      // Show breakdown
-      const globalDrinks = drinksData.filter(d => !d.userId);
-      const myUserDrinks = drinksData.filter(d => d.userId === user.$id);
-      console.log('[DEBUG] Global drinks:', globalDrinks.length);
-      console.log('[DEBUG] My user drinks:', myUserDrinks.length);
-      
+      console.log('[useAlcohol.loadData] Drinks loaded:', drinksData.length);
       setDrinks(drinksData);
       
       const logsData = await alcoholService.getLogs(user.$id);
+      console.log('[useAlcohol.loadData] Logs loaded:', logsData.length);
       setLogs(logsData);
       
       const goalData = await goalsService.getGoal(user.$id);
+      console.log('[useAlcohol.loadData] Goal loaded:', goalData ? 'exists' : 'null');
       setGoal(goalData);
       
       const profileData = await profileService.getProfile(user.$id);
+      console.log('[useAlcohol.loadData] Profile loaded:', profileData ? 'exists' : 'null');
       setUserProfile(profileData);
       
       const weekAgo = new Date();
@@ -70,8 +68,9 @@ export const useAlcohol = () => {
       }
       
       setRecentlyUsed(recent.slice(0, 4));
+      console.log('[useAlcohol.loadData] Done!');
     } catch (err) {
-      console.error('Error loading alcohol data:', err);
+      console.error('[useAlcohol.loadData] Error:', err);
       setDrinks([]);
     } finally {
       setLoading(false);
@@ -199,6 +198,7 @@ export const useAlcohol = () => {
   );
 
   const bacState = useMemo(() => {
+    console.log('[useAlcohol] bacState useMemo recalculating');
     const weightKg = userProfile?.weightKg || 70;
     const sex: SexType = userProfile?.sex || 'unspecified';
     const legalLimit = userProfile?.legalLimit || 0.5;
@@ -225,7 +225,14 @@ export const useAlcohol = () => {
   }, [logs, userProfile, refreshKey]);
 
   const insights = useMemo((): AlcoholInsight | null => {
-    return alcoholService.calculateInsights(logs, goal);
+    console.log('[useAlcohol] insights useMemo recalculating', { 
+      logsCount: logs.length, 
+      goalExists: !!goal,
+      refreshKey 
+    });
+    const result = alcoholService.calculateInsights(logs, goal);
+    console.log('[useAlcohol] insights result:', result ? 'calculated' : 'null');
+    return result;
   }, [logs, goal, refreshKey]);
 
   const getTodayUnits = useCallback((): number => {
