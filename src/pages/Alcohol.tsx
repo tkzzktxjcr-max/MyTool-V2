@@ -10,6 +10,7 @@ import type { DrinkType, MoodType } from '@/features/alcohol/types';
 import type { Drink } from '@/features/alcohol/services/drinks.service';
 
 import BACCard from './alcohol/BACCard';
+import AlcoholInfo from './AlcoholInfo';
 import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
 import InsightsCard from './alcohol/InsightsCard';
 import HistoryCard from './alcohol/HistoryCard';
@@ -41,6 +42,7 @@ export default function AlcoholPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     console.log('[AlcoholPage] useEffect calling loadData');
@@ -119,8 +121,11 @@ export default function AlcoholPage() {
             <User className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowGoalSetter(true)}>
-            <Target className="w-5 h-5" />
-          </Button>
+                      <Target className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)}>
+                      <Info className="w-5 h-5" />
+                    </Button>
         </div>
       </div>
 
@@ -283,10 +288,14 @@ export default function AlcoholPage() {
       />
 
       <CreateDrinkDialog
-        open={showCreateDrink}
-        onOpenChange={setShowCreateDrink}
-        onCreate={handleCreateDrink}
-      />
+              open={showCreateDrink}
+              onOpenChange={setShowCreateDrink}
+              onCreate={handleCreateDrink}
+            />
+      
+            <AnimatePresence>
+              {showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}
+            </AnimatePresence>
     </div>
   );
 }
