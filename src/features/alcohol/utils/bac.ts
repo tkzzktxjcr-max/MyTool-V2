@@ -5,7 +5,7 @@
 
 // Physical constants
 const ALCOHOL_DENSITY = 0.789; // g/ml
-const ELIMINATION_RATE = 0.13; // g/L per hour (realistic for practical purposes)
+const ELIMINATION_RATE = 0.15; // g/L per hour (average liver metabolism rate)
 const PEAK_ABSORPTION_HOURS = 0.75; // ~45 minutes after drink when BAC peaks
 
 // Body water ratios (Widmark's r factor)
