@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Info, Plus, X, Leaf } from 'lucide-react';
+import { Activity, Target, User, Info, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
@@ -20,6 +20,8 @@ import MoodSelector from './alcohol/MoodSelector';
 import QuantitySelector, { calculateUnits } from './alcohol/QuantitySelector';
 import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
+import FloatingActionButton from './alcohol/FloatingActionButton';
+import ConfettiAnimation from './alcohol/ConfettiAnimation';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -37,11 +39,13 @@ export default function AlcoholPage() {
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showDrinkPicker, setShowDrinkPicker] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   
   // Feature states
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
+  const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -50,6 +54,19 @@ export default function AlcoholPage() {
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
+
+  // Check for goal achievement celebration
+  useEffect(() => {
+    const wasUnderLimit = previousWeeklyUnits <= weeklyLimit;
+    const isNowUnderLimit = weeklyUnits <= weeklyLimit;
+    const justReachedLimit = wasUnderLimit && !isNowUnderLimit && weeklyUnits <= weeklyLimit * 1.1;
+    
+    if (weeklyUnits > 0 && weeklyUnits <= weeklyLimit * 0.8 && previousWeeklyUnits > weeklyLimit * 0.8) {
+      setShowConfetti(true);
+    }
+    
+    setPreviousWeeklyUnits(weeklyUnits);
+  }, [weeklyUnits, weeklyLimit]);
 
   const handleSelectDrink = (drink: Drink) => {
     setSelectedDrink(drink);
@@ -61,7 +78,6 @@ export default function AlcoholPage() {
   };
 
   const handleQuickAdd = async (drink: Drink) => {
-    // Premium toast feedback
     toast.success(`${drink.emoji} ${drink.name} ajouté !`, {
       icon: '✨',
       duration: 2000,
@@ -76,7 +92,6 @@ export default function AlcoholPage() {
     const moodValue = mood === 'none' ? undefined : mood as MoodType;
     await quickLog(selectedDrink, moodValue, quantity, selectedTime);
     
-    // Premium celebration toast
     toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity}) ajouté !`, {
       icon: '✅',
       duration: 2000,
@@ -123,11 +138,18 @@ export default function AlcoholPage() {
     ? calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity)
     : 0;
 
-  // Empty state - no drinks logged yet
   const isFirstUse = logs.length === 0;
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
+      {/* Confetti Celebration */}
+      <ConfettiAnimation 
+        show={showConfetti} 
+        onComplete={() => setShowConfetti(false)}
+        message="Semaine parfaite !"
+        emoji="🌟"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -154,7 +176,7 @@ export default function AlcoholPage() {
         </div>
       </div>
 
-      {/* Undo delete notification - Premium styling */}
+      {/* Undo delete notification */}
       <AnimatePresence>
         {lastDeletedLog && (
           <motion.div 
@@ -190,12 +212,19 @@ export default function AlcoholPage() {
         safeToDriveTime={bacState.safeToDriveTime}
       />
 
-      {/* Quick Add Favorites Bar - Premium */}
+      {/* Quick Add Favorites Bar - Premium avec BAC Preview */}
       <QuickAddBar
         favorites={favorites}
         onQuickAdd={handleQuickAdd}
         onCreateDrink={() => setShowCreateDrink(true)}
         onToggleFavorite={toggleFavorite}
+        showBACPreview={true}
+        userProfile={{
+          weightKg: userProfile?.weightKg || 70,
+          sex: userProfile?.sex || 'unspecified'
+        }}
+        currentBAC={bacState.currentBAC}
+        logs={logs}
       />
 
       {/* Drink Selection & Logging */}
@@ -280,7 +309,7 @@ export default function AlcoholPage() {
 
               {selectedTime && (
                 <div className="flex items-center justify-between px-3 py-2 bg-accent/10 rounded-xl">
-                  <span className="text-sm text-accent">Horodatage personnalise</span>
+                  <span className="text-sm text-accent">Horodatage personnalisé</span>
                   <button 
                     onClick={() => setSelectedTime(undefined)}
                     className="text-xs text-muted-foreground hover:text-foreground"
@@ -298,7 +327,7 @@ export default function AlcoholPage() {
                 onClick={() => handleConfirmLog('none')}
                 className="w-full bg-secondary hover:bg-secondary/80 rounded-xl h-12 text-base font-medium"
               >
-                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unites)
+                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unités)
               </Button>
 
               {/* Cancel button */}
