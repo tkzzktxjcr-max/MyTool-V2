@@ -45,6 +45,7 @@ export interface BACResult {
   peakBAC: number;
   peakTime: Date;
   zeroTime: Date;
+  safeToDriveTime?: Date;
   timeline: BACDataPoint[];
 }
 
@@ -193,6 +194,30 @@ export const findZeroTime = (
 };
 
 /**
+ * Find when BAC will be below the legal limit (safe to drive)
+ */
+export const findSafeToDriveTime = (
+  drinks: DrinkData[],
+  userProfile: UserProfile,
+  legalLimit: number = 0.5
+): Date => {
+  if (drinks.length === 0) return new Date();
+  
+  const { peakBAC, peakTime } = findPeakInfo(drinks, userProfile);
+  
+  // If already below limit, return now
+  if (peakBAC <= legalLimit) return new Date();
+  
+  // Calculate hours needed to reach legal limit from peak
+  // BAC at time t after peak = peakBAC - (ELIMINATION_RATE * hours)
+  // We need peakBAC - (ELIMINATION_RATE * hours) = legalLimit
+  // hours = (peakBAC - legalLimit) / ELIMINATION_RATE
+  const hoursToSafe = (peakBAC - legalLimit) / ELIMINATION_RATE;
+  
+  return new Date(peakTime.getTime() + hoursToSafe * 60 * 60 * 1000);
+};
+
+/**
  * Generate a timeline of BAC values for charting
  */
 export const generateBACTimeline = (
@@ -236,12 +261,14 @@ export const generateBACTimeline = (
  */
 export const getBACAnalysis = (
   drinks: DrinkData[],
-  userProfile: UserProfile
+  userProfile: UserProfile,
+  legalLimit: number = 0.5
 ): BACResult => {
   const now = new Date();
   const currentBAC = calculateTotalBAC(drinks, userProfile, now);
   const { peakTime, peakBAC } = findPeakInfo(drinks, userProfile);
   const zeroTime = findZeroTime(drinks, userProfile);
+  const safeToDriveTime = findSafeToDriveTime(drinks, userProfile, legalLimit);
   const timeline = generateBACTimeline(drinks, userProfile);
   
   return {
@@ -249,6 +276,7 @@ export const getBACAnalysis = (
     peakBAC: Math.round(peakBAC * 1000) / 1000,
     peakTime,
     zeroTime,
+    safeToDriveTime,
     timeline,
   };
 };

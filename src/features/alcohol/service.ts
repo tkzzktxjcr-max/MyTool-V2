@@ -20,12 +20,12 @@ export const alcoholService = {
         drinkName: doc.drinkName || DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
         drinkEmoji: doc.drinkEmoji || DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
         drinkType: doc.drinkType as DrinkType,
-        quantity: 1,
-        servingSize: doc.volumeCl,
+        quantity: doc.quantity || 1,
+        servingSize: doc.volumeCl || doc.servingSize || 33,
         abv: doc.abv,
         units: doc.units,
         mood: doc.mood,
-        timestamp: doc.date,
+        timestamp: doc.date || doc.timestamp,
         notes: doc.notes,
       }));
     } catch (error) {
@@ -44,17 +44,22 @@ export const alcoholService = {
       notes?: string;
       drinkName?: string;
       drinkEmoji?: string;
+      quantity?: number;
+      timestamp?: string;
     }
   ): Promise<AlcoholLog> {
-    const units = calculateUnits(data.servingSize, data.abv);
+    const quantity = data.quantity || 1;
+    const units = calculateUnits(data.servingSize, data.abv) * quantity;
+    const timestamp = data.timestamp || new Date().toISOString();
     
     const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
       userId,
-      date: new Date().toISOString(),
+      date: timestamp,
       drinkType: data.drinkType,
       volumeCl: data.servingSize,
       abv: data.abv,
       units,
+      quantity,
       mood: data.mood || null,
       notes: data.notes || null,
       drinkName: data.drinkName || DRINK_TYPES[data.drinkType]?.label,
@@ -67,8 +72,8 @@ export const alcoholService = {
       drinkName: doc.drinkName,
       drinkEmoji: doc.drinkEmoji,
       drinkType: doc.drinkType as DrinkType,
-      quantity: 1,
-      servingSize: doc.volumeCl,
+      quantity: doc.quantity || 1,
+      servingSize: doc.volumeCl || 33,
       abv: doc.abv,
       units: doc.units,
       mood: doc.mood,
@@ -153,7 +158,7 @@ export const alcoholService = {
     
     weeklyLogs.forEach(log => {
       if (drinkTypeBreakdown[log.drinkType]) {
-        drinkTypeBreakdown[log.drinkType].count++;
+        drinkTypeBreakdown[log.drinkType].count += log.quantity || 1;
         drinkTypeBreakdown[log.drinkType].units += log.units;
       }
     });

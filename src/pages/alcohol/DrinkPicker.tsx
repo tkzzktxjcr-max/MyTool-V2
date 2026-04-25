@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, Plus, X, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, Plus, X, ChevronRight, Sparkles, Globe, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Drink } from '@/features/alcohol/services/drinks.service';
@@ -10,13 +10,25 @@ import { DRINK_TYPES } from '@/features/alcohol/types';
 
 interface DrinkPickerProps {
   drinks: Drink[];
+  libraryDrinks?: Drink[];
+  userDrinks?: Drink[];
   onSelect: (drink: Drink) => void;
   onCreate: (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => void;
+  onToggleFavorite?: (drinkId: string) => void;
+  showLibraryFirst?: boolean;
 }
 
 const EMOJI_OPTIONS = ['🍺', '🍻', '🍷', '🥃', '🍹', '🍾', '🥂', '🍸', '🧃', '🥤'];
 
-export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerProps) {
+export default function DrinkPicker({ 
+  drinks, 
+  libraryDrinks = [], 
+  userDrinks = [], 
+  onSelect, 
+  onCreate,
+  onToggleFavorite,
+  showLibraryFirst = true 
+}: DrinkPickerProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
@@ -28,12 +40,20 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
     emoji: '🍺',
   });
 
-  const filteredDrinks = query.trim()
-    ? drinks.filter(d => 
+  // Filter drinks based on query
+  const filteredLibraryDrinks = query.trim()
+    ? libraryDrinks.filter(d => 
         d.name.toLowerCase().includes(query.toLowerCase()) ||
         DRINK_TYPES[d.type]?.label.toLowerCase().includes(query.toLowerCase())
       )
-    : drinks.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
+    : libraryDrinks.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+
+  const filteredUserDrinks = query.trim()
+    ? userDrinks.filter(d => 
+        d.name.toLowerCase().includes(query.toLowerCase()) ||
+        DRINK_TYPES[d.type]?.label.toLowerCase().includes(query.toLowerCase())
+      )
+    : userDrinks.sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0));
 
   const handleSelect = (drink: Drink) => {
     onSelect(drink);
@@ -65,6 +85,49 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
     }));
   };
 
+  const handleToggleFavorite = (e: React.MouseEvent, drinkId: string) => {
+    e.stopPropagation();
+    onToggleFavorite?.(drinkId);
+  };
+
+  const renderDrinkItem = (drink: Drink, index: number, sectionStart: number) => (
+    <button
+      key={drink.id}
+      onClick={() => handleSelect(drink)}
+      className={cn(
+        "w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors",
+        index === selectedIndex - sectionStart && "bg-secondary/10"
+      )}
+    >
+      <span className="text-2xl">{drink.emoji}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="font-medium truncate">{drink.name}</p>
+          {drink.isGlobal && (
+            <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {DRINK_TYPES[drink.type]?.label} - {drink.abv}% - {drink.defaultServingSize} cl
+        </p>
+      </div>
+      {onToggleFavorite && (
+        <button
+          onClick={(e) => handleToggleFavorite(e, drink.id)}
+          className={cn(
+            "p-1.5 rounded-lg transition-colors",
+            drink.isFavorite 
+              ? "text-yellow-400 hover:text-yellow-300" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Star className={cn("w-4 h-4", drink.isFavorite && "fill-current")} />
+        </button>
+      )}
+      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+    </button>
+  );
+
   return (
     <div className="space-y-2">
       {/* Search input */}
@@ -74,7 +137,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
           type="text"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setSelectedIndex(0); }}
-          placeholder="Recherche ta boisson..."
+          placeholder="Recherche ta boissons..."
           className="w-full h-14 pl-12 pr-12 rounded-2xl bg-white/5 border border-white/10 text-base placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50"
         />
         {query && (
@@ -93,7 +156,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">{newDrink.emoji}</span>
-              <span className="font-medium">Nouvelle boisson</span>
+              <span className="font-medium">Nouvelle boissons</span>
             </div>
             <button onClick={() => setShowCreate(false)} className="p-1 rounded-full hover:bg-white/10">
               <X className="w-4 h-4 text-muted-foreground" />
@@ -104,7 +167,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
             type="text"
             value={newDrink.name}
             onChange={(e) => setNewDrink(p => ({ ...p, name: e.target.value }))}
-            placeholder="Nom de la boisson"
+            placeholder="Nom de la boissons"
             className="w-full h-11 px-4 rounded-xl bg-white/5 border border-white/10 focus:outline-none focus:ring-2 focus:ring-secondary/50"
             autoFocus
           />
@@ -170,33 +233,37 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
         </div>
       ) : (
         <>
-          {/* Drink list */}
-          {filteredDrinks.length > 0 && (
-            <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
-              {filteredDrinks.slice(0, 8).map((drink, index) => (
-                <button
-                  key={drink.id}
-                  onClick={() => handleSelect(drink)}
-                  className={cn(
-                    "w-full flex items-center gap-3 p-4 text-left hover:bg-white/5",
-                    index === selectedIndex && "bg-secondary/10"
-                  )}
-                >
-                  <span className="text-2xl">{drink.emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{drink.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {DRINK_TYPES[drink.type]?.label} - {drink.abv}% - {drink.defaultServingSize} cl
-                    </p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                </button>
-              ))}
+          {/* Library drinks section */}
+          {filteredLibraryDrinks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 px-2 py-1">
+                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Bibliothèque</span>
+              </div>
+              <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
+                {filteredLibraryDrinks.slice(0, 6).map((drink, index) => 
+                  renderDrinkItem(drink, index, 0)
+                )}
+              </div>
             </div>
           )}
 
-          {/* Create option */}
-          {query.trim() && filteredDrinks.length === 0 && (
+          {/* User drinks section */}
+          {filteredUserDrinks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 px-2 py-1">
+                <span className="text-xs text-muted-foreground font-medium">Mes Boissons</span>
+              </div>
+              <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
+                {filteredUserDrinks.slice(0, 4).map((drink, index) => 
+                  renderDrinkItem(drink, index, filteredLibraryDrinks.length)
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Create option when search yields no results */}
+          {query.trim() && filteredLibraryDrinks.length === 0 && filteredUserDrinks.length === 0 && (
             <button
               onClick={() => {
                 setNewDrink(p => ({ ...p, name: query }));
@@ -209,7 +276,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate }: DrinkPickerP
               </div>
               <div className="flex-1">
                 <p className="font-medium text-secondary">Creer "{query}"</p>
-                <p className="text-xs text-muted-foreground">Nouvelle boisson personnalisee</p>
+                <p className="text-xs text-muted-foreground">Nouvelle boissons personnalisee</p>
               </div>
               <Sparkles className="w-5 h-5 text-secondary" />
             </button>

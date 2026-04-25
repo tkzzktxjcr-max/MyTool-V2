@@ -11,54 +11,72 @@ export interface Drink {
   emoji: string;
   country?: string;
   isFavorite: boolean;
+  favoriteRank?: number;
   usageCount: number;
   userId?: string;
+  isGlobal: boolean;
+  popularity: number;
+  category?: string;
+  brand?: string;
   createdAt: string;
 }
+
+const mapDocToDrink = (doc: any): Drink => ({
+  id: doc.$id,
+  name: doc.name,
+  type: doc.type as DrinkType,
+  abv: doc.abv,
+  defaultServingSize: doc.defaultServingSize || doc.servingSize || 33,
+  emoji: doc.emoji,
+  country: doc.country,
+  isFavorite: doc.isFavorite || false,
+  favoriteRank: doc.favoriteRank,
+  usageCount: doc.usageCount || 0,
+  userId: doc.userId,
+  isGlobal: doc.isGlobal || false,
+  popularity: doc.popularity || 0,
+  category: doc.category,
+  brand: doc.brand,
+  createdAt: doc.$createdAt,
+});
 
 export const drinksService = {
   async getAllDrinks(): Promise<Drink[]> {
     try {
       const response = await listDocuments(COLLECTIONS.DRINKS, []);
-      return response.documents.map((doc: any) => ({
-        id: doc.$id,
-        name: doc.name,
-        type: doc.type as DrinkType,
-        abv: doc.abv,
-        defaultServingSize: doc.defaultServingSize,
-        emoji: doc.emoji,
-        country: doc.country,
-        isFavorite: doc.isFavorite || false,
-        usageCount: doc.usageCount || 0,
-        userId: doc.userId,
-        createdAt: doc.$createdAt,
-      }));
+      return response.documents.map(mapDocToDrink);
     } catch (error) {
       console.warn('[drinksService] Error:', error);
       return [];
     }
   },
 
-  async getDrinksByUser(userId: string): Promise<Drink[]> {
+  async getLibraryDrinks(): Promise<Drink[]> {
     try {
-      const response = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
-      return response.documents.map((doc: any) => ({
-        id: doc.$id,
-        name: doc.name,
-        type: doc.type as DrinkType,
-        abv: doc.abv,
-        defaultServingSize: doc.defaultServingSize,
-        emoji: doc.emoji,
-        country: doc.country,
-        isFavorite: doc.isFavorite || false,
-        usageCount: doc.usageCount || 0,
-        userId: doc.userId,
-        createdAt: doc.$createdAt,
-      }));
+      const response = await listDocuments(COLLECTIONS.DRINKS, [
+        Query.equal('isGlobal', true),
+      ]);
+      return response.documents.map(mapDocToDrink);
     } catch (error) {
-      console.warn('[drinksService] getDrinksByUser failed:', error);
+      console.warn('[drinksService] getLibraryDrinks failed:', error);
       return [];
     }
+  },
+
+  async getUserDrinks(userId: string): Promise<Drink[]> {
+    try {
+      const response = await listDocuments(COLLECTIONS.DRINKS, [
+        Query.equal('userId', userId),
+      ]);
+      return response.documents.map(mapDocToDrink);
+    } catch (error) {
+      console.warn('[drinksService] getUserDrinks failed:', error);
+      return [];
+    }
+  },
+
+  async getDrinksByUser(userId: string): Promise<Drink[]> {
+    return this.getUserDrinks(userId);
   },
 
   async getUserDrinkPreference(userId: string, drinkType: DrinkType): Promise<Drink | null> {
@@ -69,20 +87,7 @@ export const drinksService = {
       ]);
       
       if (response.documents.length > 0) {
-        const doc = response.documents[0];
-        return {
-          id: doc.$id,
-          name: doc.name,
-          type: doc.type as DrinkType,
-          abv: doc.abv,
-          defaultServingSize: doc.defaultServingSize,
-          emoji: doc.emoji,
-          country: doc.country,
-          isFavorite: doc.isFavorite || false,
-          usageCount: doc.usageCount || 0,
-          userId: doc.userId,
-          createdAt: doc.$createdAt,
-        };
+        return mapDocToDrink(response.documents[0]);
       }
       return null;
     } catch (error) {
@@ -98,6 +103,9 @@ export const drinksService = {
     emoji: string;
     country?: string;
     userId?: string;
+    isGlobal?: boolean;
+    category?: string;
+    brand?: string;
   }): Promise<Drink> {
     const doc: any = await createDocument(COLLECTIONS.DRINKS, {
       name: data.name,
@@ -107,23 +115,16 @@ export const drinksService = {
       emoji: data.emoji,
       country: data.country || null,
       isFavorite: false,
+      favoriteRank: null,
       usageCount: 0,
       userId: data.userId || null,
+      isGlobal: data.isGlobal || false,
+      popularity: 0,
+      category: data.category || null,
+      brand: data.brand || null,
     });
     
-    return {
-      id: doc.$id,
-      name: doc.name,
-      type: doc.type as DrinkType,
-      abv: doc.abv,
-      defaultServingSize: doc.defaultServingSize,
-      emoji: doc.emoji,
-      country: doc.country,
-      isFavorite: false,
-      usageCount: 0,
-      userId: doc.userId,
-      createdAt: doc.$createdAt,
-    };
+    return mapDocToDrink(doc);
   },
 
   async setUserDrinkPreference(
@@ -148,22 +149,39 @@ export const drinksService = {
         country: data.country || null,
       });
       
-      return {
-        id: doc.$id,
-        name: doc.name,
-        type: doc.type as DrinkType,
-        abv: doc.abv,
-        defaultServingSize: doc.defaultServingSize,
-        emoji: doc.emoji,
-        country: doc.country,
-        isFavorite: doc.isFavorite || false,
-        usageCount: doc.usageCount || 0,
-        userId: doc.userId,
-        createdAt: doc.$createdAt,
-      };
+      return mapDocToDrink(doc);
     }
     
     return this.createDrink({ ...data, userId });
+  },
+
+  async toggleFavorite(drinkId: string, rank?: number): Promise<void> {
+    try {
+      const currentDoc = await listDocuments(COLLECTIONS.DRINKS, [
+        Query.equal('$id', drinkId),
+      ]);
+      
+      if (currentDoc.documents.length === 0) return;
+      
+      const doc = currentDoc.documents[0];
+      const currentlyFavorite = doc.isFavorite || false;
+      
+      if (currentlyFavorite) {
+        // Remove from favorites
+        await updateDocument(COLLECTIONS.DRINKS, drinkId, {
+          isFavorite: false,
+          favoriteRank: null,
+        });
+      } else {
+        // Add to favorites
+        await updateDocument(COLLECTIONS.DRINKS, drinkId, {
+          isFavorite: true,
+          favoriteRank: rank || 1,
+        });
+      }
+    } catch (error) {
+      console.warn('[drinksService] toggleFavorite failed:', error);
+    }
   },
 
   async incrementUsage(drinkId: string): Promise<void> {
@@ -173,6 +191,20 @@ export const drinksService = {
       });
     } catch (error) {
       console.warn('[drinksService] incrementUsage failed:', error);
+    }
+  },
+
+  async updateDrink(drinkId: string, data: Partial<{
+    name: string;
+    abv: number;
+    defaultServingSize: number;
+    emoji: string;
+    country?: string;
+  }>): Promise<void> {
+    try {
+      await updateDocument(COLLECTIONS.DRINKS, drinkId, data);
+    } catch (error) {
+      console.warn('[drinksService] updateDrink failed:', error);
     }
   },
 

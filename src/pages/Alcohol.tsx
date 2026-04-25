@@ -16,19 +16,27 @@ import HistoryCard from './alcohol/HistoryCard';
 import { GoalSetterDialog, ProfileEditorDialog, CreateDrinkDialog } from './alcohol/dialogs';
 import DrinkPicker from './alcohol/DrinkPicker';
 import MoodSelector from './alcohol/MoodSelector';
+import QuantitySelector, { calculateUnits } from './alcohol/QuantitySelector';
+import TimeSelector from './alcohol/TimeSelector';
+import QuickAddBar from './alcohol/QuickAddBar';
 
 export default function AlcoholPage() {
-  const { 
-    drinks, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState,
-    loadData, createDrink, quickLog, deleteLog, undoDelete,
-    setWeeklyGoal, updateUserProfile, getWeeklyUnits,
-  } = useAlcohol();
+  const {
+      drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
+      loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
+      setWeeklyGoal, updateUserProfile, getWeeklyUnits,
+    } = useAlcohol();
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
+  
+  // Feature states
+  const [quantity, setQuantity] = useState(1);
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
+  const [showTimeSelector, setShowTimeSelector] = useState(false);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -38,14 +46,27 @@ export default function AlcoholPage() {
 
   const handleSelectDrink = (drink: Drink) => {
     setSelectedDrink(drink);
+    setQuantity(1);
+    setSelectedTime(undefined);
+    setShowTimeSelector(false);
     setShowMoodSelector(true);
+  };
+
+  const handleQuickAdd = async (drink: Drink) => {
+    // Quick add with default settings (no mood prompt)
+    await quickLog(drink, undefined, 1, undefined);
   };
 
   const handleConfirmLog = async (mood: string) => {
     if (!selectedDrink) return;
-    await quickLog(selectedDrink, mood as MoodType);
+    
+    const moodValue = mood === 'none' ? undefined : mood as MoodType;
+    await quickLog(selectedDrink, moodValue, quantity, selectedTime);
+    
     setShowMoodSelector(false);
     setSelectedDrink(null);
+    setQuantity(1);
+    setSelectedTime(undefined);
   };
 
   const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
@@ -61,8 +82,18 @@ export default function AlcoholPage() {
     await updateUserProfile(data);
   };
 
+  const handleTimeSelect = (timestamp: string) => {
+    setSelectedTime(timestamp);
+    setShowTimeSelector(false);
+  };
+
+  const totalUnits = selectedDrink 
+    ? calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity)
+    : 0;
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -86,6 +117,7 @@ export default function AlcoholPage() {
         </div>
       </div>
 
+      {/* Undo delete notification */}
       <AnimatePresence>
         {lastDeletedLog && (
           <motion.div 
@@ -106,6 +138,7 @@ export default function AlcoholPage() {
         )}
       </AnimatePresence>
 
+      {/* BAC Card with Sober Countdown */}
       <BACCard
         currentBAC={bacState.currentBAC}
         peakBAC={bacState.peakBAC}
@@ -115,42 +148,119 @@ export default function AlcoholPage() {
         isAboveLimit={bacState.isAboveLimit}
         isNearLimit={bacState.isNearLimit}
         legalLimit={legalLimit}
+        safeToDriveTime={bacState.safeToDriveTime}
       />
 
+      {/* Quick Add Favorites Bar */}
+      <QuickAddBar
+        favorites={favorites}
+        onQuickAdd={handleQuickAdd}
+        onCreateDrink={() => setShowCreateDrink(true)}
+        onToggleFavorite={toggleFavorite}
+      />
+
+      {/* Drink Selection & Logging */}
       <div className="space-y-3">
         <DrinkPicker 
-          drinks={drinks} 
+          drinks={drinks}
+          libraryDrinks={libraryDrinks}
+          userDrinks={userDrinks}
           onSelect={handleSelectDrink}
           onCreate={handleCreateDrink}
+          onToggleFavorite={toggleFavorite}
         />
 
+        {/* Mood Selection with Quantity & Time */}
         <AnimatePresence>
           {showMoodSelector && selectedDrink && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, y: 10 }}
-              className="p-4 rounded-2xl bg-card border border-white/10"
+              className="p-4 rounded-2xl bg-card border border-white/10 space-y-4"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{selectedDrink.emoji}</span>
-                  <span className="font-medium">{selectedDrink.name}</span>
+              {/* Drink info with quantity */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">{selectedDrink.emoji}</span>
+                  <div>
+                    <p className="font-medium">{selectedDrink.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedDrink.abv}% - {selectedDrink.defaultServingSize} cl
+                    </p>
+                  </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => { setShowMoodSelector(false); setSelectedDrink(null); }}>
-                  Annuler
-                </Button>
+                <QuantitySelector
+                  quantity={quantity}
+                  onChange={setQuantity}
+                />
               </div>
+
+              {/* Time selector toggle */}
+              {!selectedTime && (
+                <button
+                  onClick={() => setShowTimeSelector(!showTimeSelector)}
+                  className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/10 rounded-xl"
+                >
+                  Modifier l'heure...
+                </button>
+              )}
+
+              {showTimeSelector && (
+                <TimeSelector onSelect={handleTimeSelect} />
+              )}
+
+              {selectedTime && (
+                <div className="flex items-center justify-between px-3 py-2 bg-accent/10 rounded-xl">
+                  <span className="text-sm text-accent">Horodatage personnalise</span>
+                  <button 
+                    onClick={() => setSelectedTime(undefined)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              )}
+
+              {/* Mood selector */}
               <MoodSelector onSelect={handleConfirmLog} />
+
+              {/* Confirm button with total units */}
+              <Button 
+                onClick={() => handleConfirmLog('none')}
+                className="w-full bg-secondary hover:bg-secondary/80"
+              >
+                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unites)
+              </Button>
+
+              {/* Cancel button */}
+              <Button 
+                variant="ghost" 
+                onClick={() => { 
+                  setShowMoodSelector(false); 
+                  setSelectedDrink(null);
+                  setQuantity(1);
+                  setSelectedTime(undefined);
+                }}
+                className="w-full"
+              >
+                Annuler
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
+      {/* Weekly Progress */}
       <WeeklyProgressCard weeklyUnits={weeklyUnits} weeklyLimit={weeklyLimit} streak={insights?.streak} />
+      
+      {/* Insights */}
       <InsightsCard insights={insights} />
+      
+      {/* History with retroactive indicators */}
       <HistoryCard logs={logs} onDeleteLog={deleteLog} />
 
+      {/* Dialogs */}
       <GoalSetterDialog
         open={showGoalSetter}
         onOpenChange={setShowGoalSetter}

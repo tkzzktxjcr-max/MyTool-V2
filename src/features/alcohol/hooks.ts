@@ -82,7 +82,12 @@ export const useAlcohol = () => {
     return drink;
   }, [user?.$id]);
 
-  const quickLog = useCallback(async (drink: Drink, mood?: MoodType) => {
+  const quickLog = useCallback(async (
+    drink: Drink, 
+    mood?: MoodType, 
+    quantity: number = 1,
+    timestamp?: string
+  ) => {
     if (!user?.$id) throw new Error('Not authenticated');
     
     const log = await alcoholService.createLog(user.$id, {
@@ -92,6 +97,8 @@ export const useAlcohol = () => {
       mood,
       drinkName: drink.name,
       drinkEmoji: drink.emoji,
+      quantity,
+      timestamp,
     });
     
     await drinksService.incrementUsage(drink.id);
@@ -121,6 +128,7 @@ export const useAlcohol = () => {
       mood: lastDeletedLog.mood,
       drinkName: lastDeletedLog.drinkName,
       drinkEmoji: lastDeletedLog.drinkEmoji,
+      quantity: lastDeletedLog.quantity,
     });
     setLogs(prev => [restoredLog, ...prev]);
     setLastDeletedLog(null);
@@ -130,6 +138,19 @@ export const useAlcohol = () => {
   const deleteDrink = useCallback(async (drinkId: string) => {
     await drinksService.deleteDrink(drinkId);
     setDrinks(prev => prev.filter(d => d.id !== drinkId));
+  }, []);
+
+  const toggleFavorite = useCallback(async (drinkId: string) => {
+    await drinksService.toggleFavorite(drinkId);
+    setDrinks(prev => prev.map(d => 
+      d.id === drinkId 
+        ? { 
+            ...d, 
+            isFavorite: !d.isFavorite, 
+            favoriteRank: d.isFavorite ? undefined : (d.favoriteRank || 1) 
+          }
+        : d
+    ));
   }, []);
 
   const setWeeklyGoal = useCallback(async (limit: number) => {
@@ -150,6 +171,22 @@ export const useAlcohol = () => {
     setUserProfile(updatedProfile);
   }, [user?.$id]);
 
+  // Derived states
+  const libraryDrinks = useMemo(() => 
+    drinks.filter(d => d.isGlobal).sort((a, b) => b.popularity - a.popularity),
+    [drinks]
+  );
+
+  const userDrinks = useMemo(() => 
+    drinks.filter(d => d.userId === user?.$id).sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0)),
+    [drinks, user?.$id]
+  );
+
+  const favorites = useMemo(() => 
+    drinks.filter(d => d.isFavorite).sort((a, b) => (a.favoriteRank || 5) - (b.favoriteRank || 5)),
+    [drinks]
+  );
+
   const bacState = useMemo(() => {
     const weightKg = userProfile?.weightKg || 70;
     const sex: SexType = userProfile?.sex || 'unspecified';
@@ -161,7 +198,7 @@ export const useAlcohol = () => {
       timestamp: log.timestamp,
     }));
     
-    const analysis = getBACAnalysis(drinksData, { weightKg, sex });
+    const analysis = getBACAnalysis(drinksData, { weightKg, sex }, legalLimit);
     const { isAbove, isNear } = checkLegalLimit(analysis.currentBAC, legalLimit);
     
     return {
@@ -169,6 +206,7 @@ export const useAlcohol = () => {
       peakBAC: analysis.peakBAC,
       peakTime: analysis.peakTime,
       zeroTime: analysis.zeroTime,
+      safeToDriveTime: analysis.safeToDriveTime,
       timeline: analysis.timeline,
       isAboveLimit: isAbove,
       isNearLimit: isNear,
@@ -194,8 +232,16 @@ export const useAlcohol = () => {
       .reduce((sum, l) => sum + l.units, 0);
   }, [logs, refreshKey]);
 
+  const isSafeToDrive = useMemo(() => {
+    const legalLimit = userProfile?.legalLimit || 0.5;
+    return bacState.currentBAC <= legalLimit;
+  }, [bacState.currentBAC, userProfile]);
+
   return {
     drinks,
+    libraryDrinks,
+    userDrinks,
+    favorites,
     recentlyUsed,
     logs,
     goal,
@@ -204,12 +250,14 @@ export const useAlcohol = () => {
     insights,
     lastDeletedLog,
     bacState,
+    isSafeToDrive,
     loadData,
     createDrink,
     quickLog,
     deleteLog,
     undoDelete,
     deleteDrink,
+    toggleFavorite,
     setWeeklyGoal,
     updateUserProfile,
     getTodayUnits,
