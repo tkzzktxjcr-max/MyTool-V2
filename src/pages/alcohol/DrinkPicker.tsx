@@ -87,15 +87,19 @@ export default function DrinkPicker({
 
   const handleToggleFavorite = (e: React.MouseEvent, drinkId: string) => {
     e.stopPropagation();
+    e.preventDefault();
     onToggleFavorite?.(drinkId);
   };
 
   const renderDrinkItem = (drink: Drink, index: number, sectionStart: number) => (
-    <button
+    <div
       key={drink.id}
       onClick={() => handleSelect(drink)}
+      onKeyDown={(e) => e.key === 'Enter' && handleSelect(drink)}
+      role="button"
+      tabIndex={0}
       className={cn(
-        "w-full flex items-center gap-3 p-4 text-left hover:bg-white/5 transition-colors",
+        "w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors cursor-pointer",
         index === selectedIndex - sectionStart && "bg-secondary/10"
       )}
     >
@@ -112,8 +116,11 @@ export default function DrinkPicker({
         </p>
       </div>
       {onToggleFavorite && (
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={(e) => handleToggleFavorite(e, drink.id)}
+          onKeyDown={(e) => e.key === 'Enter' && handleToggleFavorite(e as any, drink.id)}
           className={cn(
             "p-1.5 rounded-lg transition-colors",
             drink.isFavorite 
@@ -122,10 +129,10 @@ export default function DrinkPicker({
           )}
         >
           <Star className={cn("w-4 h-4", drink.isFavorite && "fill-current")} />
-        </button>
+        </div>
       )}
       <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-    </button>
+    </div>
   );
 
   return (
