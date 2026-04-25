@@ -27,11 +27,8 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 
 export const createDocument = async (collectionId: string, data: Record<string, unknown>) => {
-  console.log('[Appwrite] Creating document in collection:', collectionId);
-  console.log('[Appwrite] Document data:', JSON.stringify(data, null, 2));
   try {
     const result = await databases.createDocument(APPWRITE_CONFIG.databaseId, collectionId, ID.unique(), data);
-    console.log('[Appwrite] Document created:', result.$id);
     return result;
   } catch (error) {
     console.error('[Appwrite] Error creating document:', error);
@@ -40,10 +37,8 @@ export const createDocument = async (collectionId: string, data: Record<string, 
 };
 
 export const listDocuments = async (collectionId: string, queries: string[] = []) => {
-  console.log('[Appwrite] Listing documents from collection:', collectionId);
   try {
     const result = await databases.listDocuments(APPWRITE_CONFIG.databaseId, collectionId, queries);
-    console.log('[Appwrite] Found', result.documents.length, 'documents');
     return result;
   } catch (error) {
     console.error('[Appwrite] Error listing documents:', error);
@@ -52,12 +47,10 @@ export const listDocuments = async (collectionId: string, queries: string[] = []
 };
 
 export const updateDocument = async (collectionId: string, documentId: string, data: Record<string, unknown>) => {
-  console.log('[Appwrite] Updating document:', collectionId, documentId);
   return databases.updateDocument(APPWRITE_CONFIG.databaseId, collectionId, documentId, data);
 };
 
 export const deleteDocument = async (collectionId: string, documentId: string) => {
-  console.log('[Appwrite] Deleting document:', collectionId, documentId);
   return databases.deleteDocument(APPWRITE_CONFIG.databaseId, collectionId, documentId);
 };
 
