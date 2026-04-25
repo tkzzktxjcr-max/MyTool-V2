@@ -1,10 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
-import { alcoholService } from './service';
-import { drinksService, type Drink } from './services/drinks.service';
-import { goalsService } from './services/goals.service';
-import { profileService } from './services/profile.service';
-import type { UserProfile } from './services/profile.service';
+import { alcoholService, drinksService, goalsService, profileService, type Drink, type UserProfile } from './service';
 import type { CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
 import {
   getBACAnalysis,
@@ -33,32 +29,32 @@ export const useAlcohol = () => {
       return;
     }
     setLoading(true);
-    
+
     try {
       // Fetch ALL drinks from database
       const drinksData = await drinksService.getAllDrinks();
       console.log('[useAlcohol.loadData] Drinks loaded:', drinksData.length);
       setDrinks(drinksData);
-      
+
       const logsData = await alcoholService.getLogs(user.$id);
       console.log('[useAlcohol.loadData] Logs loaded:', logsData.length);
       setLogs(logsData);
-      
+
       const goalData = await goalsService.getGoal(user.$id);
       console.log('[useAlcohol.loadData] Goal loaded:', goalData ? 'exists' : 'null');
       setGoal(goalData);
-      
+
       const profileData = await profileService.getProfile(user.$id);
       console.log('[useAlcohol.loadData] Profile loaded:', profileData ? 'exists' : 'null');
       setUserProfile(profileData);
-      
+
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
-      
+
       const seen = new Set<string>();
       const recent: Drink[] = [];
-      
+
       for (const log of recentLogs) {
         const drink = drinksData.find(d => d.type === log.drinkType || d.name === log.drinkName);
         if (drink && !seen.has(drink.id)) {
@@ -66,7 +62,7 @@ export const useAlcohol = () => {
           recent.push(drink);
         }
       }
-      
+
       setRecentlyUsed(recent.slice(0, 4));
       console.log('[useAlcohol.loadData] Done!');
     } catch (err) {
@@ -93,13 +89,13 @@ export const useAlcohol = () => {
   }, [user?.$id]);
 
   const quickLog = useCallback(async (
-    drink: Drink, 
-    mood?: MoodType, 
+    drink: Drink,
+    mood?: MoodType,
     quantity: number = 1,
     timestamp?: string
   ) => {
     if (!user?.$id) throw new Error('Not authenticated');
-    
+
     const log = await alcoholService.createLog(user.$id, {
       drinkType: drink.type,
       servingSize: drink.defaultServingSize,
@@ -110,13 +106,13 @@ export const useAlcohol = () => {
       quantity,
       timestamp,
     });
-    
+
     await drinksService.incrementUsage(drink.id);
-    
+
     setLogs(prev => [log, ...prev]);
     setLastDeletedLog(null);
     setRefreshKey(prev => prev + 1);
-    
+
     return log;
   }, [user?.$id]);
 
@@ -151,8 +147,8 @@ export const useAlcohol = () => {
 
   const toggleFavorite = useCallback(async (drinkId: string) => {
     await drinksService.toggleFavorite(drinkId);
-    setDrinks(prev => prev.map(d => 
-      d.id === drinkId 
+    setDrinks(prev => prev.map(d =>
+      d.id === drinkId
         ? { ...d, isFavorite: !d.isFavorite, favoriteRank: d.isFavorite ? undefined : (d.favoriteRank || 1) }
         : d
     ));
@@ -184,7 +180,7 @@ export const useAlcohol = () => {
   }, [drinks]);
 
   // User drinks = drinks created by this user
-  const userDrinks = useMemo(() => 
+  const userDrinks = useMemo(() =>
     drinks
       .filter(d => d.userId === user?.$id)
       .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0)),
@@ -192,7 +188,7 @@ export const useAlcohol = () => {
   );
 
   // Favorites = drinks marked as favorite (from both library and user)
-  const favorites = useMemo(() => 
+  const favorites = useMemo(() =>
     drinks.filter(d => d.isFavorite).sort((a, b) => (a.favoriteRank || 5) - (b.favoriteRank || 5)),
     [drinks]
   );
@@ -202,16 +198,16 @@ export const useAlcohol = () => {
     const weightKg = userProfile?.weightKg || 70;
     const sex: SexType = userProfile?.sex || 'unspecified';
     const legalLimit = userProfile?.legalLimit || 0.5;
-    
+
     const drinksData: DrinkData[] = logs.map(log => ({
       volumeCl: log.servingSize,
       abv: log.abv,
       timestamp: log.timestamp,
     }));
-    
+
     const analysis = getBACAnalysis(drinksData, { weightKg, sex }, legalLimit);
     const { isAbove, isNear } = checkLegalLimit(analysis.currentBAC, legalLimit);
-    
+
     return {
       currentBAC: analysis.currentBAC,
       peakBAC: analysis.peakBAC,
@@ -225,10 +221,10 @@ export const useAlcohol = () => {
   }, [logs, userProfile, refreshKey]);
 
   const insights = useMemo((): AlcoholInsight | null => {
-    console.log('[useAlcohol] insights useMemo recalculating', { 
-      logsCount: logs.length, 
+    console.log('[useAlcohol] insights useMemo recalculating', {
+      logsCount: logs.length,
       goalExists: !!goal,
-      refreshKey 
+      refreshKey
     });
     const result = alcoholService.calculateInsights(logs, goal);
     console.log('[useAlcohol] insights result:', result ? 'calculated' : 'null');
