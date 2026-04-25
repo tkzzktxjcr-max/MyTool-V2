@@ -24,6 +24,7 @@ export const useAlcohol = () => {
   const [loading, setLoading] = useState(false);
   const [recentlyUsed, setRecentlyUsed] = useState<Drink[]>([]);
   const [lastDeletedLog, setLastDeletedLog] = useState<AlcoholLog | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const loadData = useCallback(async () => {
     if (!user?.$id) return;
@@ -94,8 +95,12 @@ export const useAlcohol = () => {
     });
     
     await drinksService.incrementUsage(drink.id);
+    
+    // Immediately update local state for instant feedback
     setLogs(prev => [log, ...prev]);
     setLastDeletedLog(null);
+    setRefreshKey(prev => prev + 1);
+    
     return log;
   }, [user?.$id]);
 
@@ -119,6 +124,7 @@ export const useAlcohol = () => {
     });
     setLogs(prev => [restoredLog, ...prev]);
     setLastDeletedLog(null);
+    setRefreshKey(prev => prev + 1);
   }, [lastDeletedLog, user?.$id]);
 
   const deleteDrink = useCallback(async (drinkId: string) => {
@@ -167,18 +173,18 @@ export const useAlcohol = () => {
       isAboveLimit: isAbove,
       isNearLimit: isNear,
     };
-  }, [logs, userProfile]);
+  }, [logs, userProfile, refreshKey]);
 
   const insights = useMemo((): AlcoholInsight | null => {
     return alcoholService.calculateInsights(logs, goal);
-  }, [logs, goal]);
+  }, [logs, goal, refreshKey]);
 
   const getTodayUnits = useCallback((): number => {
     const today = new Date().toISOString().split('T')[0];
     return logs
       .filter(l => l.timestamp.split('T')[0] === today)
       .reduce((sum, l) => sum + l.units, 0);
-  }, [logs]);
+  }, [logs, refreshKey]);
 
   const getWeeklyUnits = useCallback((): number => {
     const weekAgo = new Date();
@@ -186,7 +192,7 @@ export const useAlcohol = () => {
     return logs
       .filter(l => new Date(l.timestamp) >= weekAgo)
       .reduce((sum, l) => sum + l.units, 0);
-  }, [logs]);
+  }, [logs, refreshKey]);
 
   return {
     drinks,
