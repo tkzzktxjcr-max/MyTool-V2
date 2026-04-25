@@ -2,6 +2,7 @@ import { Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { AuthProvider, useAuth } from "@/features/auth/context";
 import { FamilyProvider } from "@/features/family/context";
 
@@ -12,7 +13,6 @@ import ChoresPage from "./pages/Chores";
 import BudgetPage from "./pages/Budget";
 import AlcoholPage from "./pages/Alcohol";
 import FamilyPage from "./pages/Family";
-import SeedDrinksPage from "./pages/SeedDrinksPage";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 
@@ -68,13 +68,10 @@ const AppRoutes = () => {
       <Route path="/budget" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
       <Route path="/alcohol" element={<ProtectedRoute><AlcoholPage /></ProtectedRoute>} />
       <Route path="/family" element={<ProtectedRoute><FamilyPage /></ProtectedRoute>} />
-            <Route path="/seed-drinks" element={<SeedDrinksPage />} />
-            <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };
-
-import { motion } from "framer-motion";
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
