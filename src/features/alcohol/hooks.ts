@@ -31,8 +31,18 @@ export const useAlcohol = () => {
     setLoading(true);
     
     try {
+      // Fetch ALL drinks from database
       const drinksData = await drinksService.getAllDrinks();
-      console.log('[DEBUG] Drinks from Appwrite:', drinksData.length, 'drinks');
+      console.log('[DEBUG] ===== DRINKS FROM DATABASE =====');
+      console.log('[DEBUG] Total drinks in DB:', drinksData.length);
+      console.log('[DEBUG] All drinks:', drinksData.map(d => ({ name: d.name, userId: d.userId || 'global', isGlobal: d.isGlobal })));
+      
+      // Show breakdown
+      const globalDrinks = drinksData.filter(d => !d.userId);
+      const myUserDrinks = drinksData.filter(d => d.userId === user.$id);
+      console.log('[DEBUG] Global drinks:', globalDrinks.length);
+      console.log('[DEBUG] My user drinks:', myUserDrinks.length);
+      
       setDrinks(drinksData);
       
       const logsData = await alcoholService.getLogs(user.$id);
@@ -170,7 +180,7 @@ export const useAlcohol = () => {
   // Library drinks = global drinks (no userId) - sorted by popularity
   const libraryDrinks = useMemo(() => {
     return drinks
-      .filter(d => !d.userId) // Only drinks without userId
+      .filter(d => !d.userId)
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
   }, [drinks]);
 
