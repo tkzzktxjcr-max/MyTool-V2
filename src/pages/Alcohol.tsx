@@ -6,15 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Undo2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
-import type { DrinkType } from '@/features/alcohol/types';
+import type { DrinkType, MoodType } from '@/features/alcohol/types';
 import type { Drink } from '@/features/alcohol/services/drinks.service';
 
-import QuickDrinkPanel from './alcohol/QuickDrinkPanel';
-import BACCardComponent from './alcohol/BACCardComponent';
-import WeeklyProgressComponent from './alcohol/WeeklyProgressComponent';
-import InsightsComponent from './alcohol/InsightsComponent';
-import HistoryComponent from './alcohol/HistoryComponent';
-import { GoalSetterDialog, ProfileEditorDialog } from './alcohol/DialogsComponent';
+import BACCard from './alcohol/BACCard';
+import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
+import InsightsCard from './alcohol/InsightsCard';
+import HistoryCard from './alcohol/HistoryCard';
+import { GoalSetterDialog, ProfileEditorDialog, CreateDrinkDialog } from './alcohol/dialogs';
+import DrinkPicker from './alcohol/DrinkPicker';
+import MoodSelector from './alcohol/MoodSelector';
 
 export default function AlcoholPage() {
   const { 
@@ -25,6 +26,9 @@ export default function AlcoholPage() {
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showCreateDrink, setShowCreateDrink] = useState(false);
+  const [showMoodSelector, setShowMoodSelector] = useState(false);
+  const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -32,8 +36,29 @@ export default function AlcoholPage() {
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
 
-  const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }): Promise<Drink> => {
-    return createDrink(data, data.emoji);
+  const handleSelectDrink = (drink: Drink) => {
+    setSelectedDrink(drink);
+    setShowMoodSelector(true);
+  };
+
+  const handleConfirmLog = async (mood: string) => {
+    if (!selectedDrink) return;
+    await quickLog(selectedDrink, mood as MoodType);
+    setShowMoodSelector(false);
+    setSelectedDrink(null);
+  };
+
+  const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
+    await createDrink(data, data.emoji);
+    setShowCreateDrink(false);
+  };
+
+  const handleSetGoal = async (limit: number) => {
+    await setWeeklyGoal(limit);
+  };
+
+  const handleUpdateProfile = async (data: { weightKg?: number; sex?: 'male' | 'female' | 'unspecified' }) => {
+    await updateUserProfile(data);
   };
 
   return (
@@ -44,11 +69,14 @@ export default function AlcoholPage() {
             <div className="w-8 h-8 rounded-xl bg-secondary/20 flex items-center justify-center">
               <Activity className="w-4 h-4 text-secondary" />
             </div>
-            Bien-être
+            Bien-etre
           </h1>
-          <p className="text-sm text-muted-foreground">Ton suivi personnalisé</p>
+          <p className="text-sm text-muted-foreground">Ton suivi personnalise</p>
         </div>
         <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={() => setShowCreateDrink(true)}>
+            <span className="text-lg">+</span>
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)}>
             <User className="w-5 h-5" />
           </Button>
@@ -60,10 +88,15 @@ export default function AlcoholPage() {
 
       <AnimatePresence>
         {lastDeletedLog && (
-          <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="bg-accent/20 border border-accent/30 rounded-xl p-3 flex items-center justify-between">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: -20 }} 
+            className="bg-accent/20 border border-accent/30 rounded-xl p-3 flex items-center justify-between"
+          >
             <div className="flex items-center gap-2">
               <span className="text-lg">{lastDeletedLog.drinkEmoji}</span>
-              <span className="text-sm">"{lastDeletedLog.drinkName}" supprimé</span>
+              <span className="text-sm">"{lastDeletedLog.drinkName}" supprime</span>
             </div>
             <Button size="sm" variant="ghost" onClick={undoDelete}>
               <Undo2 className="w-4 h-4 mr-1" />
@@ -73,7 +106,7 @@ export default function AlcoholPage() {
         )}
       </AnimatePresence>
 
-      <BACCardComponent
+      <BACCard
         currentBAC={bacState.currentBAC}
         peakBAC={bacState.peakBAC}
         peakTime={bacState.peakTime}
@@ -84,39 +117,58 @@ export default function AlcoholPage() {
         legalLimit={legalLimit}
       />
 
-      <QuickDrinkPanel
-        drinks={drinks}
-        recentlyUsed={recentlyUsed}
-        logs={logs}
-        insights={insights}
-        goal={goal}
-        userProfile={userProfile}
-        bacState={bacState}
-        onQuickLog={quickLog}
-        onCreateDrink={handleCreateDrink}
-        onDeleteLog={deleteLog}
-        onSetWeeklyGoal={setWeeklyGoal}
-        onUpdateProfile={updateUserProfile}
-        weeklyUnits={weeklyUnits}
-        weeklyLimit={weeklyLimit}
-      />
+      <div className="space-y-3">
+        <DrinkPicker 
+          drinks={drinks} 
+          onSelect={handleSelectDrink}
+          onCreate={handleCreateDrink}
+        />
 
-      <WeeklyProgressComponent weeklyUnits={weeklyUnits} weeklyLimit={weeklyLimit} streak={insights?.streak} />
-      <InsightsComponent insights={insights} />
-      <HistoryComponent logs={logs} onDeleteLog={deleteLog} />
+        <AnimatePresence>
+          {showMoodSelector && selectedDrink && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: 10 }}
+              className="p-4 rounded-2xl bg-card border border-white/10"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{selectedDrink.emoji}</span>
+                  <span className="font-medium">{selectedDrink.name}</span>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => { setShowMoodSelector(false); setSelectedDrink(null); }}>
+                  Annuler
+                </Button>
+              </div>
+              <MoodSelector onSelect={handleConfirmLog} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <WeeklyProgressCard weeklyUnits={weeklyUnits} weeklyLimit={weeklyLimit} streak={insights?.streak} />
+      <InsightsCard insights={insights} />
+      <HistoryCard logs={logs} onDeleteLog={deleteLog} />
 
       <GoalSetterDialog
         open={showGoalSetter}
         onOpenChange={setShowGoalSetter}
-        onSetGoal={setWeeklyGoal}
+        onSetGoal={handleSetGoal}
         initialLimit={weeklyLimit}
       />
 
       <ProfileEditorDialog
         open={showProfileEditor}
         onOpenChange={setShowProfileEditor}
-        onUpdateProfile={updateUserProfile}
+        onUpdateProfile={handleUpdateProfile}
         initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }}
+      />
+
+      <CreateDrinkDialog
+        open={showCreateDrink}
+        onOpenChange={setShowCreateDrink}
+        onCreate={handleCreateDrink}
       />
     </div>
   );

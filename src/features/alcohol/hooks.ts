@@ -5,7 +5,7 @@ import { drinksService, type Drink } from './services/drinks.service';
 import { goalsService } from './services/goals.service';
 import { profileService } from './services/profile.service';
 import type { UserProfile } from './services/profile.service';
-import type { CountryCode, CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
+import type { CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
 import {
   getBACAnalysis,
   checkLegalLimit,
@@ -30,7 +30,6 @@ export const useAlcohol = () => {
     setLoading(true);
     
     try {
-      // Load all drinks from database only
       const drinksData = await drinksService.getAllDrinks();
       setDrinks(drinksData);
       
@@ -43,23 +42,22 @@ export const useAlcohol = () => {
       const profileData = await profileService.getProfile(user.$id);
       setUserProfile(profileData);
       
-      // Build recently used from logs
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
       
       const seen = new Set<string>();
-      const recentDrinks: Drink[] = [];
+      const recent: Drink[] = [];
       
       for (const log of recentLogs) {
         const drink = drinksData.find(d => d.type === log.drinkType || d.name === log.drinkName);
         if (drink && !seen.has(drink.id)) {
           seen.add(drink.id);
-          recentDrinks.push(drink);
+          recent.push(drink);
         }
       }
       
-      setRecentlyUsed(recentDrinks.slice(0, 4));
+      setRecentlyUsed(recent.slice(0, 4));
     } catch (err) {
       console.error('Error loading alcohol data:', err);
       setDrinks([]);
@@ -67,11 +65,6 @@ export const useAlcohol = () => {
       setLoading(false);
     }
   }, [user?.$id]);
-
-  const resetDrinks = useCallback(async () => {
-    const allDrinks = await drinksService.getAllDrinks();
-    setDrinks(allDrinks);
-  }, []);
 
   const createDrink = useCallback(async (form: CreateDrinkForm, emoji?: string) => {
     if (!user?.$id) throw new Error('Not authenticated');
@@ -85,26 +78,6 @@ export const useAlcohol = () => {
       userId: user.$id,
     });
     setDrinks(prev => [...prev, drink]);
-    return drink;
-  }, [user?.$id]);
-
-  const customizeDrink = useCallback(async (
-    drinkType: DrinkType,
-    data: {
-      name: string;
-      abv: number;
-      defaultServingSize: number;
-      emoji: string;
-      country?: CountryCode;
-    }
-  ) => {
-    if (!user?.$id) throw new Error('Not authenticated');
-    const drink = await drinksService.setUserDrinkPreference(user.$id, {
-      type: drinkType,
-      ...data,
-    });
-    const allDrinks = await drinksService.getAllDrinks();
-    setDrinks(allDrinks);
     return drink;
   }, [user?.$id]);
 
@@ -153,26 +126,22 @@ export const useAlcohol = () => {
     setDrinks(prev => prev.filter(d => d.id !== drinkId));
   }, []);
 
-  const setWeeklyGoal = useCallback(async (limit: number, reductionGoal?: number) => {
+  const setWeeklyGoal = useCallback(async (limit: number) => {
     if (!user?.$id) throw new Error('Not authenticated');
     const updatedGoal = await goalsService.createOrUpdateGoal(user.$id, {
       weeklyLimit: limit,
-      reductionGoal,
       isActive: true,
     });
     setGoal(updatedGoal);
-    return updatedGoal;
   }, [user?.$id]);
 
   const updateUserProfile = useCallback(async (data: {
     weightKg?: number;
     sex?: 'male' | 'female' | 'unspecified';
-    legalLimit?: number;
   }) => {
     if (!user?.$id) throw new Error('Not authenticated');
     const updatedProfile = await profileService.createOrUpdateProfile(user.$id, data);
     setUserProfile(updatedProfile);
-    return updatedProfile;
   }, [user?.$id]);
 
   const bacState = useMemo(() => {
@@ -186,8 +155,7 @@ export const useAlcohol = () => {
       timestamp: log.timestamp,
     }));
     
-    const userProfileForBAC = { weightKg, sex };
-    const analysis = getBACAnalysis(drinksData, userProfileForBAC);
+    const analysis = getBACAnalysis(drinksData, { weightKg, sex });
     const { isAbove, isNear } = checkLegalLimit(analysis.currentBAC, legalLimit);
     
     return {
@@ -220,23 +188,8 @@ export const useAlcohol = () => {
       .reduce((sum, l) => sum + l.units, 0);
   }, [logs]);
 
-  const getDrinksByCountry = useCallback(() => {
-    const grouped: Record<string, Drink[]> = {};
-    
-    for (const drink of drinks) {
-      const country = drink.country || 'INT';
-      if (!grouped[country]) {
-        grouped[country] = [];
-      }
-      grouped[country].push(drink);
-    }
-    
-    return grouped;
-  }, [drinks]);
-
   return {
     drinks,
-    allDrinks: drinks,
     recentlyUsed,
     logs,
     goal,
@@ -246,9 +199,7 @@ export const useAlcohol = () => {
     lastDeletedLog,
     bacState,
     loadData,
-    resetDrinks,
     createDrink,
-    customizeDrink,
     quickLog,
     deleteLog,
     undoDelete,
@@ -257,6 +208,5 @@ export const useAlcohol = () => {
     updateUserProfile,
     getTodayUnits,
     getWeeklyUnits,
-    getDrinksByCountry,
   };
 };
