@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, AlertTriangle, Sparkles } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -33,8 +33,13 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
   console.log('[InsightsCard] Rendering with valid insights:', {
     weeklyUnits: insights.totalWeeklyUnits,
     recommendations: insights.recommendations,
-    patterns: insights.patterns
+    patterns: insights.patterns,
+    dailyTrend: insights.dailyTrend
   });
+
+  // Calculate max for chart scaling - ensure we have a reasonable minimum
+  const maxUnits = Math.max(...insights.dailyTrend.map(d => d.units), 2);
+  const hasAnyData = insights.dailyTrend.some(d => d.units > 0);
 
   return (
     <Card>
@@ -68,25 +73,56 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
           </div>
         </div>
 
-        {/* Daily Trend Chart (simple bars) */}
-        {insights.dailyTrend.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs text-muted-foreground mb-2">7 derniers jours</p>
-            <div className="flex items-end justify-between h-16 gap-1">
+        {/* Daily Trend Chart - Fixed bars */}
+        <div className="mb-4">
+          <p className="text-xs text-muted-foreground mb-3">7 derniers jours</p>
+          
+          {/* Chart container with fixed height */}
+          <div className="relative h-24 bg-white/5 rounded-xl p-3">
+            {/* Grid lines */}
+            <div className="absolute inset-3 flex flex-col justify-between pointer-events-none">
+              <div className="h-px bg-white/10" />
+              <div className="h-px bg-white/10" />
+              <div className="h-px bg-white/10" />
+              <div className="h-px bg-white/10" />
+            </div>
+            
+            {/* Bars */}
+            <div className="relative h-full flex items-end justify-between gap-1">
               {insights.dailyTrend.map((day, i) => {
-                const maxUnits = Math.max(...insights.dailyTrend.map(d => d.units), 1);
-                const height = (day.units / maxUnits) * 100;
+                // Calculate height as percentage of max, minimum 8px if there's data
+                const rawHeight = maxUnits > 0 ? (day.units / maxUnits) * 100 : 0;
+                const barHeight = day.units > 0 ? Math.max(rawHeight, 15) : 4;
                 const isTodayBar = i === 6;
+                
                 return (
-                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1 z-10">
+                    {/* Value label */}
+                    <span className={cn(
+                      "text-[10px] font-medium",
+                      day.units > 0 ? "text-foreground" : "text-muted-foreground"
+                    )}>
+                      {day.units > 0 ? day.units.toFixed(1) : ''}
+                    </span>
+                    
+                    {/* Bar */}
                     <div 
                       className={cn(
-                        "w-full rounded-t-sm transition-all",
-                        day.units <= 2 ? "bg-secondary" : day.units <= 4 ? "bg-accent" : "bg-destructive"
+                        "w-full rounded-t-md transition-all duration-300",
+                        day.units === 0 && "bg-white/10",
+                        day.units > 0 && day.units <= 2 && "bg-secondary",
+                        day.units > 2 && day.units <= 4 && "bg-accent",
+                        day.units > 4 && "bg-destructive",
+                        isTodayBar && "ring-2 ring-white/30"
                       )}
-                      style={{ height: `${Math.max(height, 4)}%` }}
+                      style={{ height: `${barHeight}%` }}
                     />
-                    <span className={cn("text-[10px]", isTodayBar && "text-secondary font-medium")}>
+                    
+                    {/* Day label */}
+                    <span className={cn(
+                      "text-[10px]",
+                      isTodayBar ? "text-secondary font-medium" : "text-muted-foreground"
+                    )}>
                       {format(new Date(day.date), 'EEE', { locale: fr }).charAt(0)}
                     </span>
                   </div>
@@ -94,7 +130,20 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
               })}
             </div>
           </div>
-        )}
+          
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-secondary" /> 0-2
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-accent" /> 2-4
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded bg-destructive" /> 4+
+            </span>
+          </div>
+        </div>
 
         {/* Patterns/Recommendations */}
         {insights.patterns.length > 0 && (
