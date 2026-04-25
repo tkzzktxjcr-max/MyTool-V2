@@ -4,8 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, ReferenceLine, CartesianGrid } from 'recharts';
 import { format, formatDistanceToNow } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
-import { motion, useAnimation } from 'framer-motion';
-import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { BACDataPoint } from '@/features/alcohol/utils/bac';
 
@@ -30,29 +29,12 @@ export default function BACCard({
   isNearLimit,
   legalLimit,
 }: BACCardProps) {
-  const controls = useAnimation();
-  
-  useEffect(() => {
-    if (currentBAC > 0) {
-      // Pulse animation loop when BAC is above zero
-      const pulseAnimation = async () => {
-        while (currentBAC > 0) {
-          await controls.start({
-            scale: [1, 1.02, 1],
-            transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-          });
-        }
-      };
-      pulseAnimation();
-    } else {
-      controls.stop();
-    }
-  }, [currentBAC, controls]);
-
   const chartData = timeline.map(point => ({
     time: format(point.time, 'HH:mm'),
     bac: point.bac,
   }));
+
+  const hasActiveBAC = currentBAC > 0;
 
   return (
     <Card className={cn(
@@ -64,31 +46,33 @@ export default function BACCard({
         <div className="text-center mb-4">
           <p className="text-sm text-muted-foreground mb-1">Alcoolémie actuelle</p>
           <motion.div
-            key={currentBAC}
+            key={`bac-${currentBAC.toFixed(2)}`}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            whileInView={currentBAC > 0 ? {
-              scale: [1, 1.015, 1],
-              transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
-            } : {}}
             className={cn(
               "text-5xl md:text-7xl font-bold transition-colors duration-300",
               isAboveLimit && "text-destructive",
               isNearLimit && "text-accent",
-              !isAboveLimit && !isNearLimit && currentBAC > 0 && "text-secondary",
-              currentBAC === 0 && "text-muted-foreground"
+              !isAboveLimit && !isNearLimit && hasActiveBAC && "text-secondary",
+              !hasActiveBAC && "text-muted-foreground"
             )}
           >
             {currentBAC.toFixed(2)}
           </motion.div>
           <p className="text-xl text-muted-foreground">g/L</p>
           
-          {peakBAC > 0 && (
-            <div className="mt-2 p-2 rounded-lg bg-white/5 inline-block">
+          {hasActiveBAC && (
+            <motion.div
+              animate={hasActiveBAC ? {
+                scale: [1, 1.02, 1],
+                transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" as const }
+              } : {}}
+              className="mt-2 p-2 rounded-lg bg-white/5 inline-block"
+            >
               <p className="text-sm">
                 Pic attendu : <span className="font-bold text-accent">{peakBAC.toFixed(2)} g/L</span> à {format(peakTime, 'HH:mm')}
               </p>
-            </div>
+            </motion.div>
           )}
         </div>
 
@@ -103,7 +87,7 @@ export default function BACCard({
           </motion.div>
         )}
 
-        {timeline.length > 0 && currentBAC > 0 && (
+        {timeline.length > 0 && hasActiveBAC && (
           <div className="h-40 mb-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
@@ -135,8 +119,8 @@ export default function BACCard({
           <div className="w-px h-12 bg-white/10" />
           <div>
             <p className="text-xs text-muted-foreground">Retour à 0</p>
-            <p className="text-lg font-bold">{currentBAC > 0 ? format(zeroTime, 'HH:mm') : '—'}</p>
-            {currentBAC > 0 && (
+            <p className="text-lg font-bold">{hasActiveBAC ? format(zeroTime, 'HH:mm') : '—'}</p>
+            {hasActiveBAC && (
               <p className="text-xs text-muted-foreground">{formatDistanceToNow(zeroTime, { addSuffix: true })}</p>
             )}
           </div>
