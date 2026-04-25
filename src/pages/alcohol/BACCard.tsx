@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, ReferenceLine, CartesianGrid } from 'recharts';
 import { format, formatDistanceToNow } from 'date-fns';
 import { AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useAnimation } from 'framer-motion';
+import { useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import type { BACDataPoint } from '@/features/alcohol/utils/bac';
 
@@ -29,6 +30,25 @@ export default function BACCard({
   isNearLimit,
   legalLimit,
 }: BACCardProps) {
+  const controls = useAnimation();
+  
+  useEffect(() => {
+    if (currentBAC > 0) {
+      // Pulse animation loop when BAC is above zero
+      const pulseAnimation = async () => {
+        while (currentBAC > 0) {
+          await controls.start({
+            scale: [1, 1.02, 1],
+            transition: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+          });
+        }
+      };
+      pulseAnimation();
+    } else {
+      controls.stop();
+    }
+  }, [currentBAC, controls]);
+
   const chartData = timeline.map(point => ({
     time: format(point.time, 'HH:mm'),
     bac: point.bac,
@@ -36,7 +56,7 @@ export default function BACCard({
 
   return (
     <Card className={cn(
-      "overflow-hidden",
+      "overflow-hidden transition-all duration-300",
       isAboveLimit && "ring-2 ring-destructive/50",
       isNearLimit && "ring-2 ring-accent/50"
     )}>
@@ -47,8 +67,12 @@ export default function BACCard({
             key={currentBAC}
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
+            whileInView={currentBAC > 0 ? {
+              scale: [1, 1.015, 1],
+              transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+            } : {}}
             className={cn(
-              "text-5xl md:text-7xl font-bold",
+              "text-5xl md:text-7xl font-bold transition-colors duration-300",
               isAboveLimit && "text-destructive",
               isNearLimit && "text-accent",
               !isAboveLimit && !isNearLimit && currentBAC > 0 && "text-secondary",
