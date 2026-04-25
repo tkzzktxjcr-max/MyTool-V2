@@ -104,7 +104,6 @@ export const useAlcohol = () => {
     
     await drinksService.incrementUsage(drink.id);
     
-    // Immediately update local state for instant feedback
     setLogs(prev => [log, ...prev]);
     setLastDeletedLog(null);
     setRefreshKey(prev => prev + 1);
@@ -145,11 +144,7 @@ export const useAlcohol = () => {
     await drinksService.toggleFavorite(drinkId);
     setDrinks(prev => prev.map(d => 
       d.id === drinkId 
-        ? { 
-            ...d, 
-            isFavorite: !d.isFavorite, 
-            favoriteRank: d.isFavorite ? undefined : (d.favoriteRank || 1) 
-          }
+        ? { ...d, isFavorite: !d.isFavorite, favoriteRank: d.isFavorite ? undefined : (d.favoriteRank || 1) }
         : d
     ));
   }, []);
@@ -172,18 +167,22 @@ export const useAlcohol = () => {
     setUserProfile(updatedProfile);
   }, [user?.$id]);
 
-  // Derived states - show all drinks in library (sort by popularity)
+  // Library drinks = global drinks (no userId) - sorted by popularity
   const libraryDrinks = useMemo(() => {
-    return [...drinks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    return drinks
+      .filter(d => !d.userId) // Only drinks without userId
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
   }, [drinks]);
 
   // User drinks = drinks created by this user
   const userDrinks = useMemo(() => 
-    drinks.filter(d => d.userId === user?.$id).sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0)),
+    drinks
+      .filter(d => d.userId === user?.$id)
+      .sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0)),
     [drinks, user?.$id]
   );
 
-  // Favorites = drinks marked as favorite
+  // Favorites = drinks marked as favorite (from both library and user)
   const favorites = useMemo(() => 
     drinks.filter(d => d.isFavorite).sort((a, b) => (a.favoriteRank || 5) - (b.favoriteRank || 5)),
     [drinks]
