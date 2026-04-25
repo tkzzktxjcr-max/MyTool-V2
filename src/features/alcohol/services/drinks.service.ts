@@ -40,16 +40,47 @@ const mapDocToDrink = (doc: any): Drink => ({
   createdAt: doc.$createdAt,
 });
 
+// Helper to get all documents with pagination
+async function getAllDocuments(collectionId: string): Promise<any[]> {
+  const allDocs: any[] = [];
+  let offset = 0;
+  const limit = 100; // Get 100 at a time
+  
+  while (true) {
+    const response = await listDocuments(collectionId, [
+      Query.limit(limit),
+      Query.offset(offset),
+    ]);
+    
+    allDocs.push(...response.documents);
+    
+    // Check if there are more documents
+    if (response.documents.length < limit) {
+      break;
+    }
+    
+    offset += limit;
+    
+    // Safety: don't fetch more than 1000 documents
+    if (allDocs.length >= 1000) {
+      console.warn('[drinksService] Stopped at 1000 documents');
+      break;
+    }
+  }
+  
+  console.log(`[drinksService] Fetched ${allDocs.length} total documents`);
+  return allDocs;
+}
+
 export const drinksService = {
   async getAllDrinks(): Promise<Drink[]> {
     console.log('[drinksService] getAllDrinks called, collection:', COLLECTIONS.DRINKS);
     try {
-      const response = await listDocuments(COLLECTIONS.DRINKS, []);
-      console.log('[drinksService] Success! Found', response.documents.length, 'drinks');
-      return response.documents.map(mapDocToDrink);
+      const allDocs = await getAllDocuments(COLLECTIONS.DRINKS);
+      console.log('[drinksService] Success! Found', allDocs.length, 'drinks');
+      return allDocs.map(mapDocToDrink);
     } catch (error: any) {
       console.error('[drinksService] Error loading drinks:', error?.message || error);
-      // Return empty array but log the error
       return [];
     }
   },
@@ -172,13 +203,11 @@ export const drinksService = {
       const currentlyFavorite = doc.isFavorite || false;
       
       if (currentlyFavorite) {
-        // Remove from favorites
         await updateDocument(COLLECTIONS.DRINKS, drinkId, {
           isFavorite: false,
           favoriteRank: null,
         });
       } else {
-        // Add to favorites
         await updateDocument(COLLECTIONS.DRINKS, drinkId, {
           isFavorite: true,
           favoriteRank: rank || 1,
