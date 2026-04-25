@@ -22,12 +22,14 @@ const MOODS = [
 export default function MoodSelector({ onSelect, quantity = 1, totalUnits }: MoodSelectorProps) {
   return (
     <div className="space-y-3">
+      <p className="text-sm font-medium text-muted-foreground text-center">Comment te sens-tu ?</p>
+      
       <div className="grid grid-cols-4 gap-2">
         {MOODS.map((mood) => (
           <button
             key={mood.id}
             onClick={() => onSelect(mood.id)}
-            className="flex flex-col items-center gap-1 p-3 rounded-xl hover:bg-white/10 transition-colors"
+            className="flex flex-col items-center gap-1.5 p-3 rounded-xl hover:bg-white/10 transition-all active:scale-95"
           >
             <span className="text-2xl">{mood.emoji}</span>
             <span className="text-xs text-muted-foreground">{mood.label}</span>

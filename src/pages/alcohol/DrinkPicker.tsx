@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, Plus, X, ChevronRight, Sparkles, Globe, Star } from 'lucide-react';
+import { Search, Plus, X, ChevronRight, Sparkles, Globe, Star, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Drink } from '@/features/alcohol/service';
@@ -99,11 +99,11 @@ export default function DrinkPicker({
       role="button"
       tabIndex={0}
       className={cn(
-        "w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors cursor-pointer",
+        "w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors cursor-pointer rounded-xl mx-1 mb-1",
         index === selectedIndex - sectionStart && "bg-secondary/10"
       )}
     >
-      <span className="text-2xl">{drink.emoji}</span>
+      <span className="text-3xl">{drink.emoji}</span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium truncate">{drink.name}</p>
@@ -116,27 +116,24 @@ export default function DrinkPicker({
         </p>
       </div>
       {onToggleFavorite && (
-        <div
-          role="button"
-          tabIndex={0}
+        <button
           onClick={(e) => handleToggleFavorite(e, drink.id)}
-          onKeyDown={(e) => e.key === 'Enter' && handleToggleFavorite(e as any, drink.id)}
           className={cn(
-            "p-1.5 rounded-lg transition-colors",
+            "p-2 rounded-lg transition-colors",
             drink.isFavorite 
               ? "text-yellow-400 hover:text-yellow-300" 
               : "text-muted-foreground hover:text-foreground"
           )}
         >
           <Star className={cn("w-4 h-4", drink.isFavorite && "fill-current")} />
-        </div>
+        </button>
       )}
       <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
     </div>
   );
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Search input */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -202,7 +199,7 @@ export default function DrinkPicker({
                 key={key}
                 onClick={() => handleTypeChange(key as DrinkType)}
                 className={cn(
-                  "flex-shrink-0 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1",
+                  "flex-shrink-0 px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1 transition-all",
                   newDrink.type === key ? "bg-secondary/20 text-secondary" : "bg-white/5 text-muted-foreground hover:bg-white/10"
                 )}
               >
@@ -234,7 +231,8 @@ export default function DrinkPicker({
             </div>
           </div>
 
-          <Button onClick={handleCreate} className="w-full" disabled={!newDrink.name.trim()}>
+          <Button onClick={handleCreate} className="w-full rounded-xl bg-secondary hover:bg-secondary/80" disabled={!newDrink.name.trim()}>
+            <Check className="w-4 h-4 mr-2" />
             Creer
           </Button>
         </div>
@@ -245,7 +243,7 @@ export default function DrinkPicker({
             <div className="space-y-1">
               <div className="flex items-center gap-2 px-2 py-1">
                 <Globe className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-medium">Bibliothèque</span>
+                <span className="text-xs text-muted-foreground font-medium">Bibliotheque</span>
               </div>
               <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
                 {filteredLibraryDrinks.slice(0, 6).map((drink, index) => 

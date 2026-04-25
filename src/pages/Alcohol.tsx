@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Undo2, Info } from 'lucide-react';
+import { Activity, Target, User, Info, Plus, X, Leaf } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
@@ -20,13 +20,15 @@ import MoodSelector from './alcohol/MoodSelector';
 import QuantitySelector, { calculateUnits } from './alcohol/QuantitySelector';
 import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
+import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function AlcoholPage() {
   const {
-      drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
-      loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
-      setWeeklyGoal, updateUserProfile, getWeeklyUnits,
-    } = useAlcohol();
+    drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
+    loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
+    setWeeklyGoal, updateUserProfile, getWeeklyUnits,
+  } = useAlcohol();
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -34,6 +36,7 @@ export default function AlcoholPage() {
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
   const [showInfo, setShowInfo] = useState(false);
+  const [showDrinkPicker, setShowDrinkPicker] = useState(false);
   
   // Feature states
   const [quantity, setQuantity] = useState(1);
@@ -41,22 +44,29 @@ export default function AlcoholPage() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
 
   useEffect(() => {
-      loadData();
-    }, [loadData]);
+    loadData();
+  }, [loadData]);
 
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
-  
-    const handleSelectDrink = (drink: Drink) => {
+
+  const handleSelectDrink = (drink: Drink) => {
     setSelectedDrink(drink);
     setQuantity(1);
     setSelectedTime(undefined);
     setShowTimeSelector(false);
+    setShowDrinkPicker(false);
     setShowMoodSelector(true);
   };
 
   const handleQuickAdd = async (drink: Drink) => {
+    // Premium toast feedback
+    toast.success(`${drink.emoji} ${drink.name} ajouté !`, {
+      icon: '✨',
+      duration: 2000,
+      className: 'premium-toast',
+    });
     await quickLog(drink, undefined, 1, undefined);
   };
 
@@ -66,6 +76,13 @@ export default function AlcoholPage() {
     const moodValue = mood === 'none' ? undefined : mood as MoodType;
     await quickLog(selectedDrink, moodValue, quantity, selectedTime);
     
+    // Premium celebration toast
+    toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity}) ajouté !`, {
+      icon: '✅',
+      duration: 2000,
+      className: 'premium-toast',
+    });
+    
     setShowMoodSelector(false);
     setSelectedDrink(null);
     setQuantity(1);
@@ -74,15 +91,27 @@ export default function AlcoholPage() {
 
   const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
     await createDrink(data, data.emoji);
+    toast.success('Boisson créée !', {
+      icon: '🎉',
+      duration: 2000,
+    });
     setShowCreateDrink(false);
   };
 
   const handleSetGoal = async (limit: number) => {
     await setWeeklyGoal(limit);
+    toast.success('Objectif mis à jour !', {
+      icon: '🎯',
+      duration: 2000,
+    });
   };
 
   const handleUpdateProfile = async (data: { weightKg?: number; sex?: 'male' | 'female' | 'unspecified' }) => {
     await updateUserProfile(data);
+    toast.success('Profil mis à jour !', {
+      icon: '✅',
+      duration: 2000,
+    });
   };
 
   const handleTimeSelect = (timestamp: string) => {
@@ -94,6 +123,9 @@ export default function AlcoholPage() {
     ? calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity)
     : 0;
 
+  // Empty state - no drinks logged yet
+  const isFirstUse = logs.length === 0;
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       {/* Header */}
@@ -103,48 +135,49 @@ export default function AlcoholPage() {
             <div className="w-8 h-8 rounded-xl bg-secondary/20 flex items-center justify-center">
               <Activity className="w-4 h-4 text-secondary" />
             </div>
-            Bien-etre
+            Bien-être
           </h1>
-          <p className="text-sm text-muted-foreground">Ton suivi personnalise</p>
+          <p className="text-sm text-muted-foreground">
+            {isFirstUse ? 'Commence ton suivi' : 'Ton espace personnel'}
+          </p>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setShowCreateDrink(true)}>
-            <span className="text-lg">+</span>
-          </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)}>
+          <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)} className="rounded-xl">
             <User className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowGoalSetter(true)}>
+          <Button variant="ghost" size="icon" onClick={() => setShowGoalSetter(true)} className="rounded-xl">
             <Target className="w-5 h-5" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)}>
+          <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)} className="rounded-xl">
             <Info className="w-5 h-5" />
           </Button>
         </div>
       </div>
 
-      {/* Undo delete notification */}
+      {/* Undo delete notification - Premium styling */}
       <AnimatePresence>
         {lastDeletedLog && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }} 
-            animate={{ opacity: 1, y: 0 }} 
-            exit={{ opacity: 0, y: -20 }} 
-            className="bg-accent/20 border border-accent/30 rounded-xl p-3 flex items-center justify-between"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }} 
+            exit={{ opacity: 0, y: -20, scale: 0.95 }} 
+            className="bg-accent/15 border border-accent/25 rounded-2xl p-3 flex items-center justify-between shadow-lg"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{lastDeletedLog.drinkEmoji}</span>
-              <span className="text-sm">"{lastDeletedLog.drinkName}" supprime</span>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{lastDeletedLog.drinkEmoji}</span>
+              <div>
+                <p className="text-sm font-medium">"{lastDeletedLog.drinkName}"</p>
+                <p className="text-xs text-muted-foreground">supprimé</p>
+              </div>
             </div>
-            <Button size="sm" variant="ghost" onClick={undoDelete}>
-              <Undo2 className="w-4 h-4 mr-1" />
+            <Button size="sm" variant="outline" onClick={undoDelete} className="rounded-xl">
               Annuler
             </Button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* BAC Card with Sober Countdown */}
+      {/* BAC Card Hero */}
       <BACCard
         currentBAC={bacState.currentBAC}
         peakBAC={bacState.peakBAC}
@@ -157,7 +190,7 @@ export default function AlcoholPage() {
         safeToDriveTime={bacState.safeToDriveTime}
       />
 
-      {/* Quick Add Favorites Bar */}
+      {/* Quick Add Favorites Bar - Premium */}
       <QuickAddBar
         favorites={favorites}
         onQuickAdd={handleQuickAdd}
@@ -167,32 +200,61 @@ export default function AlcoholPage() {
 
       {/* Drink Selection & Logging */}
       <div className="space-y-3">
-        <DrinkPicker 
-          drinks={drinks}
-          libraryDrinks={libraryDrinks}
-          userDrinks={userDrinks}
-          onSelect={handleSelectDrink}
-          onCreate={handleCreateDrink}
-          onToggleFavorite={toggleFavorite}
-        />
-
-        {/* Mood Selection with Quantity & Time */}
-        <AnimatePresence>
-          {showMoodSelector && selectedDrink && (
+        {/* Drink Picker Button / Area */}
+        <AnimatePresence mode="wait">
+          {!showMoodSelector ? (
+            <motion.div
+              key="picker"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              {!showDrinkPicker ? (
+                <button
+                  onClick={() => setShowDrinkPicker(true)}
+                  className="w-full h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center gap-3 text-muted-foreground hover:bg-white/10 transition-all"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">Ajouter une consommation</span>
+                </button>
+              ) : (
+                <div className="rounded-2xl bg-card border border-white/10 p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">Choisir une boissons</span>
+                    <button 
+                      onClick={() => setShowDrinkPicker(false)}
+                      className="p-1 rounded-lg hover:bg-white/10"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <DrinkPicker 
+                    drinks={drinks}
+                    libraryDrinks={libraryDrinks}
+                    userDrinks={userDrinks}
+                    onSelect={handleSelectDrink}
+                    onCreate={handleCreateDrink}
+                    onToggleFavorite={toggleFavorite}
+                  />
+                </div>
+              )}
+            </motion.div>
+          ) : (
             <motion.div 
+              key="mood-selector"
               initial={{ opacity: 0, y: 10 }} 
               animate={{ opacity: 1, y: 0 }} 
               exit={{ opacity: 0, y: 10 }}
-              className="p-4 rounded-2xl bg-card border border-white/10 space-y-4"
+              className="p-5 rounded-2xl bg-card border border-secondary/30 space-y-4 shadow-lg"
             >
               {/* Drink info with quantity */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl">{selectedDrink.emoji}</span>
+                  <span className="text-4xl">{selectedDrink?.emoji}</span>
                   <div>
-                    <p className="font-medium">{selectedDrink.name}</p>
+                    <p className="font-semibold text-base">{selectedDrink?.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {selectedDrink.abv}% - {selectedDrink.defaultServingSize} cl
+                      {selectedDrink?.abv}% - {selectedDrink?.defaultServingSize} cl
                     </p>
                   </div>
                 </div>
@@ -206,7 +268,7 @@ export default function AlcoholPage() {
               {!selectedTime && (
                 <button
                   onClick={() => setShowTimeSelector(!showTimeSelector)}
-                  className="w-full py-2 text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/10 rounded-xl"
+                  className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/10 rounded-xl hover:bg-white/5"
                 >
                   Modifier l'heure...
                 </button>
@@ -234,7 +296,7 @@ export default function AlcoholPage() {
               {/* Confirm button with total units */}
               <Button 
                 onClick={() => handleConfirmLog('none')}
-                className="w-full bg-secondary hover:bg-secondary/80"
+                className="w-full bg-secondary hover:bg-secondary/80 rounded-xl h-12 text-base font-medium"
               >
                 Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unites)
               </Button>
@@ -248,7 +310,7 @@ export default function AlcoholPage() {
                   setQuantity(1);
                   setSelectedTime(undefined);
                 }} 
-                className="w-full"
+                className="w-full rounded-xl"
               >
                 Annuler
               </Button>
@@ -263,7 +325,7 @@ export default function AlcoholPage() {
       {/* Insights */}
       <InsightsCard insights={insights} />
       
-      {/* History with retroactive indicators */}
+      {/* History */}
       <HistoryCard logs={logs} onDeleteLog={deleteLog} />
 
       {/* Dialogs */}
@@ -290,6 +352,16 @@ export default function AlcoholPage() {
       <AnimatePresence>
         {showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}
       </AnimatePresence>
+
+      {/* Premium Toast Styles */}
+      <style>{`
+        .premium-toast {
+          background: linear-gradient(135deg, hsl(222 47% 11%), hsl(222 47% 15%)) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 1rem !important;
+          backdrop-filter: blur(12px) !important;
+        }
+      `}</style>
     </div>
   );
 }

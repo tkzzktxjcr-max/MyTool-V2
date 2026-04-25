@@ -543,7 +543,7 @@ export const alcoholService = {
         contextBreakdown: {},
         patterns: [],
         riskLevel: 'low' as const,
-        recommendations: ['✅ Aucune donnée pour le moment'],
+        recommendations: [],
         weeklyGoalProgress: 0,
         streak: 0,
       };
@@ -600,6 +600,7 @@ export const alcoholService = {
       }
     });
 
+    // Positive patterns - coaching language
     const patterns: string[] = [];
     const weekendUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
@@ -612,32 +613,42 @@ export const alcoholService = {
     }).reduce((sum, l) => sum + l.units, 0);
 
     if (weekendUnits > weekdayUnits * 1.5 && weekendUnits > 5) {
-      patterns.push('🍺 +50% le week-end');
+      patterns.push('Boire surtout le week-end est courant');
     }
 
     const typeEntries = Object.entries(drinkTypeBreakdown).sort((a, b) => b[1].units - a[1].units);
     if (typeEntries[0] && typeEntries[0][1].units > 0) {
       const typeName = DRINK_TYPES[typeEntries[0][0] as DrinkType]?.label || typeEntries[0][0];
-      patterns.push(`🍷 ${typeName} favorit${typeEntries[0][0] === 'wine' ? 'e' : ''}`);
+      patterns.push(`${typeName} est ton choix prefere`);
     }
 
+    // Positive recommendations - coaching language
+    const recommendations: string[] = [];
     const effectiveLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
+    
+    if (weeklyUnits === 0) {
+      recommendations.push('Semaine sobre - Excellent !');
+    } else if (weeklyUnits <= effectiveLimit * 0.8) {
+      recommendations.push('Tu es sous ton objectif hebdomadaire');
+    } else if (weeklyUnits <= effectiveLimit) {
+      recommendations.push('Tu es dans les limites de ton objectif');
+    } else if (weeklyUnits <= effectiveLimit * 1.2) {
+      recommendations.push('Legerement au-dessus - tu approches de ton objectif');
+    } else {
+      recommendations.push('Au-dessus de ton objectif cette semaine');
+    }
+
+    // Calculate risk level - using more positive framing
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
     if (weeklyUnits > effectiveLimit * 1.5) {
-      riskLevel = 'high';
+      riskLevel = 'moderate'; // Changed from 'high' to 'moderate'
     } else if (weeklyUnits > effectiveLimit) {
-      riskLevel = 'moderate';
+      riskLevel = 'low'; // Changed from 'moderate' to 'low'
     }
 
-    const recommendations: string[] = [];
-    if (weeklyUnits > effectiveLimit) {
-      recommendations.push('⚠️ Au-delà de votre objectif');
-    } else if (weeklyUnits > 0) {
-      recommendations.push('✅ Dans les limites');
-    }
+    const weeklyGoalProgress = effectiveLimit > 0 ? Math.min((weeklyUnits / effectiveLimit) * 100, 150) : 0;
 
-    const weeklyGoalProgress = Math.min((weeklyUnits / effectiveLimit) * 100, 100);
-
+    // Calculate streak of days without alcohol
     let streak = 0;
     for (let i = 0; i <= 30; i++) {
       const checkDate = new Date(now);
