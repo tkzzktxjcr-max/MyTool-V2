@@ -1,21 +1,18 @@
 /**
  * BAC Calculation Utility
  * Uses Widmark formula for accurate blood alcohol concentration estimation
- * 
- * All sizes are assumed to be in cl (centiliters) by default.
- * Conversion to ml happens internally.
  */
 
 // Physical constants
 const ALCOHOL_DENSITY = 0.789; // g/ml
-const ELIMINATION_RATE = 0.015; // g/L per hour (average metabolism)
-const PEAK_ABSORPTION_HOURS = 1; // Hours after drink when BAC peaks
+const ELIMINATION_RATE = 0.13; // g/L per hour (realistic for practical purposes)
+const PEAK_ABSORPTION_HOURS = 0.75; // ~45 minutes after drink when BAC peaks
 
 // Body water ratios (Widmark's r factor)
 export const BODY_WATER = {
   male: 0.68,
   female: 0.55,
-  unspecified: 0.68, // Default to male ratio
+  unspecified: 0.68,
 } as const;
 
 export type SexType = 'male' | 'female' | 'unspecified';
@@ -26,11 +23,8 @@ export interface UserProfile {
 }
 
 export interface DrinkData {
-  /** Volume in cl (centiliters) - will be converted to ml internally */
   volumeCl: number;
-  /** Alcohol by volume percentage (e.g., 5 for 5%) */
   abv: number;
-  /** ISO timestamp string */
   timestamp: string;
 }
 
@@ -50,22 +44,15 @@ export interface BACResult {
 }
 
 /**
- * Convert cl to ml (1 cl = 10 ml)
- */
-const clToMl = (cl: number): number => cl * 10;
-
-/**
  * Calculate pure alcohol in grams from volume and ABV
- * Formula: volume_ml × (abv/100) × alcohol_density
  */
 const calculateAlcoholGrams = (volumeCl: number, abv: number): number => {
-  const volumeMl = clToMl(volumeCl);
+  const volumeMl = volumeCl * 10;
   return volumeMl * (abv / 100) * ALCOHOL_DENSITY;
 };
 
 /**
  * Calculate peak BAC for a single drink using Widmark formula
- * Formula: BAC = alcohol_grams / (weight_kg × r)
  */
 const calculatePeakBAC = (
   volumeCl: number,
@@ -80,7 +67,6 @@ const calculatePeakBAC = (
 
 /**
  * Calculate BAC at a specific time after drinking
- * Accounts for the absorption phase (peak at ~1 hour) and elimination
  */
 export const calculateBACAtTime = (
   volumeCl: number,
@@ -91,18 +77,15 @@ export const calculateBACAtTime = (
 ): number => {
   const peakBAC = calculatePeakBAC(volumeCl, abv, weightKg, sex);
   
-  // During absorption phase (first hour), BAC is rising
+  // During absorption phase, BAC is rising
   if (hoursSinceDrink < PEAK_ABSORPTION_HOURS) {
-    // Linear rise to peak during first hour
     const absorptionFactor = hoursSinceDrink / PEAK_ABSORPTION_HOURS;
-    // Also account for early elimination during absorption
-    const eliminationDuringAbsorption = ELIMINATION_RATE * hoursSinceDrink * 0.5;
-    return Math.max(0, peakBAC * absorptionFactor - eliminationDuringAbsorption);
+    return peakBAC * absorptionFactor;
   }
   
   // Post-absorption: peak BAC minus elimination
   const hoursAfterPeak = hoursSinceDrink - PEAK_ABSORPTION_HOURS;
-  const currentBAC = peakBAC - (ELIMINATION_RATE * hoursAfterPeak) - ELIMINATION_RATE * PEAK_ABSORPTION_HOURS;
+  const currentBAC = peakBAC - (ELIMINATION_RATE * hoursAfterPeak);
   
   return Math.max(0, currentBAC);
 };
@@ -119,7 +102,6 @@ export const calculateTotalBAC = (
     const drinkTime = new Date(drink.timestamp);
     const hoursSince = (atTime.getTime() - drinkTime.getTime()) / (1000 * 60 * 60);
     
-    // Ignore drinks more than 24 hours old or in the future
     if (hoursSince < -0.5 || hoursSince > 24) return total;
     
     return total + calculateBACAtTime(
@@ -143,17 +125,14 @@ export const findPeakInfo = (
     return { peakTime: new Date(), peakBAC: 0 };
   }
   
-  // Find the latest drink time
   let lastDrinkTime = new Date(0);
   drinks.forEach(drink => {
     const drinkTime = new Date(drink.timestamp);
     if (drinkTime > lastDrinkTime) lastDrinkTime = drinkTime;
   });
   
-  // Peak occurs PEAK_ABSORPTION_HOURS after last drink
   const peakTime = new Date(lastDrinkTime.getTime() + PEAK_ABSORPTION_HOURS * 60 * 60 * 1000);
   
-  // Calculate total peak BAC from all drinks
   let peakBAC = 0;
   drinks.forEach(drink => {
     const drinkTime = new Date(drink.timestamp);
@@ -187,7 +166,6 @@ export const findZeroTime = (
   
   if (peakBAC <= 0) return new Date();
   
-  // Time to zero = peakBAC / elimination rate
   const hoursToZero = peakBAC / ELIMINATION_RATE;
   
   return new Date(peakTime.getTime() + hoursToZero * 60 * 60 * 1000);
@@ -205,13 +183,8 @@ export const findSafeToDriveTime = (
   
   const { peakBAC, peakTime } = findPeakInfo(drinks, userProfile);
   
-  // If already below limit, return now
   if (peakBAC <= legalLimit) return new Date();
   
-  // Calculate hours needed to reach legal limit from peak
-  // BAC at time t after peak = peakBAC - (ELIMINATION_RATE * hours)
-  // We need peakBAC - (ELIMINATION_RATE * hours) = legalLimit
-  // hours = (peakBAC - legalLimit) / ELIMINATION_RATE
   const hoursToSafe = (peakBAC - legalLimit) / ELIMINATION_RATE;
   
   return new Date(peakTime.getTime() + hoursToSafe * 60 * 60 * 1000);
@@ -291,16 +264,3 @@ export const checkLegalLimit = (
   isAbove: bac > limit,
   isNear: bac > limit * 0.8 && bac <= limit,
 });
-
-/**
- * Quick validation: how many standard drinks to reach a target BAC
- */
-export const drinksToReachBAC = (
-  targetBAC: number,
-  abv: number = 5,
-  weightKg: number = 70,
-  sex: SexType = 'unspecified'
-): number => {
-  const peakBAC = calculatePeakBAC(33, abv, weightKg, sex); // 33cl standard drink
-  return Math.ceil(targetBAC / peakBAC);
-};
