@@ -32,7 +32,7 @@ export const useAlcohol = () => {
     
     try {
       const drinksData = await drinksService.getAllDrinks();
-      console.log('[DEBUG] Drinks from Appwrite:', drinksData);
+      console.log('[DEBUG] Drinks from Appwrite:', drinksData.length, 'drinks');
       setDrinks(drinksData);
       
       const logsData = await alcoholService.getLogs(user.$id);
@@ -172,18 +172,18 @@ export const useAlcohol = () => {
     setUserProfile(updatedProfile);
   }, [user?.$id]);
 
-  // Derived states
+  // Derived states - show all drinks in library (sort by popularity)
   const libraryDrinks = useMemo(() => {
-    // Include drinks that are either isGlobal=true OR isGlobal is undefined (not set)
-    const globalDrinks = drinks.filter(d => d.isGlobal === true || d.isGlobal === undefined);
-    return globalDrinks.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    return [...drinks].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
   }, [drinks]);
 
+  // User drinks = drinks created by this user
   const userDrinks = useMemo(() => 
     drinks.filter(d => d.userId === user?.$id).sort((a, b) => (b.usageCount || 0) - (a.usageCount || 0)),
     [drinks, user?.$id]
   );
 
+  // Favorites = drinks marked as favorite
   const favorites = useMemo(() => 
     drinks.filter(d => d.isFavorite).sort((a, b) => (a.favoriteRank || 5) - (b.favoriteRank || 5)),
     [drinks]
