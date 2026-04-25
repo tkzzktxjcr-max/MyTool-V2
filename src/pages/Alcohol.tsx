@@ -21,11 +21,15 @@ import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
 
 export default function AlcoholPage() {
+  console.log('[AlcoholPage] Component rendered');
+  
   const {
       drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
       loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
       setWeeklyGoal, updateUserProfile, getWeeklyUnits,
     } = useAlcohol();
+
+  console.log('[AlcoholPage] drinks from hook:', drinks.length, 'libraryDrinks:', libraryDrinks.length);
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -38,7 +42,10 @@ export default function AlcoholPage() {
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    console.log('[AlcoholPage] useEffect calling loadData');
+    loadData();
+  }, [loadData]);
 
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
