@@ -7,7 +7,7 @@ import { Activity, Target, User, Undo2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
-import type { Drink } from '@/features/alcohol/services/drinks.service';
+import type { Drink } from '@/features/alcohol/service';
 
 import BACCard from './alcohol/BACCard';
 import AlcoholInfo from './AlcoholInfo';
@@ -22,21 +22,11 @@ import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
 
 export default function AlcoholPage() {
-  console.log('[AlcoholPage] Component rendering');
-  
   const {
       drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
       loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
       setWeeklyGoal, updateUserProfile, getWeeklyUnits,
     } = useAlcohol();
-
-  console.log('[AlcoholPage] After useAlcohol hook:', { 
-    drinksCount: drinks.length, 
-    libraryDrinksCount: libraryDrinks.length,
-    logsCount: logs.length,
-    insightsExists: !!insights,
-    insightsValue: insights
-  });
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -51,17 +41,14 @@ export default function AlcoholPage() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
 
   useEffect(() => {
-    console.log('[AlcoholPage] useEffect calling loadData');
-    loadData();
-  }, [loadData]);
+      loadData();
+    }, [loadData]);
 
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
-
-  console.log('[AlcoholPage] Before render:', { weeklyUnits, weeklyLimit, legalLimit });
-
-  const handleSelectDrink = (drink: Drink) => {
+  
+    const handleSelectDrink = (drink: Drink) => {
     setSelectedDrink(drink);
     setQuantity(1);
     setSelectedTime(undefined);

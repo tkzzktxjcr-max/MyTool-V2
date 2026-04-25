@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Plus, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { Drink } from '@/features/alcohol/services/drinks.service';
+import type { Drink } from '@/features/alcohol/service';
 
 interface QuickAddBarProps {
   favorites: Drink[];

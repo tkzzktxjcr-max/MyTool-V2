@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Search, Plus, X, ChevronRight, Sparkles, Globe, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { Drink } from '@/features/alcohol/services/drinks.service';
+import type { Drink } from '@/features/alcohol/service';
 import type { DrinkType } from '@/features/alcohol/types';
 import { DRINK_TYPES } from '@/features/alcohol/types';
 

@@ -11,10 +11,7 @@ import type { AlcoholInsight } from '@/features/alcohol/types';
 interface InsightsCardProps { insights: AlcoholInsight | null; }
 
 export default function InsightsCard({ insights }: InsightsCardProps) {
-  console.log('[InsightsCard] Rendering with insights:', insights);
-
   if (!insights) {
-    console.log('[InsightsCard] insights is null, showing fallback');
     return (
       <Card>
         <CardContent className="p-4">
@@ -29,13 +26,6 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
       </Card>
     );
   }
-
-  console.log('[InsightsCard] Rendering with valid insights:', {
-    weeklyUnits: insights.totalWeeklyUnits,
-    recommendations: insights.recommendations,
-    patterns: insights.patterns,
-    dailyTrend: insights.dailyTrend
-  });
 
   // Calculate max for chart scaling - ensure we have a reasonable minimum
   const maxUnits = Math.max(...insights.dailyTrend.map(d => d.units), 2);

@@ -1,1 +1,0 @@
-export { useChores } from './hooks';
