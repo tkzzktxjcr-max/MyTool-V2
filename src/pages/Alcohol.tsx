@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Undo2 } from 'lucide-react';
+import { Activity, Target, User, Undo2, Info, FlaskConical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
@@ -37,12 +37,12 @@ export default function AlcoholPage() {
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
   
   // Feature states
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
-    const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
     console.log('[AlcoholPage] useEffect calling loadData');
@@ -62,7 +62,6 @@ export default function AlcoholPage() {
   };
 
   const handleQuickAdd = async (drink: Drink) => {
-    // Quick add with default settings (no mood prompt)
     await quickLog(drink, undefined, 1, undefined);
   };
 
@@ -121,11 +120,11 @@ export default function AlcoholPage() {
             <User className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowGoalSetter(true)}>
-                      <Target className="w-5 h-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)}>
-                      <Info className="w-5 h-5" />
-                    </Button>
+            <Target className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)}>
+            <Info className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
@@ -288,14 +287,14 @@ export default function AlcoholPage() {
       />
 
       <CreateDrinkDialog
-              open={showCreateDrink}
-              onOpenChange={setShowCreateDrink}
-              onCreate={handleCreateDrink}
-            />
-      
-            <AnimatePresence>
-              {showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}
-            </AnimatePresence>
+        open={showCreateDrink}
+        onOpenChange={setShowCreateDrink}
+        onCreate={handleCreateDrink}
+      />
+
+      <AnimatePresence>
+        {showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}
+      </AnimatePresence>
     </div>
   );
 }
