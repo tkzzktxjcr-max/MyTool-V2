@@ -19,6 +19,14 @@ export const COLLECTIONS = {
   USER_PROFILES: import.meta.env.VITE_COLLECTION_USER_PROFILES || 'user_profiles',
 };
 
+// Debug: log collection IDs on load
+console.log('[Appwrite Config]', {
+  endpoint: APPWRITE_CONFIG.endpoint,
+  projectId: APPWRITE_CONFIG.projectId ? APPWRITE_CONFIG.projectId.substring(0, 8) + '...' : 'MISSING',
+  databaseId: APPWRITE_CONFIG.databaseId ? APPWRITE_CONFIG.databaseId.substring(0, 8) + '...' : 'MISSING',
+  collections: COLLECTIONS,
+});
+
 const client = new Client()
   .setEndpoint(APPWRITE_CONFIG.endpoint)
   .setProject(APPWRITE_CONFIG.projectId);

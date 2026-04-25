@@ -42,23 +42,28 @@ const mapDocToDrink = (doc: any): Drink => ({
 
 export const drinksService = {
   async getAllDrinks(): Promise<Drink[]> {
+    console.log('[drinksService] getAllDrinks called, collection:', COLLECTIONS.DRINKS);
     try {
       const response = await listDocuments(COLLECTIONS.DRINKS, []);
+      console.log('[drinksService] Success! Found', response.documents.length, 'drinks');
       return response.documents.map(mapDocToDrink);
-    } catch (error) {
-      console.warn('[drinksService] Error:', error);
+    } catch (error: any) {
+      console.error('[drinksService] Error loading drinks:', error?.message || error);
+      // Return empty array but log the error
       return [];
     }
   },
 
   async getLibraryDrinks(): Promise<Drink[]> {
+    console.log('[drinksService] getLibraryDrinks called');
     try {
       const response = await listDocuments(COLLECTIONS.DRINKS, [
         Query.equal('isGlobal', true),
       ]);
+      console.log('[drinksService] Found', response.documents.length, 'library drinks');
       return response.documents.map(mapDocToDrink);
-    } catch (error) {
-      console.warn('[drinksService] getLibraryDrinks failed:', error);
+    } catch (error: any) {
+      console.error('[drinksService] getLibraryDrinks failed:', error?.message || error);
       return [];
     }
   },
