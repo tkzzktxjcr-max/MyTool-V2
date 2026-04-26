@@ -25,6 +25,7 @@ export function AlcoholOnboardingWizard({
     profile,
     step,
     hasCompleted,
+    isLoading,
     drinks,
     setGoal,
     setSex,
@@ -40,12 +41,32 @@ export function AlcoholOnboardingWizard({
   const [isOpen, setIsOpen] = useState(true);
   const [isCompleting, setIsCompleting] = useState(false);
 
+  // Show loading state while checking Appwrite
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div className="flex flex-col items-center gap-4">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="h-12 w-12 rounded-full border-4 border-secondary border-t-transparent"
+          />
+          <p className="text-sm text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't show onboarding if already completed
+  if (hasCompleted) {
+    console.log('[AlcoholOnboarding] Already completed, skipping wizard');
+    return null;
+  }
+
   useEffect(() => {
-    if (hasCompleted) {
-      setIsOpen(false);
-      onComplete?.();
-    }
-  }, [hasCompleted, onComplete]);
+    // Set isOpen to true when component mounts (if not completed)
+    setIsOpen(true);
+  }, []);
 
   const handleClose = () => {
     setIsOpen(false);

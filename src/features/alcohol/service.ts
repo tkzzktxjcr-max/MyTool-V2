@@ -1,3 +1,5 @@
+"use client";
+
 import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
@@ -37,6 +39,7 @@ export interface UserProfile {
   weightKg: number;
   sex: 'male' | 'female' | 'unspecified';
   legalLimit: number;
+  onboardingCompleted: boolean;
   updatedAt: string;
 }
 
@@ -305,13 +308,11 @@ export const drinksService = {
 
   async incrementUsage(drinkId: string): Promise<void> {
     try {
-      // Get current document to read the current usageCount
       const currentDoc = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('$id', drinkId)]);
       if (currentDoc.documents.length === 0) return;
       
       const currentUsageCount = currentDoc.documents[0].usageCount || 0;
       
-      // Update with incremented value
       await updateDocument(COLLECTIONS.DRINKS, drinkId, { 
         usageCount: currentUsageCount + 1 
       });
@@ -368,41 +369,22 @@ export const goalsService = {
   },
 
   async createOrUpdateGoal(userId: string, data: {
-      weeklyLimit: number;
-      reductionGoal?: number;
-      isActive?: boolean;
-    }): Promise<AlcoholGoal> {
-      console.log('[goalsService] createOrUpdateGoal called with:', { userId, weeklyLimit: data.weeklyLimit });
-      console.log('[goalsService] Collection ID:', COLLECTIONS.GOALS);
-      
-      try {
-        const existing = await this.getGoal(userId);
-        if (existing) {
-          console.log('[goalsService] Updating existing goal:', existing.id);
-          const doc: any = await updateDocument(COLLECTIONS.GOALS, existing.id, {
-            weeklyLimit: data.weeklyLimit,
-            reductionGoal: data.reductionGoal ?? null,
-            isActive: data.isActive ?? true,
-          });
-          return {
-            id: doc.$id,
-            userId: doc.userId,
-            weeklyLimit: doc.weeklyLimit,
-            reductionGoal: doc.reductionGoal,
-            isActive: doc.isActive,
-            createdAt: doc.$createdAt,
-          };
-        }
-        
-        console.log('[goalsService] Creating new goal for userId:', userId);
-        const doc: any = await createDocument(COLLECTIONS.GOALS, {
-          userId,
+    weeklyLimit: number;
+    reductionGoal?: number;
+    isActive?: boolean;
+  }): Promise<AlcoholGoal> {
+    console.log('[goalsService] createOrUpdateGoal called with:', { userId, weeklyLimit: data.weeklyLimit });
+    console.log('[goalsService] Collection ID:', COLLECTIONS.GOALS);
+    
+    try {
+      const existing = await this.getGoal(userId);
+      if (existing) {
+        console.log('[goalsService] Updating existing goal:', existing.id);
+        const doc: any = await updateDocument(COLLECTIONS.GOALS, existing.id, {
           weeklyLimit: data.weeklyLimit,
           reductionGoal: data.reductionGoal ?? null,
           isActive: data.isActive ?? true,
         });
-        
-        console.log('[goalsService] Goal created successfully:', doc.$id);
         return {
           id: doc.$id,
           userId: doc.userId,
@@ -411,19 +393,38 @@ export const goalsService = {
           isActive: doc.isActive,
           createdAt: doc.$createdAt,
         };
-      } catch (error: any) {
-        console.error('[goalsService] FAILED to save goal:', error?.message || error);
-        console.error('[goalsService] Error details:', error);
-        return {
-          id: 'local-goal',
-          userId,
-          weeklyLimit: data.weeklyLimit,
-          reductionGoal: data.reductionGoal,
-          isActive: data.isActive ?? true,
-          createdAt: new Date().toISOString(),
-        };
       }
-    },
+      
+      console.log('[goalsService] Creating new goal for userId:', userId);
+      const doc: any = await createDocument(COLLECTIONS.GOALS, {
+        userId,
+        weeklyLimit: data.weeklyLimit,
+        reductionGoal: data.reductionGoal ?? null,
+        isActive: data.isActive ?? true,
+      });
+      
+      console.log('[goalsService] Goal created successfully:', doc.$id);
+      return {
+        id: doc.$id,
+        userId: doc.userId,
+        weeklyLimit: doc.weeklyLimit,
+        reductionGoal: doc.reductionGoal,
+        isActive: doc.isActive,
+        createdAt: doc.$createdAt,
+      };
+    } catch (error: any) {
+      console.error('[goalsService] FAILED to save goal:', error?.message || error);
+      console.error('[goalsService] Error details:', error);
+      return {
+        id: 'local-goal',
+        userId,
+        weeklyLimit: data.weeklyLimit,
+        reductionGoal: data.reductionGoal,
+        isActive: data.isActive ?? true,
+        createdAt: new Date().toISOString(),
+      };
+    }
+  },
 };
 
 // =============================================================================
@@ -442,6 +443,7 @@ export const profileService = {
         weightKg: doc.weightKg || 70,
         sex: doc.sex || 'unspecified',
         legalLimit: doc.legalLimit || 0.5,
+        onboardingCompleted: doc.onboardingCompleted || false,
         updatedAt: doc.$updatedAt,
       };
     } catch (error) {
@@ -451,62 +453,68 @@ export const profileService = {
   },
 
   async createOrUpdateProfile(userId: string, data: {
-      weightKg?: number;
-      sex?: 'male' | 'female' | 'unspecified';
-      legalLimit?: number;
-    }): Promise<UserProfile> {
-      console.log('[profileService] createOrUpdateProfile called with:', { userId, weightKg: data.weightKg, sex: data.sex });
-      console.log('[profileService] Collection ID:', COLLECTIONS.USER_PROFILES);
-      
-      try {
-        const existing = await this.getProfile(userId);
-        if (existing) {
-          console.log('[profileService] Updating existing profile:', existing.id);
-          const doc: any = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
-            weightKg: data.weightKg ?? existing.weightKg,
-            sex: data.sex ?? existing.sex,
-            legalLimit: data.legalLimit ?? existing.legalLimit,
-          });
-          return {
-            id: doc.$id,
-            userId: doc.userId,
-            weightKg: doc.weightKg,
-            sex: doc.sex,
-            legalLimit: doc.legalLimit,
-            updatedAt: doc.$updatedAt,
-          };
-        }
-        
-        console.log('[profileService] Creating new profile for userId:', userId);
-        const doc: any = await createDocument(COLLECTIONS.USER_PROFILES, {
-          userId,
-          weightKg: data.weightKg || 70,
-          sex: data.sex || 'unspecified',
-          legalLimit: data.legalLimit || 0.5,
+    weightKg?: number;
+    sex?: 'male' | 'female' | 'unspecified';
+    legalLimit?: number;
+    onboardingCompleted?: boolean;
+  }): Promise<UserProfile> {
+    console.log('[profileService] createOrUpdateProfile called with:', { userId, weightKg: data.weightKg, sex: data.sex, onboardingCompleted: data.onboardingCompleted });
+    console.log('[profileService] Collection ID:', COLLECTIONS.USER_PROFILES);
+    
+    try {
+      const existing = await this.getProfile(userId);
+      if (existing) {
+        console.log('[profileService] Updating existing profile:', existing.id);
+        const doc: any = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
+          weightKg: data.weightKg ?? existing.weightKg,
+          sex: data.sex ?? existing.sex,
+          legalLimit: data.legalLimit ?? existing.legalLimit,
+          onboardingCompleted: data.onboardingCompleted ?? existing.onboardingCompleted,
         });
-        
-        console.log('[profileService] Profile created successfully:', doc.$id);
         return {
           id: doc.$id,
           userId: doc.userId,
           weightKg: doc.weightKg,
           sex: doc.sex,
           legalLimit: doc.legalLimit,
-          updatedAt: doc.$createdAt,
-        };
-      } catch (error: any) {
-        console.error('[profileService] FAILED to save profile:', error?.message || error);
-        console.error('[profileService] Error details:', error);
-        return {
-          id: 'local-profile',
-          userId,
-          weightKg: data.weightKg || 70,
-          sex: data.sex || 'unspecified',
-          legalLimit: data.legalLimit || 0.5,
-          updatedAt: new Date().toISOString(),
+          onboardingCompleted: doc.onboardingCompleted ?? false,
+          updatedAt: doc.$updatedAt,
         };
       }
-    },
+      
+      console.log('[profileService] Creating new profile for userId:', userId);
+      const doc: any = await createDocument(COLLECTIONS.USER_PROFILES, {
+        userId,
+        weightKg: data.weightKg || 70,
+        sex: data.sex || 'unspecified',
+        legalLimit: data.legalLimit || 0.5,
+        onboardingCompleted: data.onboardingCompleted || false,
+      });
+      
+      console.log('[profileService] Profile created successfully:', doc.$id);
+      return {
+        id: doc.$id,
+        userId: doc.userId,
+        weightKg: doc.weightKg,
+        sex: doc.sex,
+        legalLimit: doc.legalLimit,
+        onboardingCompleted: doc.onboardingCompleted ?? false,
+        updatedAt: doc.$createdAt,
+      };
+    } catch (error: any) {
+      console.error('[profileService] FAILED to save profile:', error?.message || error);
+      console.error('[profileService] Error details:', error);
+      return {
+        id: 'local-profile',
+        userId,
+        weightKg: data.weightKg || 70,
+        sex: data.sex || 'unspecified',
+        legalLimit: data.legalLimit || 0.5,
+        onboardingCompleted: data.onboardingCompleted || false,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+  },
 };
 
 // =============================================================================
@@ -552,7 +560,6 @@ export const alcoholService = {
     }
   ): Promise<AlcoholLog> {
     const quantity = data.quantity || 1;
-    // Utilise la fonction centralisée avec conversion cl→ml correcte
     const units = calculateUnitsWithQuantity(data.servingSize, data.abv, quantity);
     const timestamp = data.timestamp || new Date().toISOString();
 
@@ -630,8 +637,6 @@ export const alcoholService = {
     monthAgo.setDate(monthAgo.getDate() - 30);
 
     const weeklyLogs = logs.filter(l => new Date(l.timestamp) >= weekAgo);
-    
-    // Utilise les unités stockées dans les logs (calculées correctement)
     const weeklyUnits = weeklyLogs.reduce((sum, l) => sum + (l.units || 0), 0);
     const monthlyUnits = logs.filter(l => new Date(l.timestamp) >= monthAgo).reduce((sum, l) => sum + (l.units || 0), 0);
     const averagePerDay = weeklyLogs.length > 0 ? weeklyUnits / 7 : 0;
