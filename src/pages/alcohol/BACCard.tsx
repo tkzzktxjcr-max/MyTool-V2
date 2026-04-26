@@ -184,7 +184,7 @@ export default function BACCard({
                   const refValue = peak > legalLimit ? peak : legalLimit;
                   const padded = peak > legalLimit ? refValue * 1.2 : Math.max(peak * 1.5, legalLimit);
                   return Math.ceil(padded * 10) / 10;
-                }]} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(2)} />
+                }]} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(2)} tickCount={4} allowDecimals={true} />
                 <ReferenceLine y={legalLimit} stroke="hsl(0, 62%, 50%)" strokeDasharray="5 5" strokeWidth={2} />
                 <Area type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} fill="url(#bacGradientPositive)" />
                 <Line type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: 'hsl(142, 71%, 45%)' }} />
