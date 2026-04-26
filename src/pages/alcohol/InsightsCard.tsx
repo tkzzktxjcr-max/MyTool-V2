@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingUp, Sparkles, Target, Flame, ThumbsUp } from 'lucide-react';
+import { BarChart3, Trophy, Target, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -10,102 +10,168 @@ import type { AlcoholInsight } from '@/features/alcohol/types';
 
 interface InsightsCardProps { insights: AlcoholInsight | null; }
 
+// Empty state for when no data exists
+function EmptyState() {
+  return (
+    <Card className="border-0 bg-gradient-to-br from-secondary/5 to-accent/5">
+      <CardContent className="p-5 text-center py-8">
+        <div className="text-6xl mb-3">🌱</div>
+        <h3 className="text-lg font-semibold mb-2">Cultive ta conscience</h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+          Chaque verre ajouté t'aide à mieux comprendre tes habitudes.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function InsightsCard({ insights }: InsightsCardProps) {
   // Empty state
   if (!insights || insights.totalWeeklyUnits === 0) {
-    return (
-      <Card className="border-0 bg-gradient-to-br from-secondary/5 to-accent/5">
-        <CardContent className="p-5 text-center">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mb-4">
-            <div className="text-6xl mb-2">🌱</div>
-          </motion.div>
-          <h3 className="text-lg font-semibold mb-2">Cultive ta conscience</h3>
-          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Chaque verre ajouté t'aide à mieux comprendre tes habitudes.
-          </p>
-          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-secondary">
-            <Sparkles className="w-4 h-4" />
-            <span>Ajoute ta première consommation</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <EmptyState />;
   }
 
-  // Risk level config
-  const getRiskConfig = () => {
-    switch (insights.riskLevel) {
-      case 'low':
-        return { label: '✨ Léger', color: 'text-secondary', icon: ThumbsUp };
-      case 'moderate':
-        return { label: '🌿 Modéré', color: 'text-[hsl(38,92%,50%)]', icon: Target };
-      case 'high':
-        return { label: '🌱 En évolution', color: 'text-accent', icon: TrendingUp };
-    }
-  };
-
-  const riskConfig = getRiskConfig();
-  const RiskIcon = riskConfig.icon;
   const maxUnits = Math.max(...insights.dailyTrend.map(d => d.units), 2);
-  const isGoalAchieved = insights.weeklyGoalProgress >= 100;
+  
+  // Calculate stats
+  const soberDays = insights.dailyTrend.filter(d => d.units === 0).length;
+  const totalDays = 7;
+  const remainingUnits = Math.max(0, insights.weeklyGoalProgress > 0 
+    ? (100 - insights.weeklyGoalProgress) / 100 * 14 
+    : 14 - insights.totalWeeklyUnits);
+  const progressPercent = insights.weeklyGoalProgress;
+
+  // Get day name
+  const getDayName = (dayIndex: number): string => {
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    return days[dayIndex];
+  };
 
   return (
     <Card>
-      <CardContent className="p-5 space-y-4">
+      <CardContent className="p-4 md:p-5 space-y-5">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-muted-foreground" />
-            Tendances
-          </h3>
-          <div className={cn(
-            "flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-secondary/20 border border-secondary/30"
-          )}>
-            <RiskIcon className={cn("w-3.5 h-3.5", riskConfig.color)} />
-            <span className={riskConfig.color}>{riskConfig.label}</span>
-          </div>
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-secondary" />
+          <h3 className="font-semibold text-base">Ma semaine</h3>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl bg-white/5 text-center">
-            <p className="text-2xl font-bold">{insights.totalWeeklyUnits.toFixed(1)}</p>
-            <p className="text-[10px] text-muted-foreground">unités / semaine</p>
-          </div>
-          <div className="p-3 rounded-xl bg-white/5 text-center">
-            <p className="text-2xl font-bold">{insights.averagePerDay.toFixed(1)}</p>
-            <p className="text-[10px] text-muted-foreground">moyenne / jour</p>
-          </div>
-        </div>
-
-        {/* Weekly Goal */}
-        <div className={cn(
-          "p-3 rounded-xl text-center",
-          isGoalAchieved ? "bg-secondary/10 border border-secondary/20" : "bg-[hsl(38,92%,50%)]/10 border border-[hsl(38,92%,50%)]/20"
-        )}>
-          {isGoalAchieved ? (
-            <p className="text-sm text-secondary">🎯 Objectif atteint ✨</p>
-          ) : (
-            <p className="text-sm text-[hsl(38,92%,50%)]">
-              {(100 - insights.weeklyGoalProgress).toFixed(0)}% sous l'objectif
+        {/* Achievement Message - Positive feedback first */}
+        {soberDays >= 4 ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-4 rounded-2xl bg-secondary/15 border border-secondary/25 text-center"
+          >
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <Trophy className="w-5 h-5 text-secondary" />
+              <span className="text-lg font-bold text-secondary">
+                Semaine sobre {soberDays}j sur {totalDays}
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {soberDays === 7 ? 'Parfait ! 7 jours sans alcool 🍀' : 'Excellent travail !'}
             </p>
-          )}
+          </motion.div>
+        ) : insights.streak > 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="p-4 rounded-2xl bg-secondary/10 border border-secondary/20 text-center"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Flame className="w-5 h-5 text-orange-500" />
+              <span className="text-base font-bold text-secondary">
+                {insights.streak} jour{insights.streak > 1 ? 's' : ''} sobre
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Continue comme ça !
+            </p>
+          </motion.div>
+        ) : null}
+
+        {/* Weekly Progress Bar - Simplified */}
+        <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-muted-foreground">Ma conso cette semaine</span>
+            <span className="text-sm font-medium">
+              <span className={cn(
+                "font-bold",
+                progressPercent <= 80 && "text-secondary",
+                progressPercent > 80 && progressPercent <= 100 && "text-[hsl(38,92%,50%)]",
+                progressPercent > 100 && "text-accent"
+              )}>
+                {insights.totalWeeklyUnits.toFixed(1)}
+              </span>
+              <span className="text-muted-foreground"> / 14 u</span>
+            </span>
+          </div>
+          
+          {/* Progress bar */}
+          <div className="h-4 rounded-full bg-white/10 overflow-hidden">
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(progressPercent, 100)}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              className={cn(
+                "h-full rounded-full",
+                progressPercent <= 80 && "bg-secondary",
+                progressPercent > 80 && progressPercent <= 100 && "bg-[hsl(38,92%,50%)]",
+                progressPercent > 100 && "bg-accent"
+              )}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between mt-2">
+            <span className="text-xs text-muted-foreground">
+              {remainingUnits > 0 ? (
+                <>{remainingUnits.toFixed(1)} restants</>
+              ) : (
+                <span className="text-[hsl(38,92%,50%)]">Objectif atteint ✨</span>
+              )}
+            </span>
+            <span className={cn(
+              "text-xs font-medium",
+              progressPercent <= 80 && "text-secondary",
+              progressPercent > 80 && progressPercent <= 100 && "text-[hsl(38,92%,50%)]",
+              progressPercent > 100 && "text-accent"
+            )}>
+              {Math.round(progressPercent)}%
+            </span>
+          </div>
         </div>
 
-        {/* Bar Chart */}
+        {/* Daily Chart - 7 last days */}
         <div>
-          <p className="text-xs text-muted-foreground mb-2">7 derniers jours</p>
-          <div className="flex items-end justify-between gap-1 h-24 bg-white/5 rounded-xl p-3">
-            {insights.dailyTrend.map((day, i) => {
-              const isToday = i === 6;
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-muted-foreground">7 derniers jours</span>
+          </div>
+
+          {/* Chart grid */}
+          <div className="grid grid-cols-7 gap-1 md:gap-2">
+            {insights.dailyTrend.map((day, index) => {
+              const isToday = index === 6;
               const hasUnits = day.units > 0;
-              const height = maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, 20) : 20;
+              // Calculate bar height - minimum 8px, max 80px
+              const barHeight = maxUnits > 0 
+                ? Math.max(8, Math.min(80, (day.units / maxUnits) * 80))
+                : 8;
               
+              // Color based on units
+              const getBarColor = () => {
+                if (!hasUnits) return 'bg-white/10';
+                if (day.units <= 2) return 'bg-secondary';
+                if (day.units <= 4) return 'bg-[hsl(38,92%,50%)]';
+                return 'bg-accent';
+              };
+
               return (
-                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                <div key={day.date} className="flex flex-col items-center gap-1">
+                  {/* Value above bar */}
                   {hasUnits && (
                     <span className={cn(
-                      "text-[10px] font-medium",
+                      "text-[10px] md:text-xs font-medium",
                       day.units <= 2 && "text-secondary",
                       day.units > 2 && day.units <= 4 && "text-[hsl(38,92%,50%)]",
                       day.units > 4 && "text-accent"
@@ -113,59 +179,62 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
                       {day.units.toFixed(1)}
                     </span>
                   )}
-                  <div 
-                    className={cn(
-                      "w-full rounded-t-md min-h-[3px]",
-                      !hasUnits && "bg-white/10",
-                      hasUnits && day.units <= 2 && "bg-secondary",
-                      hasUnits && day.units > 2 && day.units <= 4 && "bg-[hsl(38,92%,50%)]",
-                      hasUnits && day.units > 4 && "bg-accent",
-                      isToday && "ring-[2px] ring-secondary"
-                    )}
-                    style={{ height: `${height}%` }}
-                  />
+                  {!hasUnits && <span className="h-4" />}
+
+                  {/* Bar */}
+                  <div className="w-full flex items-end justify-center h-20 md:h-24">
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: barHeight }}
+                      transition={{ duration: 0.4, delay: index * 0.05 }}
+                      className={cn(
+                        "w-6 md:w-8 rounded-md transition-all",
+                        getBarColor(),
+                        isToday && "ring-2 ring-secondary ring-offset-1 ring-offset-background"
+                      )}
+                    />
+                  </div>
+
+                  {/* Day label */}
                   <span className={cn(
-                    "text-[10px]",
+                    "text-[10px] md:text-xs",
                     isToday ? "text-secondary font-medium" : "text-muted-foreground"
                   )}>
-                    {format(new Date(day.date), 'EEE', { locale: fr }).charAt(0)}
+                    {getDayName(index)}
                   </span>
                 </div>
               );
             })}
           </div>
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-secondary" /> 0-2</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-[hsl(38,92%,50%)]" /> 2-4</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-accent" /> 4+</span>
-          </div>
         </div>
 
-        {/* Patterns - Only if relevant */}
-        {insights.patterns.length > 0 && (
-          <div>
-            <p className="text-xs text-muted-foreground mb-2">Observations</p>
-            <div className="space-y-1">
-              {insights.patterns.map((pattern, i) => (
-                <div key={i} className="text-sm p-2 rounded-lg bg-secondary/10 text-secondary">
-                  {pattern}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Simple Legend with colored dots */}
+        <div className="flex items-center justify-center gap-4 pt-2 border-t border-white/5">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="w-2 h-2 rounded-full bg-secondary" />
+            0-2u
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="w-2 h-2 rounded-full bg-[hsl(38,92%,50%)]" />
+            2-4u
+          </span>
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="w-2 h-2 rounded-full bg-accent" />
+            4+u
+          </span>
+        </div>
 
-        {/* Streak */}
-        {insights.streak > 0 && (
-          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5">
-            <span className="text-sm text-muted-foreground">Série sans alcool</span>
-            <span className="flex items-center gap-1.5 text-lg font-bold text-secondary">
-              <Flame className="w-5 h-5 text-orange-500" />
-              {insights.streak} jour{insights.streak > 1 ? 's' : ''}
-            </span>
+        {/* Quick Stats - 2 column grid */}
+        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-white/5">
+          <div className="text-center p-3 rounded-xl bg-white/5">
+            <p className="text-2xl font-bold">{insights.averagePerDay.toFixed(1)}</p>
+            <p className="text-xs text-muted-foreground">moyenne/jour</p>
           </div>
-        )}
+          <div className="text-center p-3 rounded-xl bg-white/5">
+            <p className="text-2xl font-bold">{insights.totalMonthlyUnits.toFixed(0)}</p>
+            <p className="text-xs text-muted-foreground">unités/mois</p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
