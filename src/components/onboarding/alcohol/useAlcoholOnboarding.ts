@@ -146,31 +146,45 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   }, [step, profile]);
 
   const complete = useCallback(async () => {
-    if (!user?.$id) {
-      saveToStorage(true);
-      return;
-    }
-
-    try {
-      await profileService.createOrUpdateProfile(user.$id, {
-        weightKg: profile.weight,
-        sex: profile.sex,
-        legalLimit: 0.5,
-      });
-
-      const weeklyLimit = profile.goal ? GOAL_WEEKLY_LIMITS[profile.goal] : 14;
-      await goalsService.createOrUpdateGoal(user.$id, {
-        weeklyLimit,
-        isActive: true,
-      });
-
-      localStorage.setItem(DRINKS_KEY, JSON.stringify(profile.favoriteDrinks));
-      saveToStorage(true);
-    } catch (e) {
-      console.error('[AlcoholOnboarding] Failed to complete:', e);
-      saveToStorage(true);
-    }
-  }, [user, profile, saveToStorage]);
+      console.log('[AlcoholOnboarding] complete() called');
+      console.log('[AlcoholOnboarding] User ID:', user?.$id);
+      console.log('[AlcoholOnboarding] Profile data:', { goal: profile.goal, sex: profile.sex, weight: profile.weight });
+  
+      if (!user?.$id) {
+        console.log('[AlcoholOnboarding] No user ID, saving to storage only');
+        saveToStorage(true);
+        return;
+      }
+  
+      try {
+        // Save profile to Appwrite
+        console.log('[AlcoholOnboarding] Saving profile...');
+        await profileService.createOrUpdateProfile(user.$id, {
+          weightKg: profile.weight,
+          sex: profile.sex,
+          legalLimit: 0.5,
+        });
+  
+        // Save goal to Appwrite
+        const weeklyLimit = profile.goal ? GOAL_WEEKLY_LIMITS[profile.goal] : 14;
+        console.log('[AlcoholOnboarding] Saving goal with weekly limit:', weeklyLimit);
+        await goalsService.createOrUpdateGoal(user.$id, {
+          weeklyLimit,
+          isActive: true,
+        });
+  
+        // Save favorite drinks to localStorage
+        localStorage.setItem(DRINKS_KEY, JSON.stringify(profile.favoriteDrinks));
+        
+        console.log('[AlcoholOnboarding] All data saved successfully');
+        saveToStorage(true);
+      } catch (e: any) {
+        console.error('[AlcoholOnboarding] Failed to complete:', e?.message || e);
+        // Still save to localStorage even if Appwrite fails
+        localStorage.setItem(DRINKS_KEY, JSON.stringify(profile.favoriteDrinks));
+        saveToStorage(true);
+      }
+    }, [user, profile, saveToStorage]);
 
   const reset = useCallback(() => {
     setProfile({

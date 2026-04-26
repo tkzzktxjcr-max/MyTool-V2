@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronLeft, ChevronRight, Check, RotateCcw } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,7 @@ import { useAlcoholOnboarding } from './useAlcoholOnboarding';
 import { GoalStep } from './GoalStep';
 import { ProfileStep } from './ProfileStep';
 import { FavoritesStep } from './FavoritesStep';
+import { toast } from 'sonner';
 
 interface AlcoholOnboardingWizardProps {
   onComplete?: () => void;
@@ -53,10 +54,22 @@ export function AlcoholOnboardingWizard({
 
   const handleComplete = async () => {
     setIsCompleting(true);
+    console.log('[Wizard] Starting completion...');
+    
     try {
       await complete();
+      console.log('[Wizard] Completion successful');
       setIsOpen(false);
+      toast.success('Configuration terminée ! 🎉', {
+        description: 'Tes préférences ont été sauvegardées.',
+      });
       onComplete?.();
+    } catch (e: any) {
+      console.error('[Wizard] Completion failed:', e?.message || e);
+      toast.error('Erreur', {
+        description: 'Impossible de sauvegarder. Réessaie plus tard.',
+        icon: <AlertTriangle className="w-5 h-5" />,
+      });
     } finally {
       setIsCompleting(false);
     }
@@ -83,6 +96,11 @@ export function AlcoholOnboardingWizard({
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto p-0 rounded-2xl">
         <div className="relative p-6">
+          {/* Debug banner - remove in production */}
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent/20 rounded-full text-[10px] text-accent z-10">
+            Onboarding Alcohol
+          </div>
+
           <div className="absolute top-4 right-4">
             <button onClick={handleClose} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all">
               <X className="w-5 h-5" />

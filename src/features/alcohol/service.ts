@@ -368,18 +368,41 @@ export const goalsService = {
   },
 
   async createOrUpdateGoal(userId: string, data: {
-    weeklyLimit: number;
-    reductionGoal?: number;
-    isActive?: boolean;
-  }): Promise<AlcoholGoal> {
-    try {
-      const existing = await this.getGoal(userId);
-      if (existing) {
-        const doc: any = await updateDocument(COLLECTIONS.GOALS, existing.id, {
+      weeklyLimit: number;
+      reductionGoal?: number;
+      isActive?: boolean;
+    }): Promise<AlcoholGoal> {
+      console.log('[goalsService] createOrUpdateGoal called with:', { userId, weeklyLimit: data.weeklyLimit });
+      console.log('[goalsService] Collection ID:', COLLECTIONS.GOALS);
+      
+      try {
+        const existing = await this.getGoal(userId);
+        if (existing) {
+          console.log('[goalsService] Updating existing goal:', existing.id);
+          const doc: any = await updateDocument(COLLECTIONS.GOALS, existing.id, {
+            weeklyLimit: data.weeklyLimit,
+            reductionGoal: data.reductionGoal ?? null,
+            isActive: data.isActive ?? true,
+          });
+          return {
+            id: doc.$id,
+            userId: doc.userId,
+            weeklyLimit: doc.weeklyLimit,
+            reductionGoal: doc.reductionGoal,
+            isActive: doc.isActive,
+            createdAt: doc.$createdAt,
+          };
+        }
+        
+        console.log('[goalsService] Creating new goal for userId:', userId);
+        const doc: any = await createDocument(COLLECTIONS.GOALS, {
+          userId,
           weeklyLimit: data.weeklyLimit,
           reductionGoal: data.reductionGoal ?? null,
           isActive: data.isActive ?? true,
         });
+        
+        console.log('[goalsService] Goal created successfully:', doc.$id);
         return {
           id: doc.$id,
           userId: doc.userId,
@@ -388,33 +411,19 @@ export const goalsService = {
           isActive: doc.isActive,
           createdAt: doc.$createdAt,
         };
+      } catch (error: any) {
+        console.error('[goalsService] FAILED to save goal:', error?.message || error);
+        console.error('[goalsService] Error details:', error);
+        return {
+          id: 'local-goal',
+          userId,
+          weeklyLimit: data.weeklyLimit,
+          reductionGoal: data.reductionGoal,
+          isActive: data.isActive ?? true,
+          createdAt: new Date().toISOString(),
+        };
       }
-      const doc: any = await createDocument(COLLECTIONS.GOALS, {
-        userId,
-        weeklyLimit: data.weeklyLimit,
-        reductionGoal: data.reductionGoal ?? null,
-        isActive: data.isActive ?? true,
-      });
-      return {
-        id: doc.$id,
-        userId: doc.userId,
-        weeklyLimit: doc.weeklyLimit,
-        reductionGoal: doc.reductionGoal,
-        isActive: doc.isActive,
-        createdAt: doc.$createdAt,
-      };
-    } catch (error) {
-      console.warn('[goalsService] createOrUpdateGoal failed', error);
-      return {
-        id: 'local-goal',
-        userId,
-        weeklyLimit: data.weeklyLimit,
-        reductionGoal: data.reductionGoal,
-        isActive: data.isActive ?? true,
-        createdAt: new Date().toISOString(),
-      };
-    }
-  },
+    },
 };
 
 // =============================================================================
@@ -442,53 +451,62 @@ export const profileService = {
   },
 
   async createOrUpdateProfile(userId: string, data: {
-    weightKg?: number;
-    sex?: 'male' | 'female' | 'unspecified';
-    legalLimit?: number;
-  }): Promise<UserProfile> {
-    try {
-      const existing = await this.getProfile(userId);
-      if (existing) {
-        const doc: any = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
-          weightKg: data.weightKg ?? existing.weightKg,
-          sex: data.sex ?? existing.sex,
-          legalLimit: data.legalLimit ?? existing.legalLimit,
+      weightKg?: number;
+      sex?: 'male' | 'female' | 'unspecified';
+      legalLimit?: number;
+    }): Promise<UserProfile> {
+      console.log('[profileService] createOrUpdateProfile called with:', { userId, weightKg: data.weightKg, sex: data.sex });
+      console.log('[profileService] Collection ID:', COLLECTIONS.USER_PROFILES);
+      
+      try {
+        const existing = await this.getProfile(userId);
+        if (existing) {
+          console.log('[profileService] Updating existing profile:', existing.id);
+          const doc: any = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
+            weightKg: data.weightKg ?? existing.weightKg,
+            sex: data.sex ?? existing.sex,
+            legalLimit: data.legalLimit ?? existing.legalLimit,
+          });
+          return {
+            id: doc.$id,
+            userId: doc.userId,
+            weightKg: doc.weightKg,
+            sex: doc.sex,
+            legalLimit: doc.legalLimit,
+            updatedAt: doc.$updatedAt,
+          };
+        }
+        
+        console.log('[profileService] Creating new profile for userId:', userId);
+        const doc: any = await createDocument(COLLECTIONS.USER_PROFILES, {
+          userId,
+          weightKg: data.weightKg || 70,
+          sex: data.sex || 'unspecified',
+          legalLimit: data.legalLimit || 0.5,
         });
+        
+        console.log('[profileService] Profile created successfully:', doc.$id);
         return {
           id: doc.$id,
           userId: doc.userId,
           weightKg: doc.weightKg,
           sex: doc.sex,
           legalLimit: doc.legalLimit,
-          updatedAt: doc.$updatedAt,
+          updatedAt: doc.$createdAt,
+        };
+      } catch (error: any) {
+        console.error('[profileService] FAILED to save profile:', error?.message || error);
+        console.error('[profileService] Error details:', error);
+        return {
+          id: 'local-profile',
+          userId,
+          weightKg: data.weightKg || 70,
+          sex: data.sex || 'unspecified',
+          legalLimit: data.legalLimit || 0.5,
+          updatedAt: new Date().toISOString(),
         };
       }
-      const doc: any = await createDocument(COLLECTIONS.USER_PROFILES, {
-        userId,
-        weightKg: data.weightKg || 70,
-        sex: data.sex || 'unspecified',
-        legalLimit: data.legalLimit || 0.5,
-      });
-      return {
-        id: doc.$id,
-        userId: doc.userId,
-        weightKg: doc.weightKg,
-        sex: doc.sex,
-        legalLimit: doc.legalLimit,
-        updatedAt: doc.$createdAt,
-      };
-    } catch (error) {
-      console.warn('[profileService] createOrUpdateProfile failed', error);
-      return {
-        id: 'local-profile',
-        userId,
-        weightKg: data.weightKg || 70,
-        sex: data.sex || 'unspecified',
-        legalLimit: data.legalLimit || 0.5,
-        updatedAt: new Date().toISOString(),
-      };
-    }
-  },
+    },
 };
 
 // =============================================================================
