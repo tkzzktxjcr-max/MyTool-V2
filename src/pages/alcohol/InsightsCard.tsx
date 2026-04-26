@@ -142,26 +142,22 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
         <div>
           <p className="text-xs text-muted-foreground mb-3">7 derniers jours</p>
           
-          <div className="relative h-24 bg-white/5 rounded-xl p-3">
-            {/* Grid lines */}
-            <div className="absolute inset-3 flex flex-col justify-between pointer-events-none">
-              <div className="h-px bg-white/10" />
-              <div className="h-px bg-white/10" />
-              <div className="h-px bg-white/10" />
-            </div>
-            
-            {/* Bars */}
-            <div className="relative h-full flex items-end justify-between gap-1">
+          <div className="relative h-28 bg-white/5 rounded-xl p-3">
+            {/* Bars container - full height */}
+            <div className="relative h-[calc(100%-20px)] flex items-end justify-between gap-1">
               {insights.dailyTrend.map((day, i) => {
-                const barHeight = maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, day.units > 0 ? 20 : 4) : 4;
                 const isTodayBar = i === 6;
                 const hasUnits = day.units > 0;
                 
+                // Calculate height based on percentage of max
+                const barHeightPercent = maxUnits > 0 && maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, 15) : 15;
+                
                 return (
-                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1 z-10">
+                  <div key={day.date} className="flex-1 flex flex-col justify-end items-center h-full gap-1 z-10">
+                    {/* Value label on top */}
                     {hasUnits && (
                       <span className={cn(
-                        "text-[10px] font-medium transition-all",
+                        "text-[11px] font-bold transition-all mb-0.5",
                         day.units <= 2 && "text-secondary",
                         day.units > 2 && day.units <= 4 && "text-[hsl(38,92%,50%)]",
                         day.units > 4 && "text-accent"
@@ -170,22 +166,24 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
                       </span>
                     )}
                     
+                    {/* The bar itself - using h-* with percentage */}
                     <motion.div
                       initial={{ height: 0 }}
-                      animate={{ height: `${barHeight}%` }}
-                      transition={{ delay: i * 0.05, duration: 0.3 }}
+                      animate={{ height: `${barHeightPercent}%` }}
+                      transition={{ delay: i * 0.05, duration: 0.4 }}
                       className={cn(
-                        "w-full rounded-t-md transition-all",
+                        "w-full rounded-t-md transition-all min-h-[4px]",
                         !hasUnits && "bg-white/10",
                         hasUnits && day.units <= 2 && "bg-secondary",
                         hasUnits && day.units > 2 && day.units <= 4 && "bg-[hsl(38,92%,50%)]",
                         hasUnits && day.units > 4 && "bg-accent",
-                        isTodayBar && "ring-2 ring-secondary/50"
+                        isTodayBar && "ring-[2px] ring-secondary"
                       )}
                     />
                     
+                    {/* Day label */}
                     <span className={cn(
-                      "text-[10px]",
+                      "text-[10px] mt-1",
                       isTodayBar ? "text-secondary font-medium" : "text-muted-foreground"
                     )}>
                       {format(new Date(day.date), 'EEE', { locale: fr }).charAt(0)}
