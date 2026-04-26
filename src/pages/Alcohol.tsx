@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
 import type { Drink } from '@/features/alcohol/service';
+import { calculateUnits } from './alcohol/QuantitySelector';
 
 import BACCard from './alcohol/BACCard';
 import AlcoholInfo from './AlcoholInfo';
@@ -17,7 +18,7 @@ import HistoryCard from './alcohol/HistoryCard';
 import { GoalSetterDialog, ProfileEditorDialog, CreateDrinkDialog } from './alcohol/dialogs';
 import DrinkPicker from './alcohol/DrinkPicker';
 import MoodSelector from './alcohol/MoodSelector';
-import QuantitySelector, { calculateUnits } from './alcohol/QuantitySelector';
+import QuantitySelector from './alcohol/QuantitySelector';
 import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
 import FloatingActionButton from './alcohol/FloatingActionButton';
@@ -27,7 +28,7 @@ import { toast } from 'sonner';
 
 export default function AlcoholPage() {
   const {
-    drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState, isSafeToDrive,
+    drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState,
     loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
     setWeeklyGoal, updateUserProfile, getWeeklyUnits,
   } = useAlcohol();
@@ -41,7 +42,6 @@ export default function AlcoholPage() {
   const [showDrinkPicker, setShowDrinkPicker] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   
-  // Feature states
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
@@ -55,16 +55,11 @@ export default function AlcoholPage() {
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
   const legalLimit = userProfile?.legalLimit || 0.5;
 
-  // Check for goal achievement celebration
+  // Celebration when under 80% of goal
   useEffect(() => {
-    const wasUnderLimit = previousWeeklyUnits <= weeklyLimit;
-    const isNowUnderLimit = weeklyUnits <= weeklyLimit;
-    const justReachedLimit = wasUnderLimit && !isNowUnderLimit && weeklyUnits <= weeklyLimit * 1.1;
-    
     if (weeklyUnits > 0 && weeklyUnits <= weeklyLimit * 0.8 && previousWeeklyUnits > weeklyLimit * 0.8) {
       setShowConfetti(true);
     }
-    
     setPreviousWeeklyUnits(weeklyUnits);
   }, [weeklyUnits, weeklyLimit]);
 
@@ -78,11 +73,24 @@ export default function AlcoholPage() {
   };
 
   const handleQuickAdd = async (drink: Drink) => {
-    toast.success(`${drink.emoji} ${drink.name} ajouté !`, {
-      icon: '✨',
-      duration: 2000,
-      className: 'premium-toast',
+    // Calculate new BAC
+    const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv, 1);
+    const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
+    const weight = userProfile?.weightKg || 70;
+    const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
+    const newBACFormatted = newBAC.toFixed(2);
+    
+    // Determine status
+    const status = newBAC <= legalLimit * 0.8 ? 'OK' : newBAC <= legalLimit ? 'Bientôt' : 'Attendre';
+    const statusEmoji = newBAC <= legalLimit * 0.8 ? '✓' : newBAC <= legalLimit ? '~' : '⏱';
+    
+    toast.success(`${drink.emoji} ${drink.name}`, {
+      description: `${statusEmoji} ~${newBACFormatted} g/L • ${status}`,
+      duration: 3000,
+      className: 'bac-preview-toast',
+      icon: '🍺',
     });
+    
     await quickLog(drink, undefined, 1, undefined);
   };
 
@@ -90,12 +98,18 @@ export default function AlcoholPage() {
     if (!selectedDrink) return;
     
     const moodValue = mood === 'none' ? undefined : mood as MoodType;
+    const drinkUnits = calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity);
+    const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
+    const weight = userProfile?.weightKg || 70;
+    const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
+    
     await quickLog(selectedDrink, moodValue, quantity, selectedTime);
     
-    toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity}) ajouté !`, {
+    toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity})`, {
+      description: `+${drinkUnits.toFixed(1)} unités • ~${newBAC.toFixed(2)} g/L`,
+      duration: 3000,
+      className: 'bac-preview-toast',
       icon: '✅',
-      duration: 2000,
-      className: 'premium-toast',
     });
     
     setShowMoodSelector(false);
@@ -106,27 +120,18 @@ export default function AlcoholPage() {
 
   const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
     await createDrink(data, data.emoji);
-    toast.success('Boisson créée !', {
-      icon: '🎉',
-      duration: 2000,
-    });
+    toast.success('Boisson créée !', { icon: '🎉' });
     setShowCreateDrink(false);
   };
 
   const handleSetGoal = async (limit: number) => {
     await setWeeklyGoal(limit);
-    toast.success('Objectif mis à jour !', {
-      icon: '🎯',
-      duration: 2000,
-    });
+    toast.success('Objectif mis à jour !', { icon: '🎯' });
   };
 
   const handleUpdateProfile = async (data: { weightKg?: number; sex?: 'male' | 'female' | 'unspecified' }) => {
     await updateUserProfile(data);
-    toast.success('Profil mis à jour !', {
-      icon: '✅',
-      duration: 2000,
-    });
+    toast.success('Profil mis à jour !', { icon: '✅' });
   };
 
   const handleTimeSelect = (timestamp: string) => {
@@ -212,24 +217,22 @@ export default function AlcoholPage() {
         safeToDriveTime={bacState.safeToDriveTime}
       />
 
-      {/* Quick Add Favorites Bar - Premium avec BAC Preview */}
+      {/* Quick Add Favorites Bar with BAC Preview */}
       <QuickAddBar
         favorites={favorites}
         onQuickAdd={handleQuickAdd}
         onCreateDrink={() => setShowCreateDrink(true)}
         onToggleFavorite={toggleFavorite}
-        showBACPreview={true}
         userProfile={{
           weightKg: userProfile?.weightKg || 70,
           sex: userProfile?.sex || 'unspecified'
         }}
         currentBAC={bacState.currentBAC}
-        logs={logs}
+        legalLimit={legalLimit}
       />
 
       {/* Drink Selection & Logging */}
       <div className="space-y-3">
-        {/* Drink Picker Button / Area */}
         <AnimatePresence mode="wait">
           {!showMoodSelector ? (
             <motion.div
@@ -250,10 +253,7 @@ export default function AlcoholPage() {
                 <div className="rounded-2xl bg-card border border-white/10 p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">Choisir une boissons</span>
-                    <button 
-                      onClick={() => setShowDrinkPicker(false)}
-                      className="p-1 rounded-lg hover:bg-white/10"
-                    >
+                    <button onClick={() => setShowDrinkPicker(false)} className="p-1 rounded-lg hover:bg-white/10">
                       <X className="w-5 h-5" />
                     </button>
                   </div>
@@ -276,7 +276,6 @@ export default function AlcoholPage() {
               exit={{ opacity: 0, y: 10 }}
               className="p-5 rounded-2xl bg-card border border-secondary/30 space-y-4 shadow-lg"
             >
-              {/* Drink info with quantity */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-4xl">{selectedDrink?.emoji}</span>
@@ -287,13 +286,9 @@ export default function AlcoholPage() {
                     </p>
                   </div>
                 </div>
-                <QuantitySelector
-                  quantity={quantity}
-                  onChange={setQuantity}
-                />
+                <QuantitySelector quantity={quantity} onChange={setQuantity} />
               </div>
 
-              {/* Time selector toggle */}
               {!selectedTime && (
                 <button
                   onClick={() => setShowTimeSelector(!showTimeSelector)}
@@ -309,38 +304,23 @@ export default function AlcoholPage() {
 
               {selectedTime && (
                 <div className="flex items-center justify-between px-3 py-2 bg-accent/10 rounded-xl">
-                  <span className="text-sm text-accent">Horodatage personnalisé</span>
-                  <button 
-                    onClick={() => setSelectedTime(undefined)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
+                  <span className="text-sm text-accent">Horodatage personnalise</span>
+                  <button onClick={() => setSelectedTime(undefined)} className="text-xs text-muted-foreground hover:text-foreground">
                     Annuler
                   </button>
                 </div>
               )}
 
-              {/* Mood selector */}
               <MoodSelector onSelect={handleConfirmLog} />
 
-              {/* Confirm button with total units */}
               <Button 
                 onClick={() => handleConfirmLog('none')}
                 className="w-full bg-secondary hover:bg-secondary/80 rounded-xl h-12 text-base font-medium"
               >
-                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unités)
+                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unites)
               </Button>
 
-              {/* Cancel button */}
-              <Button 
-                variant="ghost" 
-                onClick={() => { 
-                  setShowMoodSelector(false); 
-                  setSelectedDrink(null);
-                  setQuantity(1);
-                  setSelectedTime(undefined);
-                }} 
-                className="w-full rounded-xl"
-              >
+              <Button variant="ghost" onClick={() => { setShowMoodSelector(false); setSelectedDrink(null); setQuantity(1); setSelectedTime(undefined); }} className="w-full rounded-xl">
                 Annuler
               </Button>
             </motion.div>
@@ -382,9 +362,9 @@ export default function AlcoholPage() {
         {showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}
       </AnimatePresence>
 
-      {/* Premium Toast Styles */}
+      {/* Premium Toast Styles with BAC */}
       <style>{`
-        .premium-toast {
+        .bac-preview-toast {
           background: linear-gradient(135deg, hsl(222 47% 11%), hsl(222 47% 15%)) !important;
           border: 1px solid rgba(255, 255, 255, 0.1) !important;
           border-radius: 1rem !important;

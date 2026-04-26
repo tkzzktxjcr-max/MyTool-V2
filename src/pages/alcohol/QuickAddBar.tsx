@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Star, Check, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { Plus, Star, Check, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Drink } from '@/features/alcohol/service';
@@ -13,13 +13,12 @@ interface QuickAddBarProps {
   onQuickAdd: (drink: Drink) => void;
   onCreateDrink: () => void;
   onToggleFavorite: (drinkId: string) => void;
-  showBACPreview?: boolean;
   userProfile?: {
     weightKg: number;
     sex: 'male' | 'female' | 'unspecified';
   };
   currentBAC?: number;
-  logs?: any[];
+  legalLimit?: number;
 }
 
 export default function QuickAddBar({ 
@@ -27,39 +26,51 @@ export default function QuickAddBar({
   onQuickAdd, 
   onCreateDrink, 
   onToggleFavorite,
-  showBACPreview = true,
   userProfile,
   currentBAC = 0,
-  logs = []
+  legalLimit = 0.5
 }: QuickAddBarProps) {
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState<string | null>(null);
-  const [selectedForPreview, setSelectedForPreview] = useState<Drink | null>(null);
-
-  const handleQuickAdd = (drink: Drink) => {
-    setPressedId(drink.id);
-    setShowConfirmation(drink.id);
-    onQuickAdd(drink);
-    
-    setTimeout(() => setPressedId(null), 200);
-    setTimeout(() => setShowConfirmation(null), 1500);
-  };
+  const [lastAddedDrink, setLastAddedDrink] = useState<Drink | null>(null);
 
   // Calculate BAC after adding this drink
   const calculatePreviewBAC = (drink: Drink): number => {
     if (!userProfile) return 0;
-    
     const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv, 1);
-    const eliminationRate = 0.15; // g/L per hour
-    const peakTime = 0.75; // hours
-    
-    // Simple estimation: add drink units to current
-    const additionalBAC = (drinkUnits * 10 * 0.789) / (userProfile.weightKg * 0.68);
+    const r = userProfile.sex === 'female' ? 0.55 : 0.68;
+    const additionalBAC = (drinkUnits * 10 * 0.789) / (userProfile.weightKg * r);
     return currentBAC + additionalBAC;
+  };
+
+  // Get driving status color
+  const getBACStatus = (bac: number): 'safe' | 'caution' | 'danger' => {
+    if (bac <= legalLimit * 0.8) return 'safe';
+    if (bac <= legalLimit) return 'caution';
+    return 'danger';
   };
 
   const formatBAC = (bac: number): string => {
     return bac.toFixed(2);
+  };
+
+  const handleQuickAdd = (drink: Drink) => {
+    setPressedId(drink.id);
+    setShowConfirmation(drink.id);
+    setLastAddedDrink(drink);
+    onQuickAdd(drink);
+    
+    setTimeout(() => setPressedId(null), 200);
+    setTimeout(() => setShowConfirmation(null), 2000);
+  };
+
+  // Get badge color class based on BAC status
+  const getBadgeColor = (status: 'safe' | 'caution' | 'danger') => {
+    switch (status) {
+      case 'safe': return 'bg-secondary/20 text-secondary';
+      case 'caution': return 'bg-[hsl(38,92%,50%)]/20 text-[hsl(38,92%,50%)]';
+      case 'danger': return 'bg-accent/20 text-accent';
+    }
   };
 
   return (
@@ -67,143 +78,124 @@ export default function QuickAddBar({
       {/* Section header */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">Accès rapide</span>
-        <span className="text-xs text-muted-foreground">
-          {favorites.length > 0 ? `${favorites.length} favori${favorites.length > 1 ? 's' : ''}` : 'Aucun favori'}
-        </span>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="w-3 h-3" />
+          <span>Preview visible</span>
+        </div>
       </div>
 
-      {/* BAC Preview */}
-      <AnimatePresence>
-        {showBACPreview && selectedForPreview && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="p-3 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-secondary" />
-                <span className="text-sm text-secondary">Après ce verre :</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={cn(
-                  "text-lg font-bold",
-                  calculatePreviewBAC(selectedForPreview) <= 0.5 ? "text-secondary" :
-                  calculatePreviewBAC(selectedForPreview) <= 0.8 ? "text-[hsl(38,92%,50%)]" : "text-accent"
-                )}>
-                  ~{formatBAC(calculatePreviewBAC(selectedForPreview))} g/L
-                </span>
-                <span className={cn(
-                  "text-xs px-2 py-0.5 rounded-full",
-                  calculatePreviewBAC(selectedForPreview) <= 0.5 ? "bg-secondary/20 text-secondary" :
-                  calculatePreviewBAC(selectedForPreview) <= 0.8 ? "bg-[hsl(38,92%,50%)]/20 text-[hsl(38,92%,50%)]" : "bg-accent/20 text-accent"
-                )}>
-                  {calculatePreviewBAC(selectedForPreview) <= 0.5 ? "✓ Conduite OK" :
-                   calculatePreviewBAC(selectedForPreview) <= 0.8 ? "~ Bientôt" : "Attendre"}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Favorites bar */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {/* Favorite drinks */}
-        <AnimatePresence mode="wait">
-          {favorites.length > 0 ? (
-            favorites.slice(0, 6).map((drink) => {
-              const previewBAC = showBACPreview && userProfile ? calculatePreviewBAC(drink) : null;
-              
-              return (
-                <motion.button
-                  key={drink.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  onClick={() => handleQuickAdd(drink)}
-                  onMouseEnter={() => setSelectedForPreview(drink)}
-                  onMouseLeave={() => setSelectedForPreview(null)}
-                  whileTap={{ scale: 0.95 }}
-                  className={cn(
-                    "flex-shrink-0 flex flex-col items-start gap-1 px-4 py-3 rounded-2xl min-w-[100px]",
-                    "border transition-all duration-200 relative",
-                    pressedId === drink.id 
-                      ? "bg-secondary border-secondary shadow-lg" 
-                      : showConfirmation === drink.id
-                        ? "bg-secondary/30 border-secondary/50"
-                        : "bg-card border-white/10 hover:bg-white/5 active:bg-secondary/20",
-                    selectedForPreview?.id === drink.id && showBACPreview && "border-secondary/50 bg-secondary/10"
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
+        {/* Favorite drinks with always visible BAC preview */}
+        {favorites.length > 0 ? (
+          favorites.slice(0, 6).map((drink) => {
+            const previewBAC = userProfile ? calculatePreviewBAC(drink) : null;
+            const status = previewBAC !== null ? getBACStatus(previewBAC) : null;
+            
+            return (
+              <motion.button
+                key={drink.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={() => handleQuickAdd(drink)}
+                whileTap={{ scale: 0.95 }}
+                className={cn(
+                  "flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl min-w-[85px]",
+                  "border transition-all duration-200 relative",
+                  pressedId === drink.id 
+                    ? "bg-secondary border-secondary shadow-lg" 
+                    : showConfirmation === drink.id
+                      ? "bg-secondary/30 border-secondary/50"
+                      : "bg-card border-white/10 hover:bg-white/5 active:bg-secondary/20"
+                )}
+              >
+                {/* Confirmation checkmark */}
+                <AnimatePresence mode="wait">
+                  {showConfirmation === drink.id ? (
+                    <motion.span
+                      key="check"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="text-2xl"
+                    >
+                      ✓
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="emoji"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="text-2xl"
+                    >
+                      {drink.emoji}
+                    </motion.span>
                   )}
-                >
-                  {/* BAC Preview badge */}
-                  {previewBAC !== null && selectedForPreview?.id === drink.id && (
-                    <div className="absolute -top-2 -right-2 px-1.5 py-0.5 rounded-full bg-secondary text-white text-[10px] font-bold">
-                      ~{formatBAC(previewBAC)}
-                    </div>
-                  )}
-                  
-                  <AnimatePresence mode="wait">
-                    {showConfirmation === drink.id ? (
-                      <motion.span
-                        key="check"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        className="text-xl"
-                      >
-                        ✓
-                      </motion.span>
-                    ) : (
-                      <motion.span
-                        key="emoji"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        exit={{ scale: 0 }}
-                        className="text-xl"
-                      >
-                        {drink.emoji}
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                  
-                  <span className={cn(
-                    "text-xs font-medium whitespace-nowrap truncate max-w-[80px]",
-                    pressedId === drink.id || showConfirmation === drink.id ? "text-secondary" : ""
+                </AnimatePresence>
+                
+                {/* Drink name */}
+                <span className={cn(
+                  "text-xs font-medium whitespace-nowrap max-w-[70px] truncate",
+                  pressedId === drink.id || showConfirmation === drink.id ? "text-secondary" : ""
+                )}>
+                  {drink.name}
+                </span>
+                
+                {/* Always visible BAC preview badge */}
+                {previewBAC !== null && (
+                  <div className={cn(
+                    "absolute -top-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap",
+                    getBadgeColor(status!)
                   )}>
-                    {drink.name}
-                  </span>
-                </motion.button>
-              );
-            })
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl text-muted-foreground text-sm"
-            >
-              <Star className="w-4 h-4" />
-              <span>Ajoute des favoris</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    ~{formatBAC(previewBAC)} g/L
+                  </div>
+                )}
+              </motion.button>
+            );
+          })
+        ) : (
+          <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl text-muted-foreground text-sm">
+            <Star className="w-4 h-4" />
+            <span>Ajoute des favoris pour accès rapide</span>
+          </div>
+        )}
 
         {/* Create button */}
         <Button
           variant="outline"
           onClick={onCreateDrink}
-          className="flex-shrink-0 h-14 px-5 rounded-2xl border-dashed border-white/20 bg-transparent hover:bg-white/5"
+          className="flex-shrink-0 h-[72px] px-4 rounded-2xl border-dashed border-white/20 bg-transparent hover:bg-white/5"
         >
-          <Plus className="w-5 h-5 mr-2" />
-          <span className="text-sm font-medium">Créer</span>
+          <div className="flex flex-col items-center gap-1">
+            <Plus className="w-5 h-5" />
+            <span className="text-xs font-medium">Créer</span>
+          </div>
         </Button>
       </div>
+
+      {/* Legend */}
+      {favorites.length > 0 && userProfile && (
+        <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-secondary" />
+            OK
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-[hsl(38,92%,50%)]" />
+            Bientôt
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-accent" />
+            Attendre
+          </span>
+        </div>
+      )}
 
       {/* Quick tip */}
       {favorites.length === 0 && (
         <p className="text-xs text-muted-foreground text-center">
-          Ajoute des boissons en favoris pour les retrouver ici
+          Ajoute des boissons en favoris pour voir l'impact BAC
         </p>
       )}
     </div>
