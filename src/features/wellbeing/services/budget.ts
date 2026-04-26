@@ -154,14 +154,41 @@ export const budgetService = {
     }));
   },
 
-  async getAlertMessage(spent: number, limit: number): Promise<{ shouldAlert: boolean; message: string; type: 'info' | 'warning' | 'critical' } | null> {
+  getAlertMessage(spent: number, limit: number): { shouldAlert: boolean; message: string; type: 'info' | 'warning' | 'critical' } | null {
     if (limit <= 0) return null;
     const percentage = (spent / limit) * 100;
 
-    if (percentage >= 100) return { shouldAlert: true, message: '⚠️ Budget dépassé !', type: 'critical' };
-    if (percentage >= 90) return { shouldAlert: true, message: '🚨 Alerte ! 90% du budget utilisé.', type: 'warning' };
-    if (percentage >= 75) return { shouldAlert: true, message: '📊 75% du budget utilisé.', type: 'warning' };
-    if (percentage >= 50) return { shouldAlert: true, message: '💡 Moitié du budget atteint.', type: 'info' };
+    if (percentage >= 100) {
+      return {
+        shouldAlert: true,
+        message: '⚠️ Budget dépassé !',
+        type: 'critical',
+      };
+    }
+
+    if (percentage >= 90) {
+      return {
+        shouldAlert: true,
+        message: '🚨 Alerte ! 90% du budget utilisé.',
+        type: 'warning',
+      };
+    }
+
+    if (percentage >= 75) {
+      return {
+        shouldAlert: true,
+        message: '📊 75% du budget utilisé.',
+        type: 'warning',
+      };
+    }
+
+    if (percentage >= 50) {
+      return {
+        shouldAlert: true,
+        message: '💡 Moitié du budget atteint.',
+        type: 'info',
+      };
+    }
 
     return null;
   },

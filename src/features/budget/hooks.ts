@@ -12,6 +12,7 @@ export interface UseBudgetResult {
   loadEntries: () => Promise<void>;
   createEntry: (form: CreateBudgetEntryForm) => Promise<BudgetEntry>;
   deleteEntry: (entryId: string) => Promise<void>;
+  updateEntry: (entryId: string, data: Partial<BudgetEntry>) => Promise<BudgetEntry>;
   financialStats: ReturnType<typeof calculateFinancialStats>;
   totalExpenses: number;
   totalIncome: number;
@@ -25,7 +26,7 @@ export interface UseBudgetResult {
   achievements: any[];
   newAchievements: any[];
   checkAchievements: () => Promise<void>;
-  budgetAlert: any;
+  budgetAlert: { shouldAlert: boolean; message: string; type: 'info' | 'warning' | 'critical' } | null;
   familyId: string | undefined;
   setFamilyId: (id: string) => void;
 }
@@ -74,13 +75,19 @@ export const useBudget = (): UseBudgetResult => {
   const createEntry = async (form: CreateBudgetEntryForm): Promise<BudgetEntry> => {
     if (!familyId || !user) throw new Error('No family or user');
     const entry = await budgetService.createEntry(familyId, user.$id, form);
-    setEntries(prev => [...prev, entry]);
+    setEntries(prev => [entry, ...prev]);
     return entry;
   };
 
   const deleteEntry = async (entryId: string): Promise<void> => {
     await budgetService.deleteEntry(entryId);
     setEntries(prev => prev.filter(e => e.id !== entryId));
+  };
+
+  const updateEntry = async (entryId: string, data: Partial<BudgetEntry>): Promise<BudgetEntry> => {
+    const updated = await budgetService.updateEntry(entryId, data);
+    setEntries(prev => prev.map(e => e.id === entryId ? updated : e));
+    return updated;
   };
 
   const financialStats = useMemo(() => calculateFinancialStats(alcoholLogs), [alcoholLogs]);
@@ -100,7 +107,9 @@ export const useBudget = (): UseBudgetResult => {
       groceries: 0, leisure: 0, bills: 0, transport: 0,
       health: 0, education: 0, gifts: 0, savings: 0, other: 0,
     };
-    entries.filter(e => e.type === 'expense').forEach(e => { cats[e.category] += e.amount; });
+    entries.filter(e => e.type === 'expense').forEach(e => {
+      cats[e.category] += e.amount;
+    });
     return cats;
   }, [entries]);
 
@@ -117,10 +126,10 @@ export const useBudget = (): UseBudgetResult => {
         setNewAchievements(newUnlocked);
         await loadAchievements();
       }
-    } catch { /* silent fail */ }
+    } catch { /* silent */ }
   }, [user?.$id, financialStats, loadAchievements]);
 
-  const budgetAlert = useMemo(() => {
+  const budgetAlert = useMemo((): { shouldAlert: boolean; message: string; type: 'info' | 'warning' | 'critical' } | null => {
     return wellbeingBudgetService.getAlertMessage(combinedExpenses, monthlyBudgetGoal);
   }, [combinedExpenses, monthlyBudgetGoal]);
 
@@ -129,7 +138,7 @@ export const useBudget = (): UseBudgetResult => {
   useEffect(() => { if (financialStats.monthlySpend > 0) checkAchievements(); }, [financialStats.monthlySpend, checkAchievements]);
 
   return {
-    entries, loading, loadEntries, createEntry, deleteEntry,
+    entries, loading, loadEntries, createEntry, deleteEntry, updateEntry,
     financialStats, totalExpenses, totalIncome, balance, budgetUsed, budgetStatus, budgetFeedback, expensesByCategory,
     monthlyBudgetGoal, setMonthlyBudgetGoal, achievements, newAchievements, checkAchievements, budgetAlert, familyId, setFamilyId,
   };

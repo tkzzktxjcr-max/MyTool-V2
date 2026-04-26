@@ -30,3 +30,20 @@ export interface CreateBudgetEntryForm {
   date: Date;
   type: 'income' | 'expense';
 }
+
+export interface BudgetStats {
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+  byCategory: Record<BudgetCategory, number>;
+  monthlyTrend: { month: string; income: number; expenses: number }[];
+}
+
+export interface BudgetGoal {
+  id: string;
+  familyId: string;
+  monthlyLimit: number;
+  alcoholLimit: number;
+  createdAt: string;
+  updatedAt: string;
+}
