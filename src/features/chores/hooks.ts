@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFamily } from '@/features/family/context';
 import { useAuth } from '@/features/auth/context';
 import { choresService } from './service';
@@ -16,8 +16,6 @@ export const useChores = () => {
     try {
       const data = await choresService.getChores(family.id);
       setChores(data);
-    } catch (err) {
-      console.error('Error loading chores:', err);
     } finally {
       setLoading(false);
     }
@@ -42,11 +40,10 @@ export const useChores = () => {
 
   const getTodaysChores = (): Chore[] => {
     const today = new Date().toISOString().split('T')[0];
-    return chores.filter(c => {
-      if (!c.dueDate) return c.status === 'pending';
-      return c.dueDate.split('T')[0] === today && c.status === 'pending';
-    });
+    return chores.filter(c => (!c.dueDate || c.dueDate.split('T')[0] === today) && c.status === 'pending');
   };
+
+  useEffect(() => { if (family?.id) loadChores(); }, [family?.id, loadChores]);
 
   return { chores, loading, loadChores, createChore, completeChore, deleteChore, getTodaysChores };
 };

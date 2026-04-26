@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useFamily } from '@/features/family/context';
 import { useAuth } from '@/features/auth/context';
 import { budgetService } from './service';
@@ -16,8 +16,6 @@ export const useBudget = () => {
     try {
       const data = await budgetService.getEntries(family.id);
       setEntries(data);
-    } catch (err) {
-      console.error('Error loading entries:', err);
     } finally {
       setLoading(false);
     }
@@ -38,12 +36,14 @@ export const useBudget = () => {
   const totalExpenses = useMemo(() => entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0), [entries]);
   const totalIncome = useMemo(() => entries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0), [entries]);
   const balance = useMemo(() => totalIncome - totalExpenses, [totalIncome, totalExpenses]);
-  const budgetUsed = useMemo(() => (!family?.monthlyBudget || family.monthlyBudget === 0) ? 0 : (totalExpenses / family.monthlyBudget) * 100, [totalExpenses, family?.monthlyBudget]);
+  const budgetUsed = useMemo(() => (!family?.monthlyBudget ? 0 : (totalExpenses / family.monthlyBudget) * 100), [totalExpenses, family?.monthlyBudget]);
   const expensesByCategory = useMemo(() => {
     const cats: Record<BudgetCategory, number> = { groceries: 0, leisure: 0, bills: 0, transport: 0, health: 0, education: 0, gifts: 0, savings: 0, other: 0 };
     entries.filter(e => e.type === 'expense').forEach(e => { cats[e.category] += e.amount; });
     return cats;
   }, [entries]);
+
+  useEffect(() => { if (family?.id) loadEntries(); }, [family?.id, loadEntries]);
 
   return { entries, loading, loadEntries, createEntry, deleteEntry, totalExpenses, totalIncome, balance, budgetUsed, expensesByCategory };
 };

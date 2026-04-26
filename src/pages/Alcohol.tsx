@@ -8,9 +8,9 @@ import { Activity, Target, User, Info, Plus, X, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
-import type { Drink } from '@/features/alcohol/service';
-import { calculateUnits, calculateUnitsWithQuantity, getFeedbackMessage, calculateWeeklyProgress } from '@/features/alcohol/utils/units';
-import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
+import type { Drink } from '@/features/alcohol/services';
+import { calculateUnits, calculateUnitsWithQuantity } from '@/features/alcohol/utils/units';
+import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/services';
 
 import BACCard from './alcohol/BACCard';
 import AlcoholInfo from './AlcoholInfo';

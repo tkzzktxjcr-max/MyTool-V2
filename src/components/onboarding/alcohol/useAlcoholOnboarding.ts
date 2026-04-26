@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
-import { profileService, goalsService } from '@/features/alcohol/service';
+import { goalsService } from '@/features/alcohol/services';
+import { profileService } from '@/features/alcohol/services';
 
 const STORAGE_KEY = 'fh_alcohol_onboarding';
 const DRINKS_KEY = 'fh_alcohol_favorites';

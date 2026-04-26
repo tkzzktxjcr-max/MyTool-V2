@@ -6,9 +6,9 @@ import { Plus, Star, Check, Clock, TrendingUp, ChevronRight } from 'lucide-react
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
-import type { Drink } from '@/features/alcohol/service';
+import type { Drink } from '@/features/alcohol/services';
 import { calculateUnits } from '@/features/alcohol/utils/units';
-import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
+import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/services';
 
 interface QuickAddBarProps {
   favorites: Drink[];

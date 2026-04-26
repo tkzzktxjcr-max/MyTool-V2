@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useFamily } from '@/features/family/context';
 import { useAuth } from '@/features/auth/context';
 import { calendarService } from './service';
@@ -16,8 +16,6 @@ export const useCalendar = () => {
     try {
       const data = await calendarService.getEvents(family.id);
       setEvents(data);
-    } catch (err) {
-      console.error('Error loading events:', err);
     } finally {
       setLoading(false);
     }
@@ -34,6 +32,8 @@ export const useCalendar = () => {
     await calendarService.deleteEvent(eventId);
     setEvents(prev => prev.filter(e => e.id !== eventId));
   };
+
+  useEffect(() => { if (family?.id) loadEvents(); }, [family?.id, loadEvents]);
 
   return { events, loading, loadEvents, createEvent, deleteEvent };
 };

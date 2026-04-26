@@ -6,10 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import type { Drink } from '@/features/alcohol/service';
+import type { Drink } from '@/features/alcohol/services';
 import type { DrinkType } from '@/features/alcohol/types';
 import { DRINK_TYPES } from '@/features/alcohol/types';
-import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
+import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/services';
 
 interface DrinkPickerProps {
   drinks: Drink[];
