@@ -41,6 +41,17 @@ export function AlcoholOnboardingWizard({
   const [isOpen, setIsOpen] = useState(true);
   const [isCompleting, setIsCompleting] = useState(false);
 
+  // ALL hooks must be called BEFORE any conditional returns!
+  
+  // Hook called on every render - must be before returns
+  useEffect(() => {
+    if (hasCompleted) {
+      console.log('[AlcoholOnboarding] Already completed, closing wizard');
+      setIsOpen(false);
+      onComplete?.();
+    }
+  }, [hasCompleted, onComplete]);
+
   // Show loading state while checking Appwrite
   if (isLoading) {
     return (
@@ -57,16 +68,10 @@ export function AlcoholOnboardingWizard({
     );
   }
 
-  // Don't show onboarding if already completed
+  // Don't show onboarding if already completed (hooks already called above)
   if (hasCompleted) {
-    console.log('[AlcoholOnboarding] Already completed, skipping wizard');
     return null;
   }
-
-  useEffect(() => {
-    // Set isOpen to true when component mounts (if not completed)
-    setIsOpen(true);
-  }, []);
 
   const handleClose = () => {
     setIsOpen(false);
