@@ -179,7 +179,12 @@ export default function BACCard({
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={{ stroke: 'rgba(255,255,255,0.1)' }} tickLine={false} />
-                <YAxis domain={[0, Math.ceil(Math.max(...timeline.map(p => p.bac), legalLimit) * 10) / 10]} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(1)} />
+                <YAxis domain={[0, (dataMax: number) => {
+                  const peak = Math.max(...timeline.map(p => p.bac));
+                  const refValue = peak > legalLimit ? peak : legalLimit;
+                  const padded = peak > legalLimit ? refValue * 1.2 : Math.max(peak * 1.5, legalLimit);
+                  return Math.ceil(padded * 10) / 10;
+                }]} tick={{ fontSize: 10, fill: 'hsl(215, 20%, 65%)' }} axisLine={false} tickLine={false} tickFormatter={(v) => v.toFixed(2)} />
                 <ReferenceLine y={legalLimit} stroke="hsl(0, 62%, 50%)" strokeDasharray="5 5" strokeWidth={2} />
                 <Area type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} fill="url(#bacGradientPositive)" />
                 <Line type="monotone" dataKey="bac" stroke="hsl(142, 71%, 45%)" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: 'hsl(142, 71%, 45%)' }} />
