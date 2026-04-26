@@ -153,7 +153,7 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
             {/* Bars */}
             <div className="relative h-full flex items-end justify-between gap-1">
               {insights.dailyTrend.map((day, i) => {
-                const barHeight = maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, day.units > 0 ? 8 : 3) : 3;
+                const barHeight = maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, day.units > 0 ? 20 : 4) : 4;
                 const isTodayBar = i === 6;
                 const hasUnits = day.units > 0;
                 
