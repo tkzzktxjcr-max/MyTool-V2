@@ -124,22 +124,29 @@ export default function QuickAddBar({
                 onClick={() => handleQuickAdd(drink)}
                 whileTap={{ scale: 0.95 }}
                 className={cn(
-                  "flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl min-w-[85px]",
-                  "border transition-all duration-200 relative overflow-visible pt-4",
+                  "flex-shrink-0 flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl min-w-[85px]",
+                  "border transition-all duration-200 relative",
                   pressedId === drink.id
-                    ? "bg-secondary border-secondary shadow-lg" 
+                    ? "bg-secondary border-secondary shadow-lg"
                     : showConfirmation === drink.id
                       ? "bg-secondary/30 border-secondary/50"
                       : "bg-card border-white/10 hover:bg-white/5 active:bg-secondary/20",
                   !isFavorite && suggestedFavorites.find(d => d.id === drink.id) && "border-dashed border-secondary/30"
                 )}
               >
-                {/* Favorite star indicator */}
-                {!isFavorite && (
-                  <div className="absolute -top-1.5 right-0">
+                {/* Top row with badges */}
+                <div className="flex items-center justify-between w-full mb-0.5">
+                  {/* BAC Preview badge */}
+                  {previewBAC !== null && (
+                    <span className={cn("px-1 py-0 rounded text-[9px] font-bold", getBadgeColor(status))}>
+                      ~{formatBAC(previewBAC)}
+                    </span>
+                  )}
+                  {/* Favorite star indicator */}
+                  {!isFavorite && (
                     <Star className="w-3 h-3 text-secondary/50" />
-                  </div>
-                )}
+                  )}
+                </div>
                 
                 {/* Confirmation */}
                 <AnimatePresence mode="wait">
@@ -165,13 +172,6 @@ export default function QuickAddBar({
                 <span className="text-[10px] text-muted-foreground">
                   ~{drinkUnits.toFixed(1)} u
                 </span>
-                
-                {/* BAC Preview badge */}
-                {previewBAC !== null && (
-                  <div className={cn("absolute -top-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full text-[10px] font-bold", getBadgeColor(status))}>
-                    ~{formatBAC(previewBAC)}
-                  </div>
-                )}
               </motion.button>
             );
           })
