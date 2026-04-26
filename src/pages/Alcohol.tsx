@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Info, Plus, X, RotateCcw } from 'lucide-react';
+import { Activity, Target, User, Info, Plus, X, RotateCcw, Settings, Check, Beer, Sparkles, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
@@ -27,11 +27,18 @@ import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
 import { toast } from 'sonner';
-import { Settings } from 'lucide-react';
 
 // Onboarding
 import { AlcoholOnboardingWizard } from '@/components/onboarding/alcohol/AlcoholOnboardingWizard';
 import { useAlcoholOnboarding } from '@/components/onboarding/alcohol/useAlcoholOnboarding';
+
+// Time of day labels
+const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
+  morning: { icon: '☀️', label: 'Bon matin' },
+  afternoon: { icon: '☀️', label: 'Bon aprem' },
+  evening: { icon: '🌆', label: 'Bonne soirée' },
+  night: { icon: '🌙', label: 'Bonne nuit' },
+};
 
 export default function AlcoholPage() {
   const navigate = useNavigate();
@@ -55,9 +62,9 @@ export default function AlcoholPage() {
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showDrinkPicker, setShowDrinkPicker] = useState(false);
-    const [showConfetti, setShowConfetti] = useState(false);
-    const [showOnboarding, setShowOnboarding] = useState(false);
-    const [showBadges, setShowBadges] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showBadges, setShowBadges] = useState(false);
   
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
@@ -97,17 +104,17 @@ export default function AlcoholPage() {
   };
 
   const handleQuickAdd = async (drink: Drink) => {
-    // Utilise la fonction centralisée avec conversion cl→ml correcte
     const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv);
     const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
     const weight = userProfile?.weightKg || 70;
     const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
     const status = newBAC <= legalLimit * 0.8 ? 'OK' : newBAC <= legalLimit ? 'Bientôt' : 'Attendre';
-    const statusEmoji = newBAC <= legalLimit * 0.8 ? '✓' : newBAC <= legalLimit ? '~' : '⏱';
+    const statusIcon = newBAC <= legalLimit * 0.8 ? <Check className="w-4 h-4" /> : newBAC <= legalLimit ? <Activity className="w-4 h-4" /> : <Activity className="w-4 h-4" />;
     
-    toast.success(`${drink.emoji} ${drink.name}`, {
-      description: `${statusEmoji} ~${newBAC.toFixed(2)} g/L • ${status}`,
+    toast.success(`${drink.name}`, {
+      description: `${statusIcon} ~${newBAC.toFixed(2)} g/L - ${status}`,
       duration: 3000,
+      className: 'bac-preview-toast',
     });
     
     await quickLog(drink, undefined, 1, undefined);
@@ -117,7 +124,6 @@ export default function AlcoholPage() {
     if (!selectedDrink) return;
     
     const moodValue = mood === 'none' ? undefined : mood as MoodType;
-    // Utilise calculateUnitsWithQuantity pour calculer correctement les unités
     const drinkUnits = calculateUnitsWithQuantity(selectedDrink.defaultServingSize, selectedDrink.abv, quantity);
     const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
     const weight = userProfile?.weightKg || 70;
@@ -125,9 +131,10 @@ export default function AlcoholPage() {
     
     await quickLog(selectedDrink, moodValue, quantity, selectedTime);
     
-    toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity})`, {
-      description: `+${drinkUnits.toFixed(1)} unites • ~${newBAC.toFixed(2)} g/L`,
+    toast.success(`${selectedDrink.name} (×${quantity})`, {
+      description: `+${drinkUnits.toFixed(1)} unités - ~${newBAC.toFixed(2)} g/L`,
       duration: 3000,
+      className: 'bac-preview-toast',
     });
     
     setShowMoodSelector(false);
@@ -138,23 +145,31 @@ export default function AlcoholPage() {
 
   const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
     await createDrink(data, data.emoji);
-    toast.success('Boisson creee !', { icon: '🎉' });
+    toast.success('Boisson créée !', {
+      icon: <Sparkles className="w-5 h-5 text-secondary" />,
+    });
     setShowCreateDrink(false);
   };
 
   const handleDeleteDrink = async (drinkId: string) => {
     await deleteDrink(drinkId);
-    toast.success('Boisson supprimee', { icon: '🗑️' });
+    toast.success('Boisson supprimée', {
+      icon: <X className="w-5 h-5 text-destructive" />,
+    });
   };
 
   const handleSetGoal = async (limit: number) => {
     await setWeeklyGoal(limit);
-    toast.success('Objectif mis a jour !', { icon: '🎯' });
+    toast.success('Objectif mis à jour !', {
+      icon: <Target className="w-5 h-5 text-secondary" />,
+    });
   };
 
   const handleUpdateProfile = async (data: { weightKg?: number; sex?: 'male' | 'female' | 'unspecified' }) => {
     await updateUserProfile(data);
-    toast.success('Profil mis a jour !', { icon: '✅' });
+    toast.success('Profil mis à jour !', {
+      icon: <Check className="w-5 h-5 text-secondary" />,
+    });
   };
 
   const handleTimeSelect = (timestamp: string) => {
@@ -179,13 +194,7 @@ export default function AlcoholPage() {
   const isFirstUse = logs.length === 0;
 
   // Time indicator
-  const timeLabels: Record<TimeOfDay, { icon: string; label: string }> = {
-    morning: { icon: '🌅', label: 'Bon matin' },
-    afternoon: { icon: '☀️', label: 'Bon aprem' },
-    evening: { icon: '🌆', label: 'Bonne soiree' },
-    night: { icon: '🌙', label: 'Bonne nuit' },
-  };
-  const timeInfo = timeLabels[currentTimeOfDay];
+  const timeInfo = TIME_LABELS[currentTimeOfDay];
 
   // Show onboarding wizard if needed
   if (showOnboarding && !onboardingCompleted) {
@@ -204,7 +213,6 @@ export default function AlcoholPage() {
         show={showConfetti} 
         onComplete={() => setShowConfetti(false)}
         message="Semaine parfaite !"
-        emoji="🌟"
       />
 
       {/* Header */}
@@ -214,10 +222,10 @@ export default function AlcoholPage() {
             <div className="w-8 h-8 rounded-xl bg-secondary/20 flex items-center justify-center">
               <Activity className="w-4 h-4 text-secondary" />
             </div>
-            Bien-etre
+            Bien-être
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {isFirstUse ? `${timeInfo.icon} ${timeInfo.label}` : `${timeInfo.icon} ${timeInfo.label}`}
+          <p className="text-sm text-muted-foreground flex items-center gap-1">
+            {timeInfo.icon} {timeInfo.label}
           </p>
         </div>
         <div className="flex gap-1">
@@ -231,14 +239,14 @@ export default function AlcoholPage() {
             <Target className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)} className="rounded-xl">
-                      <Info className="w-5 h-5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => setShowBadges(true)} className="rounded-xl" title="Badges">
-                      🏆
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/settings')} className="rounded-xl" title="Paramètres">
-                      <Settings className="w-5 h-5" />
-                    </Button>
+            <Info className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowBadges(true)} className="rounded-xl" title="Badges">
+            <Trophy className="w-5 h-5" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/settings')} className="rounded-xl" title="Paramètres">
+            <Settings className="w-5 h-5" />
+          </Button>
         </div>
       </div>
 
@@ -252,10 +260,12 @@ export default function AlcoholPage() {
             className="bg-accent/15 border border-accent/25 rounded-2xl p-3 flex items-center justify-between shadow-lg"
           >
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{lastDeletedLog.drinkEmoji}</span>
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                <Beer className="w-5 h-5 text-muted-foreground" />
+              </div>
               <div>
                 <p className="text-sm font-medium">"{lastDeletedLog.drinkName}"</p>
-                <p className="text-xs text-muted-foreground">supprime</p>
+                <p className="text-xs text-muted-foreground">supprimé</p>
               </div>
             </div>
             <Button size="sm" variant="outline" onClick={undoDelete} className="rounded-xl">
@@ -344,7 +354,9 @@ export default function AlcoholPage() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-4xl">{selectedDrink?.emoji}</span>
+                  <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
+                    <Beer className="w-6 h-6 text-secondary" />
+                  </div>
                   <div>
                     <p className="font-semibold text-base">{selectedDrink?.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -368,7 +380,7 @@ export default function AlcoholPage() {
 
               {selectedTime && (
                 <div className="flex items-center justify-between px-3 py-2 bg-accent/10 rounded-xl">
-                  <span className="text-sm text-accent">Horodatage personnalise</span>
+                  <span className="text-sm text-accent">Horodatage personnalisé</span>
                   <button onClick={() => setSelectedTime(undefined)} className="text-xs text-muted-foreground hover:text-foreground">
                     Annuler
                   </button>
@@ -381,7 +393,7 @@ export default function AlcoholPage() {
                 onClick={() => handleConfirmLog('none')}
                 className="w-full bg-secondary hover:bg-secondary/80 rounded-xl h-12 text-base font-medium"
               >
-                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unites)
+                Confirmer ({quantity} {quantity === 1 ? 'verre' : 'verres'} = {totalUnits.toFixed(1)} unités)
               </Button>
 
               <Button variant="ghost" onClick={() => { setShowMoodSelector(false); setSelectedDrink(null); setQuantity(1); setSelectedTime(undefined); }} className="w-full rounded-xl">
@@ -400,29 +412,39 @@ export default function AlcoholPage() {
       />
       
       {/* Insights */}
-            <InsightsCard insights={insights} />
-            
-            {/* Monthly Heatmap */}
-            <MonthlyHeatmap logs={logs} onAddDrink={() => setShowDrinkPicker(true)} />
-            
-            {/* History */}
-            <HistoryCard logs={logs} onDeleteLog={deleteLog} />
+      <InsightsCard insights={insights} />
+      
+      {/* Monthly Heatmap */}
+      <MonthlyHeatmap logs={logs} onAddDrink={() => setShowDrinkPicker(true)} />
+      
+      {/* History */}
+      <HistoryCard logs={logs} onDeleteLog={deleteLog} />
 
       {/* Dialogs */}
       <GoalSetterDialog open={showGoalSetter} onOpenChange={setShowGoalSetter} onSetGoal={handleSetGoal} initialLimit={weeklyLimit} />
       <ProfileEditorDialog open={showProfileEditor} onOpenChange={setShowProfileEditor} onUpdateProfile={handleUpdateProfile} initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }} />
       <CreateDrinkDialog open={showCreateDrink} onOpenChange={setShowCreateDrink} onCreate={handleCreateDrink} />
       <AnimatePresence>{showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}</AnimatePresence>
-            
-            {/* Badges Sheet */}
-            <BadgesSheet
-              open={showBadges}
-              onOpenChange={setShowBadges}
-              currentStreak={insights?.streak || 0}
-              weeklyUnits={weeklyUnits}
-              weeklyLimit={weeklyLimit}
-              totalDaysTracked={logs.length > 0 ? Math.ceil((Date.now() - new Date(logs[logs.length - 1].timestamp).getTime()) / (1000 * 60 * 60 * 24)) : 0}
-            />
+      
+      {/* Badges Sheet */}
+      <BadgesSheet
+        open={showBadges}
+        onOpenChange={setShowBadges}
+        currentStreak={insights?.streak || 0}
+        weeklyUnits={weeklyUnits}
+        weeklyLimit={weeklyLimit}
+        totalDaysTracked={logs.length > 0 ? Math.ceil((Date.now() - new Date(logs[logs.length - 1].timestamp).getTime()) / (1000 * 60 * 60 * 24)) : 0}
+      />
+
+      {/* Premium Toast Styles */}
+      <style>{`
+        .bac-preview-toast {
+          background: linear-gradient(135deg, hsl(222 47% 11%), hsl(222 47% 15%)) !important;
+          border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          border-radius: 1rem !important;
+          backdrop-filter: blur(12px) !important;
+        }
+      `}</style>
     </div>
   );
 }

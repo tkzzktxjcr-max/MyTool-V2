@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Shield, Trash2, Download, Check, Sparkles, Info, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Lock, Shield, Trash2, Download, Check, Info, ChevronRight, Sparkles, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
@@ -18,22 +18,18 @@ export default function SettingsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExportData = async () => {
-    // Simulated export - in production this would call the actual export service
     toast.success('Export en cours', {
       description: 'Tes données seront téléchargées dans quelques instants.',
-      icon: '📦',
     });
   };
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
     try {
-      // Simulated deletion - in production this would call the actual deletion service
       await new Promise(resolve => setTimeout(resolve, 1500));
       toast.success('Compte supprimé', {
         description: 'Toutes tes données ont été supprimées.',
       });
-      // In production, would also log out and redirect
       setTimeout(() => {
         navigate('/auth');
       }, 1000);
@@ -46,10 +42,10 @@ export default function SettingsPage() {
   };
 
   const privacyChecks = [
-    { icon: '✓', label: 'Stockées localement sur ton appareil', description: 'Tes données ne transitent pas par nos serveurs' },
-    { icon: '✓', label: 'Jamais revendues ou partagées', description: 'Ton vie privée est notre priorité' },
-    { icon: '✓', label: 'Export possible à tout moment', description: 'Télécharge tes données quand tu le souhaites' },
-    { icon: '✓', label: 'Suppression en 1 clic', description: 'Supprime définitivement toutes tes données' },
+    { icon: Check, label: 'Stockées localement sur ton appareil', description: 'Tes données ne transitent pas par nos serveurs' },
+    { icon: Check, label: 'Jamais revendues ou partagées', description: 'Ta vie privée est notre priorité' },
+    { icon: Check, label: 'Export possible à tout moment', description: 'Télécharge tes données quand tu le souhaites' },
+    { icon: Check, label: 'Suppression en 1 clic', description: 'Supprime définitivement toutes tes données' },
   ];
 
   return (
@@ -115,7 +111,7 @@ export default function SettingsPage() {
                     className="flex items-start gap-3 p-3 rounded-xl bg-white/5"
                   >
                     <div className="w-6 h-6 rounded-full bg-secondary/20 flex items-center justify-center flex-shrink-0">
-                      <Check className="w-4 h-4 text-secondary" />
+                      <check.icon className="w-4 h-4 text-secondary" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-sm">{check.label}</p>
@@ -222,7 +218,9 @@ export default function SettingsPage() {
           </div>
           <h3 className="font-semibold">Family Hub</h3>
           <p className="text-xs text-muted-foreground mt-1">Version 1.0.0</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Fait avec 💜 pour ton bien-être</p>
+          <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">
+            Fait avec <Heart className="w-3 h-3 text-destructive fill-destructive" /> pour ton bien-être
+          </p>
         </motion.div>
       </div>
 
@@ -253,7 +251,7 @@ export default function SettingsPage() {
                 Aucune revente
               </h4>
               <p className="text-muted-foreground">
-                Nous ne revendons jamais tes données à des tiers. Ton vie privée est notre priorité absolue.
+                Nous ne revendons jamais tes données à des tiers. Ta vie privée est notre priorité absolue.
               </p>
             </div>
 

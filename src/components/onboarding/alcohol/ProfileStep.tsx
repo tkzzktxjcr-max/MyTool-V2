@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Scale, User } from 'lucide-react';
+import { Scale, User, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { SexType } from './useAlcoholOnboarding';
 
@@ -28,7 +28,9 @@ export function ProfileStep({
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-3">👤</div>
+        <div className="w-16 h-16 rounded-2xl bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+          <User className="w-8 h-8 text-secondary" />
+        </div>
         <h2 className="text-xl font-bold">Votre profil</h2>
         <p className="text-sm text-muted-foreground">
           Pour des calculs plus précis de votre taux d'alcoolémie
@@ -52,7 +54,7 @@ export function ProfileStep({
                 : "border-white/10 bg-white/5 hover:bg-white/10"
             )}
           >
-            <span className="text-3xl">👨</span>
+            <UserRound className={cn("w-10 h-10", sex === 'male' ? "text-secondary" : "text-muted-foreground")} />
             <span className={cn(
               "font-medium text-sm",
               sex === 'male' ? "text-secondary" : ""
@@ -72,7 +74,7 @@ export function ProfileStep({
                 : "border-white/10 bg-white/5 hover:bg-white/10"
             )}
           >
-            <span className="text-3xl">👩</span>
+            <UserRound className={cn("w-10 h-10", sex === 'female' ? "text-secondary" : "text-muted-foreground")} />
             <span className={cn(
               "font-medium text-sm",
               sex === 'female' ? "text-secondary" : ""
@@ -129,7 +131,7 @@ export function ProfileStep({
 
       <div className="p-3 rounded-xl bg-secondary/10 border border-secondary/20">
         <p className="text-xs text-muted-foreground text-center">
-          💡 Le poids et le sexe influencent le calcul du taux d'alcoolémie selon la formule de Widmark
+          Le poids et le sexe influencent le calcul du taux d'alcoolémie selon la formule de Widmark
         </p>
       </div>
     </div>

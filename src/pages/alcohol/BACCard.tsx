@@ -3,11 +3,14 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, ReferenceLine, CartesianGrid } from 'recharts';
 import { format, formatDistanceToNow } from 'date-fns';
-import { CheckCircle2, Car, Clock, TrendingUp, Leaf } from 'lucide-react';
+import { CheckCircle2, Car, Clock, TrendingUp, Leaf, AlertTriangle, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import type { BACDataPoint } from '@/features/alcohol/utils/bac';
 import SoberCountdown from './SoberCountdown';
+
+// Import missing Lucide icons
+import { Gauge } from 'lucide-react';
 
 interface BACCardProps {
   currentBAC: number;
@@ -54,7 +57,7 @@ export default function BACCard({
     
     if (!isAboveLimit && !isNearLimit) {
       return {
-        label: '🌿 Léger',
+        label: 'Léger',
         sublabel: `Conduite autorisée`,
         icon: CheckCircle2,
         color: 'text-secondary',
@@ -65,7 +68,7 @@ export default function BACCard({
     
     if (isNearLimit) {
       return {
-        label: '✨ Modéré',
+        label: 'Modéré',
         sublabel: safeToDriveTime ? `OK dans ${formatDistanceToNow(safeToDriveTime, { addSuffix: false })}` : 'Bientôt',
         icon: Clock,
         color: 'text-[hsl(38,92%,50%)]',

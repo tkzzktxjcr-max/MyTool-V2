@@ -1,4 +1,4 @@
-// Drink types
+// Drink types - Now uses icon names that map to Lucide icons
 export type DrinkType = 
   | 'beer' | 'wine' | 'spirit' | 'cocktail' | 'cider' | 'other' | 'custom'
   | 'lager' | 'pilsner' | 'stout' | 'wheat_beer' | 'ipa' | 'ale'
@@ -7,46 +7,47 @@ export type DrinkType =
   | 'martini' | 'mojito' | 'margarita' | 'old_fashioned' | 'cosmopolitan' | 'daiquiri' | 'pina_colada' | 'aperol_spritz'
   | 'sake' | 'soju' | 'sangria' | 'sherry' | 'port';
 
+// Drink type configuration - icon names map to Lucide icons
 export const DRINK_TYPES: Record<DrinkType, { label: string; defaultAbv: number; icon: string }> = {
-  beer: { label: 'Biere', defaultAbv: 5, icon: '🍺' },
-  wine: { label: 'Vin', defaultAbv: 12, icon: '🍷' },
-  spirit: { label: 'Spiritueux', defaultAbv: 40, icon: '🥃' },
-  cocktail: { label: 'Cocktail', defaultAbv: 20, icon: '🍹' },
-  cider: { label: 'Cidre', defaultAbv: 5, icon: '🍎' },
-  other: { label: 'Autre', defaultAbv: 10, icon: '🥤' },
-  custom: { label: 'Personnalise', defaultAbv: 10, icon: '✨' },
-  lager: { label: 'Lager', defaultAbv: 5, icon: '🍺' },
-  pilsner: { label: 'Pilsner', defaultAbv: 5, icon: '🍺' },
-  stout: { label: 'Stout', defaultAbv: 7, icon: '🖤' },
-  wheat_beer: { label: 'Blanche', defaultAbv: 5, icon: '🍺' },
-  ipa: { label: 'IPA', defaultAbv: 6.5, icon: '🍺' },
-  ale: { label: 'Ale', defaultAbv: 5.5, icon: '🍺' },
-  red_wine: { label: 'Vin Rouge', defaultAbv: 13, icon: '🍷' },
-  white_wine: { label: 'Vin Blanc', defaultAbv: 12, icon: '🥂' },
-  rose_wine: { label: 'Rose', defaultAbv: 12.5, icon: '🌸' },
-  champagne: { label: 'Champagne', defaultAbv: 12, icon: '🍾' },
-  sparkling: { label: 'Effervescent', defaultAbv: 11, icon: '🥂' },
-  whisky: { label: 'Whisky', defaultAbv: 40, icon: '🥃' },
-  vodka: { label: 'Vodka', defaultAbv: 40, icon: '💧' },
-  rum: { label: 'Rhum', defaultAbv: 40, icon: '🏝️' },
-  tequila: { label: 'Tequila', defaultAbv: 40, icon: '🌵' },
-  gin: { label: 'Gin', defaultAbv: 40, icon: '🌿' },
-  brandy: { label: 'Brandy', defaultAbv: 40, icon: '🥃' },
-  cognac: { label: 'Cognac', defaultAbv: 40, icon: '🏰' },
-  calvados: { label: 'Calvados', defaultAbv: 40, icon: '🍎' },
-  martini: { label: 'Martini', defaultAbv: 25, icon: '🍸' },
-  mojito: { label: 'Mojito', defaultAbv: 15, icon: '🍹' },
-  margarita: { label: 'Margarita', defaultAbv: 20, icon: '🍹' },
-  old_fashioned: { label: 'Old Fashioned', defaultAbv: 35, icon: '🥃' },
-  cosmopolitan: { label: 'Cosmopolitan', defaultAbv: 20, icon: '🍸' },
-  daiquiri: { label: 'Daiquiri', defaultAbv: 15, icon: '🍹' },
-  pina_colada: { label: 'Pina Colada', defaultAbv: 15, icon: '🍍' },
-  aperol_spritz: { label: 'Aperol Spritz', defaultAbv: 11, icon: '🍊' },
-  sake: { label: 'Sake', defaultAbv: 15, icon: '🍶' },
-  soju: { label: 'Soju', defaultAbv: 20, icon: '🥃' },
-  sangria: { label: 'Sangria', defaultAbv: 10, icon: '🍷' },
-  sherry: { label: 'Sherry', defaultAbv: 17, icon: '🍷' },
-  port: { label: 'Porto', defaultAbv: 20, icon: '🍷' },
+  beer: { label: 'Bière', defaultAbv: 5, icon: 'Beer' },
+  wine: { label: 'Vin', defaultAbv: 12, icon: 'Wine' },
+  spirit: { label: 'Spiritueux', defaultAbv: 40, icon: 'Whisky' },
+  cocktail: { label: 'Cocktail', defaultAbv: 20, icon: 'Cocktail' },
+  cider: { label: 'Cidre', defaultAbv: 5, icon: 'Apple' },
+  other: { label: 'Autre', defaultAbv: 10, icon: 'CupSoda' },
+  custom: { label: 'Personnalisé', defaultAbv: 10, icon: 'Sparkles' },
+  lager: { label: 'Lager', defaultAbv: 5, icon: 'Beer' },
+  pilsner: { label: 'Pilsner', defaultAbv: 5, icon: 'Beer' },
+  stout: { label: 'Stout', defaultAbv: 7, icon: 'BeerOff' },
+  wheat_beer: { label: 'Blanche', defaultAbv: 5, icon: 'Beer' },
+  ipa: { label: 'IPA', defaultAbv: 6.5, icon: 'Beer' },
+  ale: { label: 'Ale', defaultAbv: 5.5, icon: 'Beer' },
+  red_wine: { label: 'Vin Rouge', defaultAbv: 13, icon: 'Wine' },
+  white_wine: { label: 'Vin Blanc', defaultAbv: 12, icon: 'Wine' },
+  rose_wine: { label: 'Rosé', defaultAbv: 12.5, icon: 'Wine' },
+  champagne: { label: 'Champagne', defaultAbv: 12, icon: 'Champagne' },
+  sparkling: { label: 'Effervescent', defaultAbv: 11, icon: 'Champagne' },
+  whisky: { label: 'Whisky', defaultAbv: 40, icon: 'Whisky' },
+  vodka: { label: 'Vodka', defaultAbv: 40, icon: 'GlassWater' },
+  rum: { label: 'Rhum', defaultAbv: 40, icon: 'GlassWater' },
+  tequila: { label: 'Tequila', defaultAbv: 40, icon: 'Whisky' },
+  gin: { label: 'Gin', defaultAbv: 40, icon: 'GlassWater' },
+  brandy: { label: 'Brandy', defaultAbv: 40, icon: 'Whisky' },
+  cognac: { label: 'Cognac', defaultAbv: 40, icon: 'Whisky' },
+  calvados: { label: 'Calvados', defaultAbv: 40, icon: 'Apple' },
+  martini: { label: 'Martini', defaultAbv: 25, icon: 'Cocktail' },
+  mojito: { label: 'Mojito', defaultAbv: 15, icon: 'Cocktail' },
+  margarita: { label: 'Margarita', defaultAbv: 20, icon: 'Cocktail' },
+  old_fashioned: { label: 'Old Fashioned', defaultAbv: 35, icon: 'Cocktail' },
+  cosmopolitan: { label: 'Cosmopolitan', defaultAbv: 20, icon: 'Cocktail' },
+  daiquiri: { label: 'Daiquiri', defaultAbv: 15, icon: 'Cocktail' },
+  pina_colada: { label: 'Pina Colada', defaultAbv: 15, icon: 'Cocktail' },
+  aperol_spritz: { label: 'Aperol Spritz', defaultAbv: 11, icon: 'Champagne' },
+  sake: { label: 'Sake', defaultAbv: 15, icon: 'CupSoda' },
+  soju: { label: 'Soju', defaultAbv: 20, icon: 'GlassWater' },
+  sangria: { label: 'Sangria', defaultAbv: 10, icon: 'Wine' },
+  sherry: { label: 'Sherry', defaultAbv: 17, icon: 'Wine' },
+  port: { label: 'Porto', defaultAbv: 20, icon: 'Wine' },
 };
 
 export const HEALTH_GUIDELINES = {
@@ -61,7 +62,7 @@ export interface AlcoholLog {
   id: string;
   userId: string;
   drinkName: string;
-  drinkEmoji: string;
+  drinkEmoji: string; // Kept for display purposes in logs
   drinkType: DrinkType;
   quantity: number;
   servingSize: number;

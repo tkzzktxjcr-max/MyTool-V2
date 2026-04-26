@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Sparkles, Star, PartyPopper, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ConfettiAnimationProps {
   show: boolean;
   onComplete?: () => void;
   message?: string;
-  emoji?: string;
+  icon?: string;
 }
 
 const CONFETTI_COLORS = [
@@ -20,7 +21,7 @@ const CONFETTI_COLORS = [
   'hsl(32, 95%, 55%)',  // orange
 ];
 
-const EMOJIS = ['🎉', '✨', '🌟', '💫', '🎊', '⭐'];
+const ICON_COMPONENTS = [Sparkles, Star, PartyPopper, Trophy];
 
 const generateConfetti = (count: number) => {
   return Array.from({ length: count }, (_, i) => ({
@@ -31,8 +32,8 @@ const generateConfetti = (count: number) => {
     color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
     rotation: Math.random() * 360,
     size: 6 + Math.random() * 6,
-    emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-    isEmoji: Math.random() > 0.7,
+    IconComponent: ICON_COMPONENTS[Math.floor(Math.random() * ICON_COMPONENTS.length)],
+    isIcon: Math.random() > 0.5,
   }));
 };
 
@@ -40,7 +41,7 @@ export default function ConfettiAnimation({
   show, 
   onComplete,
   message = 'Excellent !',
-  emoji = '🎉'
+  icon
 }: ConfettiAnimationProps) {
   const [confetti, setConfetti] = useState<any[]>([]);
 
@@ -71,44 +72,50 @@ export default function ConfettiAnimation({
           className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center"
         >
           {/* Confetti pieces */}
-          {confetti.map((piece) => (
-            <motion.div
-              key={piece.id}
-              initial={{ 
-                x: `${piece.x}%`, 
-                y: -20,
-                rotate: 0,
-                opacity: 1,
-                scale: 0,
-              }}
-              animate={{ 
-                y: '100vh',
-                rotate: piece.rotation + 720,
-                opacity: [1, 1, 0],
-                scale: [0, 1, 0.5],
-              }}
-              transition={{ 
-                duration: piece.duration,
-                delay: piece.delay,
-                ease: 'easeOut',
-              }}
-              className="absolute"
-              style={{ left: `${piece.x}%` }}
-            >
-              {piece.isEmoji ? (
-                <span className="text-2xl">{piece.emoji}</span>
-              ) : (
-                <div
-                  className="rounded-full"
-                  style={{
-                    width: piece.size,
-                    height: piece.size,
-                    backgroundColor: piece.color,
-                  }}
-                />
-              )}
-            </motion.div>
-          ))}
+          {confetti.map((piece) => {
+            const IconComponent = piece.IconComponent;
+            return (
+              <motion.div
+                key={piece.id}
+                initial={{ 
+                  x: `${piece.x}%`, 
+                  y: -20,
+                  rotate: 0,
+                  opacity: 1,
+                  scale: 0,
+                }}
+                animate={{ 
+                  y: '100vh',
+                  rotate: piece.rotation + 720,
+                  opacity: [1, 1, 0],
+                  scale: [0, 1, 0.5],
+                }}
+                transition={{ 
+                  duration: piece.duration,
+                  delay: piece.delay,
+                  ease: 'easeOut',
+                }}
+                className="absolute"
+                style={{ left: `${piece.x}%` }}
+              >
+                {piece.isIcon ? (
+                  <IconComponent 
+                    className="w-5 h-5" 
+                    style={{ color: piece.color }} 
+                  />
+                ) : (
+                  <div
+                    className="rounded-full"
+                    style={{
+                      width: piece.size,
+                      height: piece.size,
+                      backgroundColor: piece.color,
+                    }}
+                  />
+                )}
+              </motion.div>
+            );
+          })}
 
           {/* Celebration message */}
           <motion.div
@@ -127,9 +134,9 @@ export default function ConfettiAnimation({
                 duration: 0.6,
                 repeat: 2,
               }}
-              className="text-6xl mb-4"
+              className="w-16 h-16 rounded-full bg-secondary/20 flex items-center justify-center mx-auto mb-4"
             >
-              {emoji}
+              <Sparkles className="w-8 h-8 text-secondary" />
             </motion.div>
             <div className="px-6 py-3 rounded-2xl bg-secondary/20 backdrop-blur-sm border border-secondary/30">
               <p className="text-xl font-bold text-secondary">{message}</p>

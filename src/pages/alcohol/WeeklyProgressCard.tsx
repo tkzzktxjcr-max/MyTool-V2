@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Flame, CheckCircle2, Sparkles } from 'lucide-react';
+import { Calendar, Flame, CheckCircle2, Sparkles, TrendingDown, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { calculateWeeklyProgress, getRiskLevel, getFeedbackMessage } from '@/features/alcohol/utils/units';
@@ -27,7 +27,7 @@ export default function WeeklyProgressCard({ weeklyUnits, weeklyLimit, streak }:
         progressClass: 'bg-secondary',
         icon: CheckCircle2,
         message: 'Excellente semaine !',
-        emoji: '🌟',
+        iconEmoji: <Trophy className="w-5 h-5" />,
       };
     }
     if (!isOverLimit) {
@@ -37,16 +37,16 @@ export default function WeeklyProgressCard({ weeklyUnits, weeklyLimit, streak }:
         progressClass: 'bg-[hsl(38,92%,50%)]',
         icon: Sparkles,
         message: 'Dans les clous',
-        emoji: '✨',
+        iconEmoji: <Sparkles className="w-5 h-5" />,
       };
     }
     return {
       color: 'text-accent',
       bgClass: 'bg-accent/20',
       progressClass: 'bg-accent',
-      icon: Calendar,
+      icon: TrendingDown,
       message: 'Au-delà de la limite',
-      emoji: '📊',
+      iconEmoji: <TrendingDown className="w-5 h-5" />,
     };
   };
 
@@ -88,7 +88,7 @@ export default function WeeklyProgressCard({ weeklyUnits, weeklyLimit, streak }:
         {/* Status message */}
         <div className="mt-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{config.emoji}</span>
+            {config.iconEmoji}
             <span className={cn("text-sm font-medium", config.color)}>{config.message}</span>
           </div>
           {remaining > 0 && !isOverLimit && (
@@ -121,9 +121,9 @@ export default function WeeklyProgressCard({ weeklyUnits, weeklyLimit, streak }:
               riskLevel === 'moderate' && "text-[hsl(38,92%,50%)]",
               riskLevel === 'high' && "text-accent"
             )}>
-              {riskLevel === 'low' && '✨ Faible'}
-              {riskLevel === 'moderate' && '🌿 Modéré'}
-              {riskLevel === 'high' && '📈 Élevé'}
+              {riskLevel === 'low' && <span className="flex items-center gap-1"><Sparkles className="w-3 h-3" /> Faible</span>}
+              {riskLevel === 'moderate' && <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Modéré</span>}
+              {riskLevel === 'high' && <span className="flex items-center gap-1"><TrendingDown className="w-3 h-3" /> Élevé</span>}
             </span>
           </div>
         </div>

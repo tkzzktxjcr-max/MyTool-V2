@@ -1,67 +1,75 @@
 "use client";
 
-import { motion } from 'framer-motion';
-import { Button } from './button';
+import { Sparkles, Star, Heart, Beer, Wine, Coffee } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface PremiumEmptyStateProps {
-  emoji: string;
+  emoji?: string;
+  icon?: React.ReactNode;
   title: string;
   description: string;
   action?: {
     label: string;
     onClick: () => void;
-    variant?: 'default' | 'secondary' | 'outline';
+    variant?: 'primary' | 'secondary' | 'outline';
   };
   className?: string;
 }
 
-export function PremiumEmptyState({
-  emoji,
-  title,
-  description,
+// Map emoji strings to Lucide icon components
+const EMOJI_TO_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
+  '📝': Star,
+  '🌱': Sparkles,
+  '🍷': Wine,
+  '🍺': Beer,
+  '🌅': Coffee,
+  '✨': Sparkles,
+};
+
+export function PremiumEmptyState({ 
+  emoji, 
+  icon,
+  title, 
+  description, 
   action,
-  className,
+  className 
 }: PremiumEmptyStateProps) {
+  // Get the appropriate icon component
+  const IconComponent = emoji ? EMOJI_TO_ICON[emoji] : null;
+  
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "flex flex-col items-center justify-center py-8 px-4 text-center",
-        className
-      )}
-    >
-      <motion.div
-        initial={{ scale: 0.8 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", damping: 15, stiffness: 200 }}
-        className="mb-4"
-      >
-        <span className="text-5xl">{emoji}</span>
-      </motion.div>
+    <div className={cn("text-center py-6 px-4", className)}>
+      {/* Icon */}
+      <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center mx-auto mb-3">
+        {icon || (IconComponent ? (
+          <IconComponent className="w-7 h-7 text-secondary" />
+        ) : (
+          <Sparkles className="w-7 h-7 text-secondary" />
+        ))}
+      </div>
       
-      <h3 className="text-lg font-semibold text-foreground mb-1">
-        {title}
-      </h3>
+      {/* Title */}
+      <h4 className="text-base font-semibold mb-1">{title}</h4>
       
-      <p className="text-sm text-muted-foreground max-w-[260px] mb-4">
+      {/* Description */}
+      <p className="text-sm text-muted-foreground max-w-[240px] mx-auto mb-4">
         {description}
       </p>
       
+      {/* Action button */}
       {action && (
-        <Button
+        <Button 
           onClick={action.onClick}
-          variant={action.variant || 'default'}
-          className={cn(
-            "rounded-xl",
-            action.variant === 'secondary' && "bg-secondary/20 text-secondary hover:bg-secondary/30 border-0",
-            action.variant === 'outline' && "border-white/10 bg-white/5 hover:bg-white/10"
-          )}
+          variant={action.variant || 'secondary'}
+          size="sm"
+          className="rounded-xl"
         >
           {action.label}
         </Button>
       )}
-    </motion.div>
+    </div>
   );
 }
+
+export default PremiumEmptyState;

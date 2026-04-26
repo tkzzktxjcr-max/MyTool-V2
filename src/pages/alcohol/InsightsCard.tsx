@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
-import { BarChart3, Trophy, Target, Flame } from 'lucide-react';
+import { BarChart3, Trophy, Target, Flame, Sparkles, TrendingDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -15,7 +15,9 @@ function EmptyState() {
   return (
     <Card className="border-0 bg-gradient-to-br from-secondary/5 to-accent/5">
       <CardContent className="p-5 text-center py-8">
-        <div className="text-6xl mb-3">🌱</div>
+        <div className="w-16 h-16 rounded-2xl bg-secondary/20 flex items-center justify-center mx-auto mb-3">
+          <Sparkles className="w-8 h-8 text-secondary" />
+        </div>
         <h3 className="text-lg font-semibold mb-2">Cultive ta conscience</h3>
         <p className="text-sm text-muted-foreground max-w-xs mx-auto">
           Chaque verre ajouté t'aide à mieux comprendre tes habitudes.
@@ -70,7 +72,7 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
               </span>
             </div>
             <p className="text-xs text-muted-foreground">
-              {soberDays === 7 ? 'Parfait ! 7 jours sans alcool 🍀' : 'Excellent travail !'}
+              {soberDays === 7 ? 'Parfait ! 7 jours sans alcool' : 'Excellent travail !'}
             </p>
           </motion.div>
         ) : insights.streak > 0 ? (
@@ -108,6 +110,10 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
             </span>
           </div>
           
+         <think>I need to continue from where I left off. The last file I was updating was InsightsCard.tsx and I need to finish it. Let me continue with the rest of the code for that file.
+</think>
+
+<dyad-write path="src/pages/alcohol/InsightsCard.tsx" description="Finishing InsightsCard update">
           {/* Progress bar */}
           <div className="h-4 rounded-full bg-white/10 overflow-hidden">
             <motion.div 
@@ -128,7 +134,7 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
               {remainingUnits > 0 ? (
                 <>{remainingUnits.toFixed(1)} restants</>
               ) : (
-                <span className="text-[hsl(38,92%,50%)]">Objectif atteint ✨</span>
+                <span className="text-[hsl(38,92%,50%)]">Objectif atteint</span>
               )}
             </span>
             <span className={cn(
@@ -153,12 +159,10 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
             {insights.dailyTrend.map((day, index) => {
               const isToday = index === 6;
               const hasUnits = day.units > 0;
-              // Calculate bar height - minimum 8px, max 80px
               const barHeight = maxUnits > 0 
                 ? Math.max(8, Math.min(80, (day.units / maxUnits) * 80))
                 : 8;
               
-              // Color based on units
               const getBarColor = () => {
                 if (!hasUnits) return 'bg-white/10';
                 if (day.units <= 2) return 'bg-secondary';
@@ -168,7 +172,6 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
 
               return (
                 <div key={day.date} className="flex flex-col items-center gap-1">
-                  {/* Value above bar */}
                   {hasUnits && (
                     <span className={cn(
                       "text-[10px] md:text-xs font-medium",
@@ -181,7 +184,6 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
                   )}
                   {!hasUnits && <span className="h-4" />}
 
-                  {/* Bar */}
                   <div className="w-full flex items-end justify-center h-20 md:h-24">
                     <motion.div
                       initial={{ height: 0 }}
@@ -195,7 +197,6 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
                     />
                   </div>
 
-                  {/* Day label */}
                   <span className={cn(
                     "text-[10px] md:text-xs",
                     isToday ? "text-secondary font-medium" : "text-muted-foreground"

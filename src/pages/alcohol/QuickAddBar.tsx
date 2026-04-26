@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Star, Check, Clock, TrendingUp, ChevronRight } from 'lucide-react';
+import { Plus, Star, Check, Clock, ChevronRight, Beer, Wine, CupSoda, Apple, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
 import type { Drink } from '@/features/alcohol/services';
 import { calculateUnits } from '@/features/alcohol/utils/units';
 import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/services';
+import { GlassWater, Sun, Sunset, Moon } from 'lucide-react';
 
 interface QuickAddBarProps {
   favorites: Drink[];
@@ -25,12 +26,54 @@ interface QuickAddBarProps {
   onShowAllDrinks?: () => void;
 }
 
-// Time of day labels
 const TIME_LABELS: Record<TimeOfDay, string> = {
   morning: 'le matin',
   afternoon: "l'apres-midi",
   evening: 'le soir',
   night: 'la nuit',
+};
+
+const getDrinkIconComponent = (type: string) => {
+  switch (type) {
+    case 'beer':
+    case 'lager':
+    case 'pilsner':
+    case 'wheat_beer':
+    case 'ipa':
+    case 'ale':
+      return Beer;
+    case 'wine':
+    case 'red_wine':
+    case 'white_wine':
+    case 'rose_wine':
+    case 'champagne':
+    case 'sangria':
+      return Wine;
+    case 'spirit':
+    case 'whisky':
+    case 'tequila':
+    case 'brandy':
+    case 'cognac':
+    case 'cocktail':
+    case 'martini':
+    case 'mojito':
+    case 'margarita':
+    case 'old_fashioned':
+    case 'cosmopolitan':
+    case 'aperol_spritz':
+    case 'sparkling':
+      return CupSoda;
+    case 'cider':
+    case 'calvados':
+      return Apple;
+    case 'vodka':
+    case 'rum':
+    case 'gin':
+    case 'soju':
+      return GlassWater;
+    default:
+      return Beer;
+  }
 };
 
 export default function QuickAddBar({ 
@@ -50,14 +93,11 @@ export default function QuickAddBar({
   const timeOfDay = getTimeOfDay();
   const timeLabel = TIME_LABELS[timeOfDay];
 
-  // Calculate BAC after adding this drink using correct formula
   const calculatePreviewBAC = (drink: Drink): number => {
     if (!userProfile) return 0;
-    // Utilise la fonction centralisée pour calculer les unités
     const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv);
     const r = userProfile.sex === 'female' ? 0.55 : 0.68;
-    const additionalBAC = (drinkUnits * 10 * 0.789) / (userProfile.weightKg * r);
-    return currentBAC + additionalBAC;
+    return currentBAC + (drinkUnits * 10 * 0.789) / (userProfile.weightKg * r);
   };
 
   const getBACStatus = (bac: number): 'safe' | 'caution' | 'danger' => {
@@ -72,7 +112,6 @@ export default function QuickAddBar({
     setPressedId(drink.id);
     setShowConfirmation(drink.id);
     onQuickAdd(drink);
-    
     setTimeout(() => setPressedId(null), 200);
     setTimeout(() => setShowConfirmation(null), 2000);
   };
@@ -85,7 +124,6 @@ export default function QuickAddBar({
     }
   };
 
-  // Combine favorites + suggestions, remove duplicates
   const allQuickDrinks = [...favorites];
   suggestedFavorites.forEach(drink => {
     if (!allQuickDrinks.find(d => d.id === drink.id)) {
@@ -95,7 +133,6 @@ export default function QuickAddBar({
 
   return (
     <div className="space-y-3">
-      {/* Section header with time */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">
           {favorites.length > 0 ? 'Accès rapide' : `Suggestions ${timeLabel}`}
@@ -106,15 +143,14 @@ export default function QuickAddBar({
         </div>
       </div>
 
-      {/* Quick drinks bar */}
       <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-hide">
         {allQuickDrinks.length > 0 ? (
           allQuickDrinks.slice(0, 6).map((drink) => {
             const previewBAC = userProfile ? calculatePreviewBAC(drink) : null;
             const status = previewBAC !== null ? getBACStatus(previewBAC) : null;
             const isFavorite = favorites.find(d => d.id === drink.id);
-            // Calcul des unités pour l'affichage (optionnel)
             const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv);
+            const IconComponent = getDrinkIconComponent(drink.type);
             
             return (
               <motion.button
@@ -134,29 +170,23 @@ export default function QuickAddBar({
                   !isFavorite && suggestedFavorites.find(d => d.id === drink.id) && "border-dashed border-secondary/30"
                 )}
               >
-                {/* Top row with badges */}
                 <div className="flex items-center justify-between w-full mb-0.5">
-                  {/* BAC Preview badge */}
                   {previewBAC !== null && (
                     <span className={cn("px-1 py-0 rounded text-[9px] font-bold", getBadgeColor(status))}>
                       ~{formatBAC(previewBAC)}
                     </span>
                   )}
-                  {/* Favorite star indicator */}
-                  {!isFavorite && (
-                    <Star className="w-3 h-3 text-secondary/50" />
-                  )}
+                  {!isFavorite && <Star className="w-3 h-3 text-secondary/50" />}
                 </div>
                 
-                {/* Confirmation */}
                 <AnimatePresence mode="wait">
                   {showConfirmation === drink.id ? (
                     <motion.span key="check" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="text-2xl">
-                      ✓
+                      <Check className="w-6 h-6 text-secondary" />
                     </motion.span>
                   ) : (
-                    <motion.span key="emoji" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="text-2xl">
-                      {drink.emoji}
+                    <motion.span key="icon" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="w-8 h-8 flex items-center justify-center">
+                      <IconComponent className={cn("w-5 h-5", pressedId === drink.id || showConfirmation === drink.id ? "text-secondary" : "text-muted-foreground")} />
                     </motion.span>
                   )}
                 </AnimatePresence>
@@ -168,33 +198,22 @@ export default function QuickAddBar({
                   {drink.name}
                 </span>
 
-                {/* Units badge */}
-                <span className="text-[10px] text-muted-foreground">
-                  ~{drinkUnits.toFixed(1)} u
-                </span>
+                <span className="text-[10px] text-muted-foreground">~{drinkUnits.toFixed(1)} u</span>
               </motion.button>
             );
           })
         ) : (
           <PremiumEmptyState
-            emoji="🍷"
+            icon={<Wine className="w-7 h-7 text-secondary" />}
             title="Pas encore de favoris"
             description={`Ajoute tes boissons préférées pour un accès rapide ${timeLabel}`}
-            action={{
-              label: "Créer une boissons",
-              onClick: onCreateDrink,
-              variant: 'secondary',
-            }}
+            action={{ label: "Créer une boissons", onClick: onCreateDrink, variant: 'secondary' }}
             className="px-2 py-3"
           />
         )}
 
-        {/* Create button */}
-        <Button
-          variant="outline"
-          onClick={onCreateDrink}
-          className="flex-shrink-0 h-[72px] px-4 rounded-2xl border-dashed border-white/20 bg-transparent hover:bg-white/5"
-        >
+        <Button variant="outline" onClick={onCreateDrink}
+          className="flex-shrink-0 h-[72px] px-4 rounded-2xl border-dashed border-white/20 bg-transparent hover:bg-white/5">
           <div className="flex flex-col items-center gap-1">
             <Plus className="w-5 h-5" />
             <span className="text-xs font-medium">Créer</span>
@@ -202,40 +221,24 @@ export default function QuickAddBar({
         </Button>
       </div>
 
-      {/* Show more drinks button */}
       {onShowAllDrinks && allQuickDrinks.length > 0 && (
-        <button
-          onClick={onShowAllDrinks}
-          className="w-full py-2 text-sm text-muted-foreground hover:text-secondary transition-colors flex items-center justify-center gap-1"
-        >
+        <button onClick={onShowAllDrinks}
+          className="w-full py-2 text-sm text-muted-foreground hover:text-secondary transition-colors flex items-center justify-center gap-1">
           <span>Voir toutes les boissons</span>
           <ChevronRight className="w-4 h-4" />
         </button>
       )}
 
-      {/* Legend */}
       {allQuickDrinks.length > 0 && userProfile && (
         <div className="flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-secondary" />
-            OK
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[hsl(38,92%,50%)]" />
-            Bientôt
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-accent" />
-            Attendre
-          </span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-secondary" />OK</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[hsl(38,92%,50%)]" />Bientôt</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-accent" />Attendre</span>
         </div>
       )}
 
-      {/* Smart suggestion hint when no favorites */}
       {favorites.length === 0 && suggestedFavorites.length > 0 && (
-        <p className="text-xs text-muted-foreground text-center">
-          Basé sur tes habitudes {timeLabel}
-        </p>
+        <p className="text-xs text-muted-foreground text-center">Basé sur tes habitudes {timeLabel}</p>
       )}
     </div>
   );

@@ -2,21 +2,22 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Target, Scale, TrendingDown, Dumbbell, Ban, Check } from 'lucide-react';
 import type { AlcoholGoal } from './useAlcoholOnboarding';
 
 interface GoalOption {
   id: AlcoholGoal;
-  emoji: string;
+  icon: React.ComponentType<{ className?: string }>;
   label: string;
   description: string;
 }
 
 const GOALS: GoalOption[] = [
-  { id: 'discover', emoji: '🎯', label: 'Découvrir', description: 'Je veux juste suivre ma consommation' },
-  { id: 'moderate', emoji: '⚖️', label: 'Modérer', description: 'Boire de manière responsable' },
-  { id: 'reduce', emoji: '📉', label: 'Réduire', description: 'Diminuer progressivement' },
-  { id: 'sport', emoji: '🏃', label: 'Sport', description: 'Optimiser ma récupération' },
-  { id: 'quit', emoji: '🚫', label: 'Arrêter', description: 'Zéro alcool' },
+  { id: 'discover', icon: Target, label: 'Découvrir', description: 'Je veux juste suivre ma consommation' },
+  { id: 'moderate', icon: Scale, label: 'Modérer', description: 'Boire de manière responsable' },
+  { id: 'reduce', icon: TrendingDown, label: 'Réduire', description: 'Diminuer progressivement' },
+  { id: 'sport', icon: Dumbbell, label: 'Sport', description: 'Optimiser ma récupération' },
+  { id: 'quit', icon: Ban, label: 'Arrêter', description: 'Zéro alcool' },
 ];
 
 interface GoalStepProps {
@@ -28,7 +29,9 @@ export function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
-        <div className="text-5xl mb-3">🎯</div>
+        <div className="w-16 h-16 rounded-2xl bg-secondary/20 flex items-center justify-center mx-auto mb-4">
+          <Target className="w-8 h-8 text-secondary" />
+        </div>
         <h2 className="text-xl font-bold">Quel est votre objectif ?</h2>
         <p className="text-sm text-muted-foreground">
           Choisissez l'objectif qui vous correspond le mieux
@@ -38,6 +41,7 @@ export function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
       <div className="space-y-3">
         {GOALS.map((goal, index) => {
           const isSelected = selectedGoal === goal.id;
+          const IconComponent = goal.icon;
           
           return (
             <motion.button
@@ -55,10 +59,10 @@ export function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
               )}
             >
               <div className={cn(
-                "w-14 h-14 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 transition-all",
+                "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0 transition-all",
                 isSelected ? "bg-secondary/20" : "bg-white/10"
               )}>
-                {goal.emoji}
+                <IconComponent className={cn("w-6 h-6", isSelected ? "text-secondary" : "text-muted-foreground")} />
               </div>
               
               <div className="flex-1 min-w-0">

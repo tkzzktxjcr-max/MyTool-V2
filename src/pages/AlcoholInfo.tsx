@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, Info, ExternalLink, FlaskConical, Scale, Clock, AlertTriangle, BookOpen, Sparkles } from 'lucide-react';
+import { X, Info, ExternalLink, FlaskConical, Scale, Clock, AlertTriangle, BookOpen, Sparkles, FlaskRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface AlcoholInfoProps {
@@ -19,8 +19,8 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
           <FlaskConical className="w-6 h-6 text-secondary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold">Comment ca marche ?</h2>
-          <p className="text-sm text-muted-foreground">La science derriere ton suivi</p>
+          <h2 className="text-xl font-bold">Comment ça marche ?</h2>
+          <p className="text-sm text-muted-foreground">La science derrière ton suivi</p>
         </div>
       </div>
 
@@ -29,7 +29,7 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-secondary flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-sm text-secondary">A visée educative</p>
+            <p className="font-medium text-sm text-secondary">À visée éducative</p>
             <p className="text-xs text-muted-foreground mt-1">
               Ces calculs sont des estimations pour t'aider à mieux comprendre tes habitudes. 
               Pour plus de précision, utilise un éthylotest professionnel.
@@ -47,14 +47,14 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
         
         <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
           <div>
-            <p className="text-sm font-medium mb-2">1. Calcul de l'alcool absorbe</p>
+            <p className="text-sm font-medium mb-2">1. Calcul de l'alcool absorbé</p>
             <code className="text-sm bg-white/10 px-3 py-2 rounded-lg block font-mono">
-              Alcool (g) = Volume (cl) x 10 x (Degre% / 100) x 0.789
+              Alcool (g) = Volume (cl) x 10 x (Degré% / 100) x 0.789
             </code>
           </div>
           
           <div>
-            <p className="text-sm font-medium mb-2">2. Calcul du pic d'alcoolemie</p>
+            <p className="text-sm font-medium mb-2">2. Calcul du pic d'alcoolémie</p>
             <code className="text-sm bg-white/10 px-3 py-2 rounded-lg block font-mono">
               BAC pic = Alcool (g) / (Poids x r)
             </code>
@@ -64,9 +64,9 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
           </div>
           
           <div>
-            <p className="text-sm font-medium mb-2">3. Elimination progressive</p>
+            <p className="text-sm font-medium mb-2">3. Élimination progressive</p>
             <code className="text-sm bg-white/10 px-3 py-2 rounded-lg block font-mono">
-              Elimination = 0.15 g/L par heure
+              Élimination = 0.15 g/L par heure
             </code>
           </div>
         </div>
@@ -85,11 +85,11 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
           </p>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Alcool absorbe :</span>
+              <span className="text-muted-foreground">Alcool absorbé :</span>
               <span className="font-mono">≈ 26g</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Pic BAC estime :</span>
+              <span className="text-muted-foreground">Pic BAC estimé :</span>
               <span className="font-mono">≈ 0.48 g/L</span>
             </div>
             <div className="flex justify-between">
@@ -97,7 +97,7 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
               <span className="font-mono">≈ 3h15</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Conduite autorisee :</span>
+              <span className="text-muted-foreground">Conduite autorisée :</span>
               <span className="font-mono">≈ 2h00</span>
             </div>
           </div>
@@ -128,9 +128,9 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
           </div>
           
           <div className="p-3 rounded-lg bg-white/5">
-            <p className="font-medium">Taux d'elimination moyen</p>
+            <p className="font-medium">Taux d'élimination moyen</p>
             <p className="text-xs text-muted-foreground">
-              Etudes cliniques montrent elimination moyenne de 0.10-0.15 g/L/heure. 
+              Études cliniques montrent élimination moyenne de 0.10-0.15 g/L/heure. 
               Revue médicale suisse, 2019.
             </p>
           </div>
@@ -141,10 +141,10 @@ export default function AlcoholInfo({ onClose, isModal = false }: AlcoholInfoPro
       <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
         <p className="text-sm font-medium">Facteurs non pris en compte</p>
         <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Variations individuelles (genetique, sante, medicaments)</li>
+          <li>Variations individuelles (génétique, santé, médicaments)</li>
           <li>Alimentation (estomac vide = absorption plus rapide)</li>
           <li>Hydratation et fatigue</li>
-          <li>Ethylotest professionnel (mesure plus precise)</li>
+          <li>Éthylotest professionnel (mesure plus précise)</li>
         </ul>
       </div>
 
