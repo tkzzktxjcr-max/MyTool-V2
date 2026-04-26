@@ -108,7 +108,6 @@ export default function AlcoholPage() {
     toast.success(`${drink.emoji} ${drink.name}`, {
       description: `${statusEmoji} ~${newBAC.toFixed(2)} g/L • ${status}`,
       duration: 3000,
-      className: 'bac-preview-toast',
     });
     
     await quickLog(drink, undefined, 1, undefined);
@@ -129,7 +128,6 @@ export default function AlcoholPage() {
     toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity})`, {
       description: `+${drinkUnits.toFixed(1)} unites • ~${newBAC.toFixed(2)} g/L`,
       duration: 3000,
-      className: 'bac-preview-toast',
     });
     
     setShowMoodSelector(false);
@@ -425,16 +423,6 @@ export default function AlcoholPage() {
               weeklyLimit={weeklyLimit}
               totalDaysTracked={logs.length > 0 ? Math.ceil((Date.now() - new Date(logs[logs.length - 1].timestamp).getTime()) / (1000 * 60 * 60 * 24)) : 0}
             />
-
-      {/* Premium Toast Styles */}
-      <style>{`
-        .bac-preview-toast {
-          background: linear-gradient(135deg, hsl(222 47% 11%), hsl(222 47% 15%)) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 1rem !important;
-          backdrop-filter: blur(12px) !important;
-        }
-      `}</style>
     </div>
   );
 }
