@@ -1,46 +1,21 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/features/auth/context';
-import { useFamily } from '@/features/family/context';
-import { useCalendar } from '@/features/calendar/hooks';
-import { useChores } from '@/features/chores/hooks';
-import { useBudget } from '@/features/budget/hooks';
 import { useAlcohol } from '@/features/alcohol/hooks';
+import { useBudget } from '@/features/budget/hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarIcon, CheckSquare, Plus, ArrowRight, PartyPopper, Users, Activity, Sparkles } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
+import { Sparkles, Plus, ArrowRight, Wine, BarChart3, Wallet, Activity, PartyPopper } from 'lucide-react';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 
-const AnimatedNumber = ({ value, suffix = '' }: { value: number; suffix?: string }) => {
-  const [display, setDisplay] = useState(0);
-  
-  useEffect(() => {
-    const duration = 1000;
-    const steps = 30;
-    const increment = value / steps;
-    let current = 0;
-    
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= value) {
-        setDisplay(value);
-        clearInterval(timer);
-      } else {
-        setDisplay(Math.floor(current));
-      }
-    }, duration / steps);
-    
-    return () => clearInterval(timer);
-  }, [value]);
-  
-  return <span>{display}{suffix}</span>;
-};
+import BACOverview from '@/components/wellbeing/BACOverview';
+import WeeklyGoalProgress from '@/components/wellbeing/WeeklyGoalProgress';
+import QuickStats from '@/components/wellbeing/QuickStats';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -52,93 +27,22 @@ const getGreeting = () => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { family } = useFamily();
-  const { events, loadEvents } = useCalendar();
-  const { loadChores, getTodaysChores } = useChores();
+  const { insights, loadData, getWeeklyUnits, bacState } = useAlcohol();
   const { budgetUsed, loadEntries } = useBudget();
-  const { insights, loadData, getTodayUnits } = useAlcohol();
 
   useEffect(() => {
-    if (!family?.id) return;
-    Promise.all([loadEvents(), loadChores(), loadEntries()]);
     loadData();
-  }, [family?.id, loadEvents, loadChores, loadEntries, loadData]);
+    loadEntries();
+  }, [loadData, loadEntries]);
 
-  if (!family) {
-    return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="max-w-lg mx-auto text-center py-8"
-      >
-        <motion.div 
-          whileHover={{ scale: 1.02 }}
-          className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-3xl md:text-4xl font-bold mb-4 mx-auto glow-primary"
-        >
-          {user?.name?.charAt(0).toUpperCase()}
-        </motion.div>
-        <motion.h1 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="text-2xl md:text-3xl font-bold mb-2"
-        >
-          Bienvenue, {user?.name?.split(' ')[0]} 👋
-        </motion.h1>
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-muted-foreground mb-6"
-        >
-          Commencez par créer ou rejoindre une famille
-        </motion.p>
-        
-        <div className="space-y-3">
-          <motion.div whileTap={{ scale: 0.98 }}>
-            <Card hover onClick={() => navigate('/family?action=create')} className="cursor-pointer">
-              <CardContent className="flex items-center gap-3 p-4 md:p-6">
-                <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <Plus className="w-6 h-6 text-primary" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="font-semibold text-sm md:text-base">Créer une famille</h3>
-                  <p className="text-xs md:text-sm text-muted-foreground">Commencez votre propre espace</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              </CardContent>
-            </Card>
-          </motion.div>
-          
-          <motion.div whileTap={{ scale: 0.98 }}>
-            <Card hover onClick={() => navigate('/family?action=join')} className="cursor-pointer">
-              <CardContent className="flex items-center gap-3 p-4 md:p-6">
-                <div className="w-12 h-12 rounded-2xl bg-secondary/20 flex items-center justify-center flex-shrink-0">
-                  <Users className="w-6 h-6 text-secondary" />
-                </div>
-                <div className="flex-1 text-left">
-                  <h3 className="font-semibold text-sm md:text-base">Rejoindre une famille</h3>
-                  <p className="text-xs md:text-sm text-muted-foreground">Utilisez un code d'invitation</p>
-                </div>
-                <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </motion.div>
-    );
-  }
-
-  const todaysChores = getTodaysChores();
-  const todaysUnits = getTodayUnits();
-  const upcomingEvents = events
-    .filter(e => new Date(e.date) >= new Date())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 4);
+  const weeklyUnits = getWeeklyUnits();
+  const weeklyLimit = HEALTH_GUIDELINES.maxWeeklyUnits;
+  const currentStreak = insights?.streak || 0;
+  const firstName = user?.name?.split(' ')[0] || 'Bienvenue';
+  const legalLimit = 0.5;
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
-      {/* Hero Section */}
+    <div className="space-y-6 max-w-2xl mx-auto">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -152,10 +56,10 @@ export default function Dashboard() {
                 {format(new Date(), 'EEEE d MMMM', { locale: fr })}
               </p>
               <h1 className="text-2xl md:text-4xl font-bold mb-2">
-                {getGreeting()}, {user?.name?.split(' ')[0]} <span className="animate-wave">👋</span>
+                {getGreeting()}, {firstName} <span className="animate-wave">👋</span>
               </h1>
               <p className="text-muted-foreground text-sm">
-                {todaysChores.length + upcomingEvents.length} choses à faire aujourd'hui
+                Prêt pour une journée de conscience ?
               </p>
             </div>
             <motion.div 
@@ -167,197 +71,149 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Card glow="primary">
-          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
-            <div className="text-2xl md:text-4xl font-bold gradient-text mb-1">
-              <AnimatedNumber value={todaysChores.length} />
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground">Corvées du jour</p>
-          </CardContent>
-        </Card>
-
-        <Card glow="secondary">
-          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
-            <div className={cn("text-2xl md:text-4xl font-bold mb-1", budgetUsed > 80 ? "text-destructive" : "text-secondary")}>
-              <AnimatedNumber value={Math.round(budgetUsed)} suffix="%" />
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground">Budget utilisé</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
-            <div className="text-2xl md:text-4xl font-bold mb-1">
-              <AnimatedNumber value={Number(insights?.totalWeeklyUnits.toFixed(1) || 0)} />
-            </div>
-            <p className="text-xs md:text-sm text-muted-foreground">Alcool (semaine)</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-4 md:pt-6 text-center p-3 md:p-0">
-            <div className="text-2xl md:text-4xl font-bold mb-1">{upcomingEvents.length}</div>
-            <p className="text-xs md:text-sm text-muted-foreground">Événements</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Today's Tasks */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <Button 
+          onClick={() => navigate('/wellbeing')}
+          className="w-full h-14 rounded-2xl text-base font-medium bg-secondary hover:bg-secondary/90"
         >
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                    <CheckSquare className="w-4 h-4 md:w-5 md:h-5 text-primary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-sm md:text-base">Corvées du jour</h2>
-                    <p className="text-xs text-muted-foreground">{todaysChores.length} tâches</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/chores')}>
-                  Voir tout
-                </Button>
-              </div>
+          <Plus className="w-5 h-5 mr-2" />
+          J'ai bu un verre
+        </Button>
+      </motion.div>
 
-              {todaysChores.length === 0 ? (
-                <div className="text-center py-6 md:py-8">
-                  <PartyPopper className="w-10 h-10 md:w-12 md:h-12 mx-auto text-muted-foreground/30 mb-2" />
-                  <p className="text-muted-foreground text-sm">Aucune corvée prévue !</p>
-                </div>
-              ) : (
-                <div className="space-y-2 md:space-y-3">
-                  {todaysChores.slice(0, 3).map((chore) => (
-                    <div key={chore.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-                      <div className="w-5 h-5 rounded-full border-2 border-white/20 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{chore.title}</p>
-                      </div>
-                      <Badge variant={chore.status === 'completed' ? 'secondary' : 'outline'} className="text-xs">
-                        {chore.frequency}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </motion.div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+        <BACOverview
+          currentBAC={bacState.currentBAC}
+          isAboveLimit={bacState.isAboveLimit}
+          isNearLimit={bacState.isNearLimit}
+          legalLimit={legalLimit}
+        />
+      </motion.div>
 
-        {/* Upcoming Events */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card>
-            <CardContent className="p-4 md:p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
-                    <CalendarIcon className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold text-sm md:text-base">À venir</h2>
-                    <p className="text-xs text-muted-foreground">{upcomingEvents.length} événements</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/calendar')}>
-                  Voir tout
-                </Button>
-              </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <WeeklyGoalProgress 
+          currentUnits={weeklyUnits}
+          goalUnits={weeklyLimit}
+        />
+      </motion.div>
 
-              <div className="space-y-2 md:space-y-3">
-                {upcomingEvents.slice(0, 3).map((event) => (
-                  <div key={event.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-                    <div 
-                      className="w-10 h-10 md:w-12 md:h-12 rounded-xl flex flex-col items-center justify-center text-white flex-shrink-0"
-                      style={{ backgroundColor: event.color }}
-                    >
-                      <span className="text-[8px] md:text-[10px] font-medium">
-                        {format(parseISO(event.date), 'EEE', { locale: fr })}
-                      </span>
-                      <span className="text-sm md:text-lg font-bold">
-                        {format(parseISO(event.date), 'd')}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{event.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(parseISO(event.date), 'HH:mm')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+        <QuickStats 
+          streak={currentStreak}
+          budgetUsed={budgetUsed}
+          weeklyUnits={weeklyUnits}
+          weeklyLimit={weeklyLimit}
+        />
+      </motion.div>
 
-      {/* Wellbeing Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-      >
-        <Card className="border border-secondary/20">
-          <CardContent className="p-4 md:p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 md:gap-3">
-                <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
-                  <Activity className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <Card>
+          <CardContent className="p-5">
+            <h3 className="font-semibold flex items-center gap-2 mb-3">
+              <Sparkles className="w-5 h-5 text-secondary" />
+              Quoi de neuf ?
+            </h3>
+            {currentStreak >= 3 ? (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-secondary/10 border border-secondary/20">
+                <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                  <PartyPopper className="w-5 h-5 text-secondary" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-sm md:text-base">Insights Bien-être</h2>
-                  <p className="text-xs text-muted-foreground">Suivi personnel</p>
+                  <p className="font-medium text-sm text-secondary">
+                    {currentStreak} jours sobre consecutive !
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Continue comme ça, c'est excellent pour ta récupération.
+                  </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/alcohol')}>
-                Détails
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3 md:gap-4">
-              <div className="text-center p-2 md:p-3">
-                <div className={cn(
-                  "text-xl md:text-2xl font-bold mb-1",
-                  todaysUnits <= 2 ? "text-secondary" : todaysUnits <= 4 ? "text-accent" : "text-destructive"
-                )}>
-                  {todaysUnits.toFixed(1)}
+            ) : weeklyUnits === 0 ? (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-secondary/10 border border-secondary/20">
+                <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-secondary" />
                 </div>
-                <p className="text-xs text-muted-foreground">aujourd'hui</p>
-              </div>
-
-              <div className="text-center p-2 md:p-3">
-                <div className="text-xl md:text-2xl font-bold mb-1">
-                  {insights?.averagePerDay.toFixed(1) || '0'}
+                <div>
+                  <p className="font-medium text-sm text-secondary">
+                    Semaine parfaite
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Zéro alcool cette semaine. Profite de ta clarté d'esprit !
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">moyenne / jour</p>
               </div>
-
-              <div className="text-center p-2 md:p-3">
-                <div className={cn(
-                  "text-xl md:text-2xl font-bold mb-1 flex items-center justify-center gap-1",
-                  insights?.riskLevel === 'low' ? "text-secondary" : insights?.riskLevel === 'moderate' ? "text-accent" : "text-destructive"
-                )}>
-                  {insights?.riskLevel === 'low' && <Sparkles className="w-4 h-4" />}
-                  {insights?.riskLevel === 'low' ? 'Faible' : insights?.riskLevel === 'moderate' ? 'Modéré' : 'Élevé'}
+            ) : (
+              <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Activity className="w-5 h-5 text-primary" />
                 </div>
-                <p className="text-xs text-muted-foreground">risque</p>
+                <div>
+                  <p className="font-medium text-sm">Reste conscient</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {weeklyUnits <= weeklyLimit 
+                      ? "Tu es dans les limites de ton objectif. Continue !"
+                      : "Tu as dépassé ton objectif cette semaine. C'est l'occasion de reflechir."}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
+      </motion.div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <div className="grid grid-cols-2 gap-3">
+          <Card hover className="cursor-pointer transition-all hover:scale-[1.02]" onClick={() => navigate('/wellbeing')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-secondary/20 flex items-center justify-center">
+                <Wine className="w-5 h-5 text-secondary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">Bien-être</p>
+                <p className="text-xs text-muted-foreground">Tracker & BAC</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+
+          <Card hover className="cursor-pointer transition-all hover:scale-[1.02]" onClick={() => navigate('/insights')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">Insights</p>
+                <p className="text-xs text-muted-foreground">Patterns & tendances</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+
+          <Card hover className="cursor-pointer transition-all hover:scale-[1.02]" onClick={() => navigate('/budget')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-accent" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">Budget</p>
+                <p className="text-xs text-muted-foreground">Depenses & finances</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+
+          <Card hover className="cursor-pointer transition-all hover:scale-[1.02]" onClick={() => navigate('/settings')}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-sm">Parametres</p>
+                <p className="text-xs text-muted-foreground">Profil & objectif</p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+            </CardContent>
+          </Card>
+        </div>
       </motion.div>
     </div>
   );

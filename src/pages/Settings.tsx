@@ -19,7 +19,7 @@ export default function SettingsPage() {
 
   const handleExportData = async () => {
     toast.success('Export en cours', {
-      description: 'Tes données seront téléchargées dans quelques instants.',
+      description: 'Tes donnees seront telechargees dans quelques instants.',
     });
   };
 
@@ -27,8 +27,8 @@ export default function SettingsPage() {
     setIsDeleting(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success('Compte supprimé', {
-        description: 'Toutes tes données ont été supprimées.',
+      toast.success('Compte supprime', {
+        description: 'Toutes tes donnees ont ete supprimees.',
       });
       setTimeout(() => {
         navigate('/auth');
@@ -42,10 +42,10 @@ export default function SettingsPage() {
   };
 
   const privacyChecks = [
-    { icon: Check, label: 'Stockées localement sur ton appareil', description: 'Tes données ne transitent pas par nos serveurs' },
-    { icon: Check, label: 'Jamais revendues ou partagées', description: 'Ta vie privée est notre priorité' },
-    { icon: Check, label: 'Export possible à tout moment', description: 'Télécharge tes données quand tu le souhaites' },
-    { icon: Check, label: 'Suppression en 1 clic', description: 'Supprime définitivement toutes tes données' },
+    { icon: Check, label: 'Stockees localement sur ton appareil', description: 'Tes donnees ne transitent pas par nos serveurs' },
+    { icon: Check, label: 'Jamais revendues ou partagees', description: 'Ta vie privee est notre priorite' },
+    { icon: Check, label: 'Export possible a tout moment', description: 'Telecharge tes donnees quand tu le souhaites' },
+    { icon: Check, label: 'Suppression en 1 clic', description: 'Supprime definitivement toutes tes donnees' },
   ];
 
   return (
@@ -58,7 +58,7 @@ export default function SettingsPage() {
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-lg font-semibold">Paramètres</h1>
+        <h1 className="text-lg font-semibold">Parametres</h1>
       </header>
 
       <div className="p-4 space-y-6 max-w-2xl mx-auto">
@@ -70,7 +70,7 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-2 mb-4">
             <Lock className="w-5 h-5 text-secondary" />
-            <h2 className="text-lg font-semibold">Confidentialité</h2>
+            <h2 className="text-lg font-semibold">Confidentialite</h2>
           </div>
 
           <Card className="overflow-hidden border-secondary/20">
@@ -94,9 +94,9 @@ export default function SettingsPage() {
 
               {/* Title */}
               <div className="text-center">
-                <h3 className="text-lg font-semibold">Tes données sont privées</h3>
+                <h3 className="text-lg font-semibold">Tes donnees sont privees</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Nous prenons ta vie privée au sérieux
+                  Nous prenons ta vie privee au serieux
                 </p>
               </div>
 
@@ -140,7 +140,7 @@ export default function SettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-lg font-semibold mb-4">Actions sur tes données</h2>
+          <h2 className="text-lg font-semibold mb-4">Actions sur tes donnees</h2>
           
           <div className="space-y-3">
             {/* Export Button */}
@@ -153,8 +153,8 @@ export default function SettingsPage() {
                 <Download className="w-5 h-5 text-accent" />
               </div>
               <div className="text-left">
-                <p className="font-medium">Exporter mes données</p>
-                <p className="text-xs text-muted-foreground">Télécharge une copie de toutes tes données</p>
+                <p className="font-medium">Exporter mes donnees</p>
+                <p className="text-xs text-muted-foreground">Telecharge une copie de toutes tes donnees</p>
               </div>
             </Button>
 
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="text-left">
                     <p className="font-medium">Supprimer mon compte</p>
-                    <p className="text-xs text-destructive/80">Action irréversible</p>
+                    <p className="text-xs text-destructive/80">Action irreversible</p>
                   </div>
                 </Button>
               </DialogTrigger>
@@ -178,10 +178,10 @@ export default function SettingsPage() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-destructive">
                     <Trash2 className="w-5 h-5" />
-                    Supprimer définitivement ?
+                    Supprimer definitivement ?
                   </DialogTitle>
                   <p className="text-sm text-muted-foreground text-left">
-                    Cette action supprimera définitivement ton compte et toutes tes données. Cette action est irréversible.
+                    Cette action supprimera definitivement ton compte et toutes tes donnees. Cette action est irreversible.
                   </p>
                 </DialogHeader>
                 <div className="flex flex-col sm:flex-row gap-2 mt-4">
@@ -216,10 +216,10 @@ export default function SettingsPage() {
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto mb-3">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
-          <h3 className="font-semibold">Family Hub</h3>
+          <h3 className="font-semibold">WellHub</h3>
           <p className="text-xs text-muted-foreground mt-1">Version 1.0.0</p>
           <p className="text-xs text-muted-foreground mt-0.5 flex items-center justify-center gap-1">
-            Fait avec <Heart className="w-3 h-3 text-destructive fill-destructive" /> pour ton bien-être
+            Fait avec <Heart className="w-3 h-3 text-destructive fill-destructive" /> pour ton bien-etre
           </p>
         </motion.div>
       </div>
@@ -230,7 +230,7 @@ export default function SettingsPage() {
           <SheetHeader>
             <SheetTitle className="text-center flex items-center gap-2">
               <Shield className="w-5 h-5 text-secondary" />
-              Politique de confidentialité
+              Politique de confidentialite
             </SheetTitle>
           </SheetHeader>
           
@@ -241,7 +241,7 @@ export default function SettingsPage() {
                 Local Storage
               </h4>
               <p className="text-muted-foreground">
-                Toutes tes données de consommation sont stockées localement sur ton appareil. Seul toi y as accès.
+                Toutes tes donnees de consommation sont stockees localement sur ton appareil. Seul toi y as acces.
               </p>
             </div>
 
@@ -251,7 +251,7 @@ export default function SettingsPage() {
                 Aucune revente
               </h4>
               <p className="text-muted-foreground">
-                Nous ne revendons jamais tes données à des tiers. Ta vie privée est notre priorité absolue.
+                Nous ne revendons jamais tes donnees a des tiers. Ta vie privee est notre priorite absolue.
               </p>
             </div>
 
@@ -261,7 +261,7 @@ export default function SettingsPage() {
                 Export & Suppression
               </h4>
               <p className="text-muted-foreground">
-                Tu peux exporter ou supprimer tes données à tout moment depuis cette page. La suppression est immédiate et irréversible.
+                Tu peux exporter ou supprimer tes donnees a tout moment depuis cette page. La suppression est immediate et irreversible.
               </p>
             </div>
 

@@ -5,25 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
-  Calendar, 
-  CheckSquare, 
-  Wallet, 
   Wine, 
-  Users, 
+  Sparkles, 
+  Wallet, 
+  Settings, 
   Menu,
   X,
-  LogOut
+  LogOut,
+  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { path: '/', icon: Home, label: 'Accueil' },
-  { path: '/calendar', icon: Calendar, label: 'Calendrier' },
-  { path: '/chores', icon: CheckSquare, label: 'Corvées' },
+  { path: '/', icon: Home, label: 'Tableau de bord' },
+  { path: '/wellbeing', icon: Wine, label: 'Bien-être' },
+  { path: '/insights', icon: Sparkles, label: 'Insights' },
   { path: '/budget', icon: Wallet, label: 'Budget' },
-  { path: '/alcohol', icon: Wine, label: 'Bien-être' },
-  { path: '/family', icon: Users, label: 'Famille' },
+  { path: '/settings', icon: Settings, label: 'Paramètres' },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -37,9 +36,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
-            F
+            W
           </div>
-          <span className="font-bold">Family Hub</span>
+          <span className="font-bold">WellHub</span>
         </Link>
         <button 
           onClick={() => setMobileMenuOpen(true)}
@@ -97,9 +96,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="p-6 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl">
-                    F
+                    W
                   </div>
-                  <span className="font-bold text-lg">Family Hub</span>
+                  <span className="font-bold text-lg">WellHub</span>
                 </Link>
               </div>
 
@@ -156,9 +155,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl">
-              F
+              W
             </div>
-            <span className="font-bold text-lg">Family Hub</span>
+            <span className="font-bold text-lg">WellHub</span>
           </Link>
         </div>
 
