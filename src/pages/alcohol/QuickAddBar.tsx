@@ -6,7 +6,7 @@ import { Plus, Star, Check, Clock, TrendingUp, Sparkles, ChevronRight } from 'lu
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Drink } from '@/features/alcohol/service';
-import { calculateUnits } from './QuantitySelector';
+import { calculateUnits } from '@/features/alcohol/utils/units';
 import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
 
 interface QuickAddBarProps {
@@ -49,10 +49,11 @@ export default function QuickAddBar({
   const timeOfDay = getTimeOfDay();
   const timeLabel = TIME_LABELS[timeOfDay];
 
-  // Calculate BAC after adding this drink
+  // Calculate BAC after adding this drink using correct formula
   const calculatePreviewBAC = (drink: Drink): number => {
     if (!userProfile) return 0;
-    const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv, 1);
+    // Utilise la fonction centralisée pour calculer les unités
+    const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv);
     const r = userProfile.sex === 'female' ? 0.55 : 0.68;
     const additionalBAC = (drinkUnits * 10 * 0.789) / (userProfile.weightKg * r);
     return currentBAC + additionalBAC;
@@ -111,6 +112,8 @@ export default function QuickAddBar({
             const previewBAC = userProfile ? calculatePreviewBAC(drink) : null;
             const status = previewBAC !== null ? getBACStatus(previewBAC) : null;
             const isFavorite = favorites.find(d => d.id === drink.id);
+            // Calcul des unités pour l'affichage (optionnel)
+            const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv);
             
             return (
               <motion.button
@@ -155,6 +158,11 @@ export default function QuickAddBar({
                   pressedId === drink.id || showConfirmation === drink.id ? "text-secondary" : ""
                 )}>
                   {drink.name}
+                </span>
+
+                {/* Units badge */}
+                <span className="text-[10px] text-muted-foreground">
+                  ~{drinkUnits.toFixed(1)} u
                 </span>
                 
                 {/* BAC Preview badge */}

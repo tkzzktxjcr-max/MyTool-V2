@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
 import type { Drink } from '@/features/alcohol/service';
-import { calculateUnits } from './alcohol/QuantitySelector';
+import { calculateUnits, calculateUnitsWithQuantity, getFeedbackMessage, calculateWeeklyProgress } from '@/features/alcohol/utils/units';
 import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
 
 import BACCard from './alcohol/BACCard';
@@ -91,7 +91,8 @@ export default function AlcoholPage() {
   };
 
   const handleQuickAdd = async (drink: Drink) => {
-    const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv, 1);
+    // Utilise la fonction centralisée avec conversion cl→ml correcte
+    const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv);
     const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
     const weight = userProfile?.weightKg || 70;
     const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
@@ -111,7 +112,8 @@ export default function AlcoholPage() {
     if (!selectedDrink) return;
     
     const moodValue = mood === 'none' ? undefined : mood as MoodType;
-    const drinkUnits = calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity);
+    // Utilise calculateUnitsWithQuantity pour calculer correctement les unités
+    const drinkUnits = calculateUnitsWithQuantity(selectedDrink.defaultServingSize, selectedDrink.abv, quantity);
     const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
     const weight = userProfile?.weightKg || 70;
     const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
@@ -165,8 +167,9 @@ export default function AlcoholPage() {
     setShowOnboarding(true);
   };
 
+  // Calcule les unités totales avec la fonction centralisée
   const totalUnits = selectedDrink 
-    ? calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity)
+    ? calculateUnitsWithQuantity(selectedDrink.defaultServingSize, selectedDrink.abv, quantity)
     : 0;
 
   const isFirstUse = logs.length === 0;
@@ -380,7 +383,11 @@ export default function AlcoholPage() {
       </div>
 
       {/* Weekly Progress */}
-      <WeeklyProgressCard weeklyUnits={weeklyUnits} weeklyLimit={weeklyLimit} streak={insights?.streak} />
+      <WeeklyProgressCard 
+        weeklyUnits={weeklyUnits} 
+        weeklyLimit={weeklyLimit} 
+        streak={insights?.streak} 
+      />
       
       {/* Insights */}
       <InsightsCard insights={insights} />

@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Flame, CheckCircle2, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { calculateWeeklyProgress, getRiskLevel, getFeedbackMessage } from '@/features/alcohol/utils/units';
 
 interface WeeklyProgressCardProps {
   weeklyUnits: number;
@@ -12,10 +13,11 @@ interface WeeklyProgressCardProps {
 }
 
 export default function WeeklyProgressCard({ weeklyUnits, weeklyLimit, streak }: WeeklyProgressCardProps) {
-  const progress = Math.min((weeklyUnits / weeklyLimit) * 100, 100);
+  const progress = calculateWeeklyProgress(weeklyUnits, weeklyLimit);
   const remaining = Math.max(weeklyLimit - weeklyUnits, 0);
   const isOverLimit = weeklyUnits > weeklyLimit;
   const isGoalAchieved = weeklyUnits <= weeklyLimit * 0.8;
+  const riskLevel = getRiskLevel(weeklyUnits, weeklyLimit);
 
   const getStatusConfig = () => {
     if (isGoalAchieved) {
@@ -94,6 +96,36 @@ export default function WeeklyProgressCard({ weeklyUnits, weeklyLimit, streak }:
               {remaining.toFixed(1)} restantes
             </span>
           )}
+        </div>
+
+        {/* Progress percentage */}
+        <div className="mt-2 text-center">
+          <span className={cn(
+            "text-2xl font-bold",
+            progress <= 80 ? "text-secondary" : 
+            progress <= 100 ? "text-[hsl(38,92%,50%)]" : 
+            "text-accent"
+          )}>
+            {Math.round(progress)}%
+          </span>
+          <span className="text-xs text-muted-foreground ml-1">de l'objectif</span>
+        </div>
+
+        {/* Risk level indicator */}
+        <div className="mt-3 pt-3 border-t border-white/10">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Niveau de risque</span>
+            <span className={cn(
+              "text-xs font-medium",
+              riskLevel === 'low' && "text-secondary",
+              riskLevel === 'moderate' && "text-[hsl(38,92%,50%)]",
+              riskLevel === 'high' && "text-accent"
+            )}>
+              {riskLevel === 'low' && '✨ Faible'}
+              {riskLevel === 'moderate' && '🌿 Modéré'}
+              {riskLevel === 'high' && '📈 Élevé'}
+            </span>
+          </div>
         </div>
 
         {/* Streak */}

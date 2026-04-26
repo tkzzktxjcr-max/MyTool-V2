@@ -3,6 +3,7 @@
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { calculateUnits } from '@/features/alcohol/utils/units';
 
 interface QuantitySelectorProps {
   quantity: number;
@@ -70,6 +71,11 @@ export default function QuantitySelector({
   );
 }
 
-export const calculateUnits = (servingSize: number, abv: number, quantity: number): number => {
-  return ((servingSize * abv / 100 * 0.789) / 10) * quantity;
+/**
+ * Calcule les unités d'alcool avec quantité
+ * @deprecated Utiliser calculateUnitsWithQuantity depuis '@/features/alcohol/utils/units'
+ */
+export const calculateUnitsFromQuantity = (servingSize: number, abv: number, quantity: number): number => {
+  const singleUnit = calculateUnits(servingSize, abv);
+  return Math.round(singleUnit * quantity * 10) / 10;
 };

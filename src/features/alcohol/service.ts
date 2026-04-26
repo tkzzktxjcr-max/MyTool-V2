@@ -2,6 +2,7 @@ import { createDocument, listDocuments, updateDocument, deleteDocument, Query } 
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { AlcoholLog, DrinkType, MoodType, AlcoholInsight, AlcoholGoal } from './types';
 import { DRINK_TYPES, HEALTH_GUIDELINES } from './types';
+import { calculateUnits, calculateUnitsWithQuantity } from './utils/units';
 
 // =============================================================================
 // DRINK TYPE
@@ -40,11 +41,15 @@ export interface UserProfile {
 }
 
 // =============================================================================
-// HELPERS
+// HELPERS - Using centralized units utility
 // =============================================================================
 
-const calculateUnits = (volumeCl: number, abv: number): number => {
-  return (volumeCl * abv / 100 * 0.789) / 10;
+/**
+ * @deprecated Use calculateUnits from './utils/units' instead
+ * Cette fonction est conservée pour compatibilité mais utilise maintenant le bon calcul.
+ */
+const calculateDrinkUnits = (volumeCl: number, abv: number): number => {
+  return calculateUnits(volumeCl, abv);
 };
 
 const mapDocToDrink = (doc: any): Drink => ({
@@ -528,7 +533,8 @@ export const alcoholService = {
     }
   ): Promise<AlcoholLog> {
     const quantity = data.quantity || 1;
-    const units = calculateUnits(data.servingSize, data.abv) * quantity;
+    // Utilise la fonction centralisée avec conversion cl→ml correcte
+    const units = calculateUnitsWithQuantity(data.servingSize, data.abv, quantity);
     const timestamp = data.timestamp || new Date().toISOString();
 
     const doc: any = await createDocument(COLLECTIONS.ALCOHOL_LOGS, {
@@ -605,16 +611,20 @@ export const alcoholService = {
     monthAgo.setDate(monthAgo.getDate() - 30);
 
     const weeklyLogs = logs.filter(l => new Date(l.timestamp) >= weekAgo);
-    const weeklyUnits = weeklyLogs.reduce((sum, l) => sum + l.units, 0);
-    const monthlyUnits = logs.filter(l => new Date(l.timestamp) >= monthAgo).reduce((sum, l) => sum + l.units, 0);
+    
+    // Utilise les unités stockées dans les logs (calculées correctement)
+    const weeklyUnits = weeklyLogs.reduce((sum, l) => sum + (l.units || 0), 0);
+    const monthlyUnits = logs.filter(l => new Date(l.timestamp) >= monthAgo).reduce((sum, l) => sum + (l.units || 0), 0);
     const averagePerDay = weeklyLogs.length > 0 ? weeklyUnits / 7 : 0;
 
     const dailyTrend = Array.from({ length: 7 }, (_, i) => {
       const date = new Date(now);
       date.setDate(date.getDate() - (6 - i));
       const dateStr = date.toISOString().split('T')[0];
-      const dayUnits = logs.filter(l => l.timestamp.split('T')[0] === dateStr).reduce((sum, l) => sum + l.units, 0);
-      return { date: dateStr, units: dayUnits };
+      const dayUnits = logs
+        .filter(l => l.timestamp.split('T')[0] === dateStr)
+        .reduce((sum, l) => sum + (l.units || 0), 0);
+      return { date: dateStr, units: Math.round(dayUnits * 10) / 10 };
     });
 
     const weeklyTrend = Array.from({ length: 4 }, (_, i) => {
@@ -626,8 +636,8 @@ export const alcoholService = {
       const weekUnits = logs.filter(l => {
         const d = new Date(l.timestamp);
         return d >= weekStart && d < weekEnd;
-      }).reduce((sum, l) => sum + l.units, 0);
-      return { week: weekLabel, units: weekUnits };
+      }).reduce((sum, l) => sum + (l.units || 0), 0);
+      return { week: weekLabel, units: Math.round(weekUnits * 10) / 10 };
     }).reverse();
 
     const drinkTypeBreakdown = Object.keys(DRINK_TYPES).reduce((acc, type) => {
@@ -638,7 +648,7 @@ export const alcoholService = {
     weeklyLogs.forEach(log => {
       if (drinkTypeBreakdown[log.drinkType]) {
         drinkTypeBreakdown[log.drinkType].count += log.quantity || 1;
-        drinkTypeBreakdown[log.drinkType].units += log.units;
+        drinkTypeBreakdown[log.drinkType].units += log.units || 0;
       }
     });
 
@@ -653,12 +663,12 @@ export const alcoholService = {
     const weekendUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day === 0 || day === 6;
-    }).reduce((sum, l) => sum + l.units, 0);
+    }).reduce((sum, l) => sum + (l.units || 0), 0);
 
     const weekdayUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
       return day !== 0 && day !== 6;
-    }).reduce((sum, l) => sum + l.units, 0);
+    }).reduce((sum, l) => sum + (l.units || 0), 0);
 
     if (weekendUnits > weekdayUnits * 1.5 && weekendUnits > 5) {
       patterns.push('Boire surtout le week-end est courant');
@@ -692,14 +702,16 @@ export const alcoholService = {
       riskLevel = 'low';
     }
 
-    const weeklyGoalProgress = effectiveLimit > 0 ? Math.min((weeklyUnits / effectiveLimit) * 100, 150) : 0;
+    const weeklyGoalProgress = effectiveLimit > 0 
+      ? Math.min(Math.round((weeklyUnits / effectiveLimit) * 100), 150) 
+      : 0;
 
     let streak = 0;
     for (let i = 0; i <= 30; i++) {
       const checkDate = new Date(now);
       checkDate.setDate(checkDate.getDate() - i);
       const dateStr = checkDate.toISOString().split('T')[0];
-      const hasDrinks = logs.some(l => l.timestamp.split('T')[0] === dateStr);
+      const hasDrinks = logs.some(l => l.timestamp.split('T')[0] === dateStr && (l.units || 0) > 0);
       if (!hasDrinks) {
         streak++;
       } else if (i > 0) {
@@ -708,9 +720,9 @@ export const alcoholService = {
     }
 
     return {
-      totalWeeklyUnits: weeklyUnits,
-      totalMonthlyUnits: monthlyUnits,
-      averagePerDay,
+      totalWeeklyUnits: Math.round(weeklyUnits * 10) / 10,
+      totalMonthlyUnits: Math.round(monthlyUnits * 10) / 10,
+      averagePerDay: Math.round(averagePerDay * 10) / 10,
       dailyTrend,
       weeklyTrend,
       drinkTypeBreakdown,
