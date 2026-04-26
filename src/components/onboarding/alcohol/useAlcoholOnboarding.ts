@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
 import { profileService, goalsService } from '@/features/alcohol/service';
 
@@ -43,6 +43,24 @@ const GOAL_WEEKLY_LIMITS: Record<Exclude<AlcoholGoal, null>, number> = {
   quit: 0,
 };
 
+// Load from localStorage synchronously to avoid flash
+const loadStoredData = () => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const data = JSON.parse(stored);
+      return {
+        profile: data.profile || { goal: null, sex: 'male', weight: 70, favoriteDrinks: [] },
+        completed: data.completed || false,
+        completedAt: data.completedAt || null,
+      };
+    }
+  } catch (e) {
+    console.warn('[AlcoholOnboarding] Failed to load from storage:', e);
+  }
+  return null;
+};
+
 interface UseAlcoholOnboardingReturn {
   profile: AlcoholProfile;
   step: number;
@@ -62,28 +80,22 @@ interface UseAlcoholOnboardingReturn {
 
 export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   const { user } = useAuth();
-  const [profile, setProfile] = useState<AlcoholProfile>({
-    goal: null,
-    sex: 'male',
-    weight: 70,
-    favoriteDrinks: [],
-  });
+  
+  // Load initial state from localStorage synchronously
+  const initialData = useMemo(() => loadStoredData(), []);
+  
+  const [profile, setProfile] = useState<AlcoholProfile>(
+    initialData?.profile || { goal: null, sex: 'male', weight: 70, favoriteDrinks: [] }
+  );
   const [step, setStep] = useState(0);
-  const [hasCompleted, setHasCompleted] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(initialData?.completed || false);
+  const [pendingSave, setPendingSave] = useState(false);
 
+  // If onboarding was completed before, load the saved data
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data = JSON.parse(stored);
-        setProfile(data.profile);
-        setHasCompleted(data.completed || false);
-      }
-    } catch (e) {
-      console.warn('[AlcoholOnboarding] Failed to load from storage:', e);
+    if (initialData?.completed && initialData.profile) {
+      console.log('[AlcoholOnboarding] Loaded completed state from storage');
     }
-    setIsLoaded(true);
   }, []);
 
   const saveToStorage = useCallback((completed: boolean = true) => {
@@ -94,6 +106,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
         completedAt: completed ? new Date().toISOString() : null,
       }));
       setHasCompleted(completed);
+      console.log('[AlcoholOnboarding] Saved to storage:', { completed, profile });
     } catch (e) {
       console.warn('[AlcoholOnboarding] Failed to save to storage:', e);
     }
@@ -146,63 +159,58 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   }, [step, profile]);
 
   const complete = useCallback(async () => {
-      console.log('[AlcoholOnboarding] complete() called');
-      console.log('[AlcoholOnboarding] User ID:', user?.$id);
-      console.log('[AlcoholOnboarding] Profile data:', { goal: profile.goal, sex: profile.sex, weight: profile.weight });
-  
-      if (!user?.$id) {
-        console.log('[AlcoholOnboarding] No user ID, saving to storage only');
-        saveToStorage(true);
-        return;
-      }
-  
-      try {
-        // Save profile to Appwrite
-        console.log('[AlcoholOnboarding] Saving profile...');
-        await profileService.createOrUpdateProfile(user.$id, {
-          weightKg: profile.weight,
-          sex: profile.sex,
-          legalLimit: 0.5,
-        });
-  
-        // Save goal to Appwrite
-        const weeklyLimit = profile.goal ? GOAL_WEEKLY_LIMITS[profile.goal] : 14;
-        console.log('[AlcoholOnboarding] Saving goal with weekly limit:', weeklyLimit);
-        await goalsService.createOrUpdateGoal(user.$id, {
-          weeklyLimit,
-          isActive: true,
-        });
-  
-        // Save favorite drinks to localStorage
-        localStorage.setItem(DRINKS_KEY, JSON.stringify(profile.favoriteDrinks));
-        
-        console.log('[AlcoholOnboarding] All data saved successfully');
-        saveToStorage(true);
-      } catch (e: any) {
-        console.error('[AlcoholOnboarding] Failed to complete:', e?.message || e);
-        // Still save to localStorage even if Appwrite fails
-        localStorage.setItem(DRINKS_KEY, JSON.stringify(profile.favoriteDrinks));
-        saveToStorage(true);
-      }
-    }, [user, profile, saveToStorage]);
+    console.log('[AlcoholOnboarding] complete() called');
+    console.log('[AlcoholOnboarding] User ID:', user?.$id);
+    console.log('[AlcoholOnboarding] Profile data:', { goal: profile.goal, sex: profile.sex, weight: profile.weight });
+
+    // Always save to localStorage first
+    localStorage.setItem(DRINKS_KEY, JSON.stringify(profile.favoriteDrinks));
+    
+    if (!user?.$id) {
+      console.log('[AlcoholOnboarding] No user ID, saving to storage only');
+      saveToStorage(true);
+      return;
+    }
+
+    try {
+      // Save profile to Appwrite
+      console.log('[AlcoholOnboarding] Saving profile...');
+      await profileService.createOrUpdateProfile(user.$id, {
+        weightKg: profile.weight,
+        sex: profile.sex,
+        legalLimit: 0.5,
+      });
+
+      // Save goal to Appwrite
+      const weeklyLimit = profile.goal ? GOAL_WEEKLY_LIMITS[profile.goal] : 14;
+      console.log('[AlcoholOnboarding] Saving goal with weekly limit:', weeklyLimit);
+      await goalsService.createOrUpdateGoal(user.$id, {
+        weeklyLimit,
+        isActive: true,
+      });
+
+      console.log('[AlcoholOnboarding] All data saved successfully to Appwrite');
+      saveToStorage(true);
+    } catch (e: any) {
+      console.error('[AlcoholOnboarding] Failed to save to Appwrite:', e?.message || e);
+      // Still mark as completed in localStorage
+      saveToStorage(true);
+    }
+  }, [user, profile, saveToStorage]);
 
   const reset = useCallback(() => {
-    setProfile({
-      goal: null,
-      sex: 'male',
-      weight: 70,
-      favoriteDrinks: [],
-    });
+    setProfile({ goal: null, sex: 'male', weight: 70, favoriteDrinks: [] });
     setStep(0);
     setHasCompleted(false);
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(DRINKS_KEY);
+    console.log('[AlcoholOnboarding] Reset');
   }, []);
 
   return {
     profile,
     step,
-    hasCompleted: isLoaded ? hasCompleted : false,
+    hasCompleted, // Return directly without gating
     drinks: DEFAULT_DRINKS,
     setGoal,
     setSex,
