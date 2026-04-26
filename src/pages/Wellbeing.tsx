@@ -110,7 +110,13 @@ export default function WellbeingPage() {
     setSelectedTime(undefined);
   };
 
-  const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
+  const handleCreateDrinkFromPicker = async (data: { name: string; type: DrinkType; abv: number; servingSize: number }) => {
+    await createDrink({ name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.servingSize }, 'Beer');
+    toast.success('Boisson creee !');
+    setShowCreateDrink(false);
+  };
+
+  const handleCreateDrinkFromDialog = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
     await createDrink({ name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.defaultServingSize }, data.emoji);
     toast.success('Boisson creee !');
     setShowCreateDrink(false);
@@ -198,7 +204,7 @@ export default function WellbeingPage() {
                     <span className="font-medium">Toutes les boissons</span>
                     <button onClick={() => setShowDrinkPicker(false)} className="p-1 rounded-lg hover:bg-white/10"><X className="w-5 h-5" /></button>
                   </div>
-                  <DrinkPicker drinks={drinks} onSelect={handleSelectDrink} onCreate={handleCreateDrink} onToggleFavorite={toggleFavorite} onDeleteDrink={handleDeleteDrink} />
+                  <DrinkPicker drinks={drinks} onSelect={handleSelectDrink} onCreate={handleCreateDrinkFromPicker} onToggleFavorite={toggleFavorite} onDeleteDrink={handleDeleteDrink} />
                 </div>
               )}
             </motion.div>
@@ -229,7 +235,7 @@ export default function WellbeingPage() {
 
       <GoalSetterDialog open={showGoalSetter} onOpenChange={setShowGoalSetter} onSetGoal={handleSetGoal} initialLimit={weeklyLimit} />
       <ProfileEditorDialog open={showProfileEditor} onOpenChange={setShowProfileEditor} onUpdateProfile={handleUpdateProfile} initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }} />
-      <CreateDrinkDialog open={showCreateDrink} onOpenChange={setShowCreateDrink} onCreate={handleCreateDrink} />
+      <CreateDrinkDialog open={showCreateDrink} onOpenChange={setShowCreateDrink} onCreate={handleCreateDrinkFromDialog} />
       <AnimatePresence>{showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}</AnimatePresence>
       <BadgesSheet open={showBadges} onOpenChange={setShowBadges} currentStreak={insights?.streak || 0} weeklyUnits={weeklyUnits} weeklyLimit={weeklyLimit} totalDaysTracked={logs.length > 0 ? Math.ceil((Date.now() - new Date(logs[logs.length - 1].timestamp).getTime()) / 86400000) : 0} />
     </div>
