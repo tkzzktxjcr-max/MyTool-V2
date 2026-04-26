@@ -44,14 +44,6 @@ export interface UserProfile {
 // HELPERS - Using centralized units utility
 // =============================================================================
 
-/**
- * @deprecated Use calculateUnits from './utils/units' instead
- * Cette fonction est conservée pour compatibilité mais utilise maintenant le bon calcul.
- */
-const calculateDrinkUnits = (volumeCl: number, abv: number): number => {
-  return calculateUnits(volumeCl, abv);
-};
-
 const mapDocToDrink = (doc: any): Drink => ({
   id: doc.$id,
   name: doc.name,
@@ -313,7 +305,16 @@ export const drinksService = {
 
   async incrementUsage(drinkId: string): Promise<void> {
     try {
-      await updateDocument(COLLECTIONS.DRINKS, drinkId, { usageCount: { increment: 1 } });
+      // Get current document to read the current usageCount
+      const currentDoc = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('$id', drinkId)]);
+      if (currentDoc.documents.length === 0) return;
+      
+      const currentUsageCount = currentDoc.documents[0].usageCount || 0;
+      
+      // Update with incremented value
+      await updateDocument(COLLECTIONS.DRINKS, drinkId, { 
+        usageCount: currentUsageCount + 1 
+      });
     } catch (error) {
       console.warn('[drinksService] incrementUsage failed:', error);
     }
