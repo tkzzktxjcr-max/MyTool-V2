@@ -153,28 +153,33 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
             {/* Bars */}
             <div className="relative h-full flex items-end justify-between gap-1">
               {insights.dailyTrend.map((day, i) => {
-                const barHeight = maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, day.units > 0 ? 15 : 4) : 4;
+                const barHeight = maxUnits > 0 ? Math.max((day.units / maxUnits) * 100, day.units > 0 ? 8 : 3) : 3;
                 const isTodayBar = i === 6;
+                const hasUnits = day.units > 0;
                 
                 return (
                   <div key={day.date} className="flex-1 flex flex-col items-center gap-1 z-10">
-                    <span className={cn(
-                      "text-[10px] font-medium transition-all",
-                      day.units > 0 ? "text-foreground" : "text-muted-foreground"
-                    )}>
-                      {day.units > 0 ? day.units.toFixed(1) : ''}
-                    </span>
+                    {hasUnits && (
+                      <span className={cn(
+                        "text-[10px] font-medium transition-all",
+                        day.units <= 2 && "text-secondary",
+                        day.units > 2 && day.units <= 4 && "text-[hsl(38,92%,50%)]",
+                        day.units > 4 && "text-accent"
+                      )}>
+                        {day.units.toFixed(1)}
+                      </span>
+                    )}
                     
-                    <motion.div 
+                    <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${barHeight}%` }}
                       transition={{ delay: i * 0.05, duration: 0.3 }}
                       className={cn(
                         "w-full rounded-t-md transition-all",
-                        day.units === 0 && "bg-white/10",
-                        day.units > 0 && day.units <= 2 && "bg-secondary",
-                        day.units > 2 && day.units <= 4 && "bg-[hsl(38,92%,50%)]",
-                        day.units > 4 && "bg-accent",
+                        !hasUnits && "bg-white/10",
+                        hasUnits && day.units <= 2 && "bg-secondary",
+                        hasUnits && day.units > 2 && day.units <= 4 && "bg-[hsl(38,92%,50%)]",
+                        hasUnits && day.units > 4 && "bg-accent",
                         isTodayBar && "ring-2 ring-secondary/50"
                       )}
                     />
