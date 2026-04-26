@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from 'react';
-import { Search, Plus, X, ChevronRight, Sparkles, Globe, Star, Check, Clock, TrendingUp } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Search, Plus, X, ChevronRight, Sparkles, Globe, Star, Check, Trash2, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import type { Drink } from '@/features/alcohol/service';
 import type { DrinkType } from '@/features/alcohol/types';
 import { DRINK_TYPES } from '@/features/alcohol/types';
@@ -14,13 +15,15 @@ interface DrinkPickerProps {
   drinks: Drink[];
   libraryDrinks?: Drink[];
   userDrinks?: Drink[];
-  smartDrinks?: Drink[]; // Smart sorted drinks
+  smartDrinks?: Drink[];
   onSelect: (drink: Drink) => void;
   onCreate: (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => void;
   onToggleFavorite?: (drinkId: string) => void;
+  onDeleteDrink?: (drinkId: string) => void;
+  currentUserId?: string;
 }
 
-// Time of day labels for display
+// Time of day labels
 const TIME_LABELS: Record<TimeOfDay, { label: string; icon: string }> = {
   morning: { label: 'Matin', icon: '🌅' },
   afternoon: { label: 'Apres-midi', icon: '☀️' },
@@ -37,10 +40,13 @@ export default function DrinkPicker({
   smartDrinks = drinks,
   onSelect, 
   onCreate,
-  onToggleFavorite
+  onToggleFavorite,
+  onDeleteDrink,
+  currentUserId
 }: DrinkPickerProps) {
   const [query, setQuery] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [drinkToDelete, setDrinkToDelete] = useState<Drink | null>(null);
   const [newDrink, setNewDrink] = useState({
     name: '',
     type: 'beer' as DrinkType,
@@ -60,6 +66,10 @@ export default function DrinkPicker({
       )
     : smartDrinks;
 
+  // Separate user drinks and library drinks
+  const filteredUserDrinks = filteredDrinks.filter(d => d.userId === currentUserId);
+  const filteredLibraryDrinks = filteredDrinks.filter(d => !d.userId);
+
   const handleSelect = (drink: Drink) => {
     onSelect(drink);
     setQuery('');
@@ -78,6 +88,13 @@ export default function DrinkPicker({
     setNewDrink({ name: '', type: 'beer', abv: 5, servingSize: 33, emoji: '🍺' });
   };
 
+  const handleDelete = () => {
+    if (drinkToDelete && onDeleteDrink) {
+      onDeleteDrink(drinkToDelete.id);
+      setDrinkToDelete(null);
+    }
+  };
+
   const handleTypeChange = (type: DrinkType) => {
     const defaults = DRINK_TYPES[type];
     setNewDrink(prev => ({
@@ -89,7 +106,7 @@ export default function DrinkPicker({
     }));
   };
 
-  const renderDrinkItem = (drink: Drink, index: number) => (
+  const renderDrinkItem = (drink: Drink, isUserDrink: boolean = false) => (
     <div
       key={drink.id}
       onClick={() => handleSelect(drink)}
@@ -105,6 +122,11 @@ export default function DrinkPicker({
           {drink.isGlobal && (
             <Globe className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
           )}
+          {isUserDrink && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/20 text-secondary">
+              Perso
+            </span>
+          )}
         </div>
         <p className="text-xs text-muted-foreground">
           {DRINK_TYPES[drink.type]?.label} - {drink.abv}% - {drink.defaultServingSize} cl
@@ -114,25 +136,45 @@ export default function DrinkPicker({
         </p>
       </div>
       
-      {/* Favorite button - PROMINENT */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          onToggleFavorite?.(drink.id);
-        }}
-        className={cn(
-          "p-2 rounded-lg transition-all flex-shrink-0",
-          drink.isFavorite 
-            ? "text-yellow-400 bg-yellow-400/10" 
-            : "text-muted-foreground hover:text-yellow-400 hover:bg-yellow-400/10"
+      {/* Actions */}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {/* Favorite button */}
+        {onToggleFavorite && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onToggleFavorite(drink.id);
+            }}
+            className={cn(
+              "p-2 rounded-lg transition-all",
+              drink.isFavorite 
+                ? "text-yellow-400 bg-yellow-400/10" 
+                : "text-muted-foreground hover:text-yellow-400 hover:bg-yellow-400/10"
+            )}
+            title={drink.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+          >
+            <Star className={cn("w-5 h-5", drink.isFavorite && "fill-current")} />
+          </button>
         )}
-        title={drink.isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
-      >
-        <Star className={cn("w-5 h-5", drink.isFavorite && "fill-current")} />
-      </button>
-      
-      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        
+        {/* Delete button - only for user drinks */}
+        {isUserDrink && onDeleteDrink && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setDrinkToDelete(drink);
+            }}
+            className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+            title="Supprimer cette boissons"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
+        
+        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+      </div>
     </div>
   );
 
@@ -142,7 +184,6 @@ export default function DrinkPicker({
       <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-secondary/10 text-secondary text-sm">
         <span>{timeInfo.icon}</span>
         <span>Suggestions pour le {timeInfo.label.toLowerCase()}</span>
-        <Clock className="w-4 h-4 ml-auto" />
       </div>
 
       {/* Search input */}
@@ -249,12 +290,35 @@ export default function DrinkPicker({
         </div>
       ) : (
         <>
-          {/* Drinks list with smart sorting */}
-          <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
-            {filteredDrinks.slice(0, 8).map((drink, index) => 
-              renderDrinkItem(drink, index)
-            )}
-          </div>
+          {/* User drinks section (with delete option) */}
+          {filteredUserDrinks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 px-2 py-1">
+                <span className="text-xs text-muted-foreground font-medium">Mes Boissons</span>
+                <span className="text-xs text-secondary">({filteredUserDrinks.length})</span>
+              </div>
+              <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
+                {filteredUserDrinks.slice(0, 6).map((drink) => 
+                  renderDrinkItem(drink, true)
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Library drinks section */}
+          {filteredLibraryDrinks.length > 0 && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 px-2 py-1">
+                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Bibliotheque</span>
+              </div>
+              <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
+                {filteredLibraryDrinks.slice(0, 6).map((drink) => 
+                  renderDrinkItem(drink, false)
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Create option */}
           {query.trim() && filteredDrinks.length === 0 && (
@@ -277,6 +341,53 @@ export default function DrinkPicker({
           )}
         </>
       )}
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!drinkToDelete} onOpenChange={(open) => !open && setDrinkToDelete(null)}>
+        <DialogContent className="mx-4 rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Supprimer cette boissons ?
+            </DialogTitle>
+          </DialogHeader>
+          {drinkToDelete && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10">
+                <span className="text-4xl">{drinkToDelete.emoji}</span>
+                <div>
+                  <p className="font-medium">{drinkToDelete.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {DRINK_TYPES[drinkToDelete.type]?.label} - {drinkToDelete.abv}% - {drinkToDelete.defaultServingSize} cl
+                  </p>
+                </div>
+              </div>
+              
+              <p className="text-sm text-muted-foreground">
+                Cette action est irreversible. Les statistiques liees a cette boissons seront conservees.
+              </p>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setDrinkToDelete(null)} 
+                  className="flex-1 rounded-xl"
+                >
+                  Annuler
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleDelete} 
+                  className="flex-1 rounded-xl"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Supprimer
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

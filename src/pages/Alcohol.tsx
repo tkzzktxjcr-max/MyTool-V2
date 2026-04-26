@@ -29,7 +29,7 @@ export default function AlcoholPage() {
   const {
     drinks, libraryDrinks, userDrinks, smartDrinks, favorites, suggestedFavorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
-    loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
+    loadData, createDrink, quickLog, deleteLog, undoDelete, deleteDrink, toggleFavorite,
     setWeeklyGoal, updateUserProfile, getWeeklyUnits,
   } = useAlcohol();
 
@@ -101,7 +101,7 @@ export default function AlcoholPage() {
     await quickLog(selectedDrink, moodValue, quantity, selectedTime);
     
     toast.success(`${selectedDrink.emoji} ${selectedDrink.name} (×${quantity})`, {
-      description: `+${drinkUnits.toFixed(1)} unités • ~${newBAC.toFixed(2)} g/L`,
+      description: `+${drinkUnits.toFixed(1)} unites • ~${newBAC.toFixed(2)} g/L`,
       duration: 3000,
       className: 'bac-preview-toast',
     });
@@ -114,18 +114,23 @@ export default function AlcoholPage() {
 
   const handleCreateDrink = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
     await createDrink(data, data.emoji);
-    toast.success('Boisson créée !', { icon: '🎉' });
+    toast.success('Boisson creee !', { icon: '🎉' });
     setShowCreateDrink(false);
+  };
+
+  const handleDeleteDrink = async (drinkId: string) => {
+    await deleteDrink(drinkId);
+    toast.success('Boisson supprimee', { icon: '🗑️' });
   };
 
   const handleSetGoal = async (limit: number) => {
     await setWeeklyGoal(limit);
-    toast.success('Objectif mis à jour !', { icon: '🎯' });
+    toast.success('Objectif mis a jour !', { icon: '🎯' });
   };
 
   const handleUpdateProfile = async (data: { weightKg?: number; sex?: 'male' | 'female' | 'unspecified' }) => {
     await updateUserProfile(data);
-    toast.success('Profil mis à jour !', { icon: '✅' });
+    toast.success('Profil mis a jour !', { icon: '✅' });
   };
 
   const handleTimeSelect = (timestamp: string) => {
@@ -165,7 +170,7 @@ export default function AlcoholPage() {
             <div className="w-8 h-8 rounded-xl bg-secondary/20 flex items-center justify-center">
               <Activity className="w-4 h-4 text-secondary" />
             </div>
-            Bien-être
+            Bien-etre
           </h1>
           <p className="text-sm text-muted-foreground">
             {isFirstUse ? `${timeInfo.icon} ${timeInfo.label}` : `${timeInfo.icon} ${timeInfo.label}`}
@@ -197,7 +202,7 @@ export default function AlcoholPage() {
               <span className="text-2xl">{lastDeletedLog.drinkEmoji}</span>
               <div>
                 <p className="text-sm font-medium">"{lastDeletedLog.drinkName}"</p>
-                <p className="text-xs text-muted-foreground">supprimé</p>
+                <p className="text-xs text-muted-foreground">supprime</p>
               </div>
             </div>
             <Button size="sm" variant="outline" onClick={undoDelete} className="rounded-xl">
@@ -270,6 +275,8 @@ export default function AlcoholPage() {
                     onSelect={handleSelectDrink}
                     onCreate={handleCreateDrink}
                     onToggleFavorite={toggleFavorite}
+                    onDeleteDrink={handleDeleteDrink}
+                    currentUserId={userProfile?.userId}
                   />
                 </div>
               )}
