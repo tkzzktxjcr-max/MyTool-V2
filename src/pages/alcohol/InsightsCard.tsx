@@ -119,7 +119,7 @@ export default function InsightsCard({ insights }: InsightsCardProps) {
               Objectif atteint cette semaine ✨
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {insights.totalWeeklyUnits.toFixed(1)} / {insights.weeklyGoalProgress > 0 ? insights.totalWeeklyUnits / (insights.weeklyGoalProgress / 100) : 14} unités
+              {insights.totalWeeklyUnits.toFixed(1)} / {insights.weeklyGoalProgress > 0 ? Math.round(insights.totalWeeklyUnits / (insights.weeklyGoalProgress / 100)) : 14} unités
             </p>
           </motion.div>
         )}
