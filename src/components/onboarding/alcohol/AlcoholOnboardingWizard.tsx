@@ -21,6 +21,7 @@ export function AlcoholOnboardingWizard({
   onComplete, 
   onSkip 
 }: AlcoholOnboardingWizardProps) {
+  // ALL hooks must be declared FIRST
   const {
     profile,
     step,
@@ -40,10 +41,9 @@ export function AlcoholOnboardingWizard({
 
   const [isOpen, setIsOpen] = useState(true);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [direction, setDirection] = useState(1);
 
-  // ALL hooks must be called BEFORE any conditional returns!
-  
-  // Hook called on every render - must be before returns
+  // Hook that reacts to completion
   useEffect(() => {
     if (hasCompleted) {
       console.log('[AlcoholOnboarding] Already completed, closing wizard');
@@ -68,11 +68,12 @@ export function AlcoholOnboardingWizard({
     );
   }
 
-  // Don't show onboarding if already completed (hooks already called above)
+  // Don't show onboarding if already completed
   if (hasCompleted) {
     return null;
   }
 
+  // Handler functions (not hooks - can be anywhere)
   const handleClose = () => {
     setIsOpen(false);
     onSkip?.();
@@ -101,6 +102,9 @@ export function AlcoholOnboardingWizard({
     }
   };
 
+  const handleNext = () => { setDirection(1); nextStep(); };
+  const handlePrev = () => { setDirection(-1); prevStep(); };
+
   const slideVariants = {
     enter: (direction: number) => ({
       x: direction > 0 ? 100 : -100,
@@ -112,11 +116,6 @@ export function AlcoholOnboardingWizard({
       opacity: 0,
     }),
   };
-
-  const [direction, setDirection] = useState(1);
-
-  const handleNext = () => { setDirection(1); nextStep(); };
-  const handlePrev = () => { setDirection(-1); prevStep(); };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
