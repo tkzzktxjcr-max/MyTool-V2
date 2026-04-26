@@ -11,7 +11,7 @@ interface FavoritesStepProps {
   onToggleDrink: (drinkId: string) => void;
 }
 
-export default function FavoritesStep({ 
+export function FavoritesStep({ 
   drinks, 
   selectedDrinks, 
   onToggleDrink 

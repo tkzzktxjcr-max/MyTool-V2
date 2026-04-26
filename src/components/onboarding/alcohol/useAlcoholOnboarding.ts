@@ -60,7 +60,7 @@ interface UseAlcoholOnboardingReturn {
   canProceed: () => boolean;
 }
 
-export const useAlcoholOnboarding = (): UseAlcoholOnboardingReturn => {
+export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   const { user } = useAuth();
   const [profile, setProfile] = useState<AlcoholProfile>({
     goal: null,
@@ -201,4 +201,4 @@ export const useAlcoholOnboarding = (): UseAlcoholOnboardingReturn => {
     reset,
     canProceed,
   };
-};
+}

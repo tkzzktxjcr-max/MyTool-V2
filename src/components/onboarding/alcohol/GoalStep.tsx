@@ -24,7 +24,7 @@ interface GoalStepProps {
   onSelectGoal: (goal: AlcoholGoal) => void;
 }
 
-export default function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
+export function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">

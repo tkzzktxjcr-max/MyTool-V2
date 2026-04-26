@@ -12,7 +12,7 @@ interface ProfileStepProps {
   onWeightChange: (weight: number) => void;
 }
 
-export default function ProfileStep({ 
+export function ProfileStep({ 
   sex, 
   weight, 
   onSexChange, 
