@@ -170,7 +170,7 @@ export default function BACCard({
         {timeline.length > 0 && hasActiveBAC && (
           <div className="h-32">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: -10 }}>
                 <defs>
                   <linearGradient id="bacGradientPositive" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="hsl(142, 71%, 45%)" stopOpacity={0.4} />
