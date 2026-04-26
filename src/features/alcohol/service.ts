@@ -93,6 +93,94 @@ async function getAllDocuments(collectionId: string): Promise<any[]> {
 }
 
 // =============================================================================
+// SMART FAVORITES HELPERS
+// =============================================================================
+
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
+
+const DRINKS_BY_TIME: Record<TimeOfDay, DrinkType[]> = {
+  morning: ['beer', 'cider', 'sparkling'],
+  afternoon: ['wine', 'beer', 'cider', 'rose_wine'],
+  evening: ['wine', 'beer', 'cocktail', 'aperol_spritz', 'rose_wine'],
+  night: ['spirit', 'whisky', 'vodka', 'rum', 'cocktail', 'beer'],
+};
+
+export const getTimeOfDay = (): TimeOfDay => {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 17) return 'afternoon';
+  if (hour >= 17 && hour < 21) return 'evening';
+  return 'night';
+};
+
+export const calculateDrinkPopularity = (drinks: Drink[], logs: AlcoholLog[]): Record<string, number> => {
+  const popularity: Record<string, number> = {};
+  
+  logs.forEach(log => {
+    const drink = drinks.find(d => d.id === log.drinkType || d.type === log.drinkType);
+    if (drink) {
+      popularity[drink.id] = (popularity[drink.id] || 0) + (log.quantity || 1);
+    }
+  });
+  
+  drinks.forEach(drink => {
+    popularity[drink.id] = (popularity[drink.id] || 0) + (drink.usageCount || 0) * 2;
+  });
+  
+  return popularity;
+};
+
+export const getSmartSuggestedFavorites = (
+  drinks: Drink[],
+  logs: AlcoholLog[],
+  count: number = 3
+): Drink[] => {
+  const timeOfDay = getTimeOfDay();
+  const preferredTypes = DRINKS_BY_TIME[timeOfDay];
+  const popularity = calculateDrinkPopularity(drinks, logs);
+  
+  const scoredDrinks = drinks.map(drink => {
+    let score = popularity[drink.id] || 0;
+    
+    if (preferredTypes.includes(drink.type)) {
+      score += 10;
+    }
+    
+    if (drink.isFavorite) {
+      score += 5;
+    }
+    
+    if (drink.isGlobal) {
+      score += 2;
+    }
+    
+    return { drink, score };
+  });
+  
+  return scoredDrinks
+    .sort((a, b) => b.score - a.score)
+    .slice(0, count)
+    .map(s => s.drink);
+};
+
+export const getSmartDrinksForTime = (
+  drinks: Drink[],
+  timeOfDay: TimeOfDay
+): Drink[] => {
+  const preferredTypes = DRINKS_BY_TIME[timeOfDay];
+  
+  return [...drinks].sort((a, b) => {
+    const aPreferred = preferredTypes.includes(a.type);
+    const bPreferred = preferredTypes.includes(b.type);
+    
+    if (aPreferred && !bPreferred) return -1;
+    if (!aPreferred && bPreferred) return 1;
+    
+    return (b.usageCount || 0) - (a.usageCount || 0);
+  });
+};
+
+// =============================================================================
 // DRINKS SERVICE
 // =============================================================================
 
@@ -109,9 +197,7 @@ export const drinksService = {
 
   async getLibraryDrinks(): Promise<Drink[]> {
     try {
-      const response = await listDocuments(COLLECTIONS.DRINKS, [
-        Query.equal('isGlobal', true),
-      ]);
+      const response = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('isGlobal', true)]);
       return response.documents.map(mapDocToDrink);
     } catch (error: any) {
       console.error('[drinksService] getLibraryDrinks failed:', error?.message || error);
@@ -121,9 +207,7 @@ export const drinksService = {
 
   async getUserDrinks(userId: string): Promise<Drink[]> {
     try {
-      const response = await listDocuments(COLLECTIONS.DRINKS, [
-        Query.equal('userId', userId),
-      ]);
+      const response = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
       return response.documents.map(mapDocToDrink);
     } catch (error) {
       console.warn('[drinksService] getUserDrinks failed:', error);
@@ -141,7 +225,6 @@ export const drinksService = {
         Query.equal('userId', userId),
         Query.equal('type', drinkType),
       ]);
-
       if (response.documents.length > 0) {
         return mapDocToDrink(response.documents[0]);
       }
@@ -179,7 +262,6 @@ export const drinksService = {
       category: data.category || null,
       brand: data.brand || null,
     });
-
     return mapDocToDrink(doc);
   },
 
@@ -195,7 +277,6 @@ export const drinksService = {
     }
   ): Promise<Drink> {
     const existing = await this.getUserDrinkPreference(userId, data.type);
-
     if (existing) {
       const doc: any = await updateDocument(COLLECTIONS.DRINKS, existing.id, {
         name: data.name,
@@ -204,34 +285,21 @@ export const drinksService = {
         emoji: data.emoji,
         country: data.country || null,
       });
-
       return mapDocToDrink(doc);
     }
-
     return this.createDrink({ ...data, userId });
   },
 
   async toggleFavorite(drinkId: string, rank?: number): Promise<void> {
     try {
-      const currentDoc = await listDocuments(COLLECTIONS.DRINKS, [
-        Query.equal('$id', drinkId),
-      ]);
-
+      const currentDoc = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('$id', drinkId)]);
       if (currentDoc.documents.length === 0) return;
-
       const doc = currentDoc.documents[0];
       const currentlyFavorite = doc.isFavorite || false;
-
       if (currentlyFavorite) {
-        await updateDocument(COLLECTIONS.DRINKS, drinkId, {
-          isFavorite: false,
-          favoriteRank: null,
-        });
+        await updateDocument(COLLECTIONS.DRINKS, drinkId, { isFavorite: false, favoriteRank: null });
       } else {
-        await updateDocument(COLLECTIONS.DRINKS, drinkId, {
-          isFavorite: true,
-          favoriteRank: rank || 1,
-        });
+        await updateDocument(COLLECTIONS.DRINKS, drinkId, { isFavorite: true, favoriteRank: rank || 1 });
       }
     } catch (error) {
       console.warn('[drinksService] toggleFavorite failed:', error);
@@ -240,9 +308,7 @@ export const drinksService = {
 
   async incrementUsage(drinkId: string): Promise<void> {
     try {
-      await updateDocument(COLLECTIONS.DRINKS, drinkId, {
-        usageCount: { increment: 1 },
-      });
+      await updateDocument(COLLECTIONS.DRINKS, drinkId, { usageCount: { increment: 1 } });
     } catch (error) {
       console.warn('[drinksService] incrementUsage failed:', error);
     }
@@ -279,9 +345,7 @@ export const goalsService = {
   async getGoal(userId: string): Promise<AlcoholGoal | null> {
     try {
       const response = await listDocuments(COLLECTIONS.GOALS, [Query.equal('userId', userId)]);
-
       if (response.documents.length === 0) return null;
-
       const doc = response.documents[0];
       return {
         id: doc.$id,
@@ -304,14 +368,12 @@ export const goalsService = {
   }): Promise<AlcoholGoal> {
     try {
       const existing = await this.getGoal(userId);
-
       if (existing) {
         const doc: any = await updateDocument(COLLECTIONS.GOALS, existing.id, {
           weeklyLimit: data.weeklyLimit,
           reductionGoal: data.reductionGoal ?? null,
           isActive: data.isActive ?? true,
         });
-
         return {
           id: doc.$id,
           userId: doc.userId,
@@ -321,14 +383,12 @@ export const goalsService = {
           createdAt: doc.$createdAt,
         };
       }
-
       const doc: any = await createDocument(COLLECTIONS.GOALS, {
         userId,
         weeklyLimit: data.weeklyLimit,
         reductionGoal: data.reductionGoal ?? null,
         isActive: data.isActive ?? true,
       });
-
       return {
         id: doc.$id,
         userId: doc.userId,
@@ -358,12 +418,8 @@ export const goalsService = {
 export const profileService = {
   async getProfile(userId: string): Promise<UserProfile | null> {
     try {
-      const response = await listDocuments(COLLECTIONS.USER_PROFILES, [
-        Query.equal('userId', userId),
-      ]);
-
+      const response = await listDocuments(COLLECTIONS.USER_PROFILES, [Query.equal('userId', userId)]);
       if (response.documents.length === 0) return null;
-
       const doc = response.documents[0];
       return {
         id: doc.$id,
@@ -386,14 +442,12 @@ export const profileService = {
   }): Promise<UserProfile> {
     try {
       const existing = await this.getProfile(userId);
-
       if (existing) {
         const doc: any = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
           weightKg: data.weightKg ?? existing.weightKg,
           sex: data.sex ?? existing.sex,
           legalLimit: data.legalLimit ?? existing.legalLimit,
         });
-
         return {
           id: doc.$id,
           userId: doc.userId,
@@ -403,14 +457,12 @@ export const profileService = {
           updatedAt: doc.$updatedAt,
         };
       }
-
       const doc: any = await createDocument(COLLECTIONS.USER_PROFILES, {
         userId,
         weightKg: data.weightKg || 70,
         sex: data.sex || 'unspecified',
         legalLimit: data.legalLimit || 0.5,
       });
-
       return {
         id: doc.$id,
         userId: doc.userId,
@@ -440,10 +492,7 @@ export const profileService = {
 export const alcoholService = {
   async getLogs(userId: string): Promise<AlcoholLog[]> {
     try {
-      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [
-        Query.equal('userId', userId),
-      ]);
-
+      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [Query.equal('userId', userId)]);
       return response.documents.map((doc: any) => ({
         id: doc.$id,
         userId: doc.userId,
@@ -600,7 +649,6 @@ export const alcoholService = {
       }
     });
 
-    // Positive patterns - coaching language
     const patterns: string[] = [];
     const weekendUnits = weeklyLogs.filter(l => {
       const day = new Date(l.timestamp).getDay();
@@ -622,7 +670,6 @@ export const alcoholService = {
       patterns.push(`${typeName} est ton choix prefere`);
     }
 
-    // Positive recommendations - coaching language
     const recommendations: string[] = [];
     const effectiveLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
     
@@ -638,17 +685,15 @@ export const alcoholService = {
       recommendations.push('Au-dessus de ton objectif cette semaine');
     }
 
-    // Calculate risk level - using more positive framing
     let riskLevel: 'low' | 'moderate' | 'high' = 'low';
     if (weeklyUnits > effectiveLimit * 1.5) {
-      riskLevel = 'moderate'; // Changed from 'high' to 'moderate'
+      riskLevel = 'moderate';
     } else if (weeklyUnits > effectiveLimit) {
-      riskLevel = 'low'; // Changed from 'moderate' to 'low'
+      riskLevel = 'low';
     }
 
     const weeklyGoalProgress = effectiveLimit > 0 ? Math.min((weeklyUnits / effectiveLimit) * 100, 150) : 0;
 
-    // Calculate streak of days without alcohol
     let streak = 0;
     for (let i = 0; i <= 30; i++) {
       const checkDate = new Date(now);

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
-import { alcoholService, drinksService, goalsService, profileService, type Drink, type UserProfile } from './service';
+import { alcoholService, drinksService, goalsService, profileService, type Drink, type UserProfile, getSmartSuggestedFavorites, getTimeOfDay, getSmartDrinksForTime } from './service';
 import type { CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
 import {
   getBACAnalysis,
@@ -42,6 +42,7 @@ export const useAlcohol = () => {
       const profileData = await profileService.getProfile(user.$id);
       setUserProfile(profileData);
 
+      // Calculate smart suggestions
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
       const recentLogs = logsData.filter(l => new Date(l.timestamp) >= weekAgo);
@@ -186,6 +187,21 @@ export const useAlcohol = () => {
     [drinks]
   );
 
+  // SMART: Suggested favorites based on usage + time of day
+  const suggestedFavorites = useMemo(() => {
+    if (drinks.length === 0) return [];
+    return getSmartSuggestedFavorites(drinks, logs, 3);
+  }, [drinks, logs]);
+
+  // SMART: Drinks sorted by time of day for the picker
+  const smartDrinks = useMemo(() => {
+    const time = getTimeOfDay();
+    return getSmartDrinksForTime(drinks, time);
+  }, [drinks]);
+
+  // Current time of day for UI display
+  const currentTimeOfDay = useMemo(() => getTimeOfDay(), []);
+
   const bacState = useMemo(() => {
     const weightKg = userProfile?.weightKg || 70;
     const sex: SexType = userProfile?.sex || 'unspecified';
@@ -240,8 +256,11 @@ export const useAlcohol = () => {
     drinks,
     libraryDrinks,
     userDrinks,
+    smartDrinks, // NEW: Smart sorted drinks
     favorites,
     recentlyUsed,
+    suggestedFavorites, // NEW: Smart suggested favorites
+    currentTimeOfDay, // NEW: Current time of day
     logs,
     goal,
     userProfile,

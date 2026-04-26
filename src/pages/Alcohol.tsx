@@ -9,6 +9,7 @@ import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
 import type { Drink } from '@/features/alcohol/service';
 import { calculateUnits } from './alcohol/QuantitySelector';
+import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
 
 import BACCard from './alcohol/BACCard';
 import AlcoholInfo from './AlcoholInfo';
@@ -21,14 +22,13 @@ import MoodSelector from './alcohol/MoodSelector';
 import QuantitySelector from './alcohol/QuantitySelector';
 import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
-import FloatingActionButton from './alcohol/FloatingActionButton';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function AlcoholPage() {
   const {
-    drinks, libraryDrinks, userDrinks, favorites, recentlyUsed, logs, insights, goal, userProfile, lastDeletedLog, bacState,
+    drinks, libraryDrinks, userDrinks, smartDrinks, favorites, suggestedFavorites, currentTimeOfDay,
+    logs, insights, goal, userProfile, lastDeletedLog, bacState,
     loadData, createDrink, quickLog, deleteLog, undoDelete, toggleFavorite,
     setWeeklyGoal, updateUserProfile, getWeeklyUnits,
   } = useAlcohol();
@@ -73,22 +73,17 @@ export default function AlcoholPage() {
   };
 
   const handleQuickAdd = async (drink: Drink) => {
-    // Calculate new BAC
     const drinkUnits = calculateUnits(drink.defaultServingSize, drink.abv, 1);
     const r = (userProfile?.sex === 'female' ? 0.55 : 0.68);
     const weight = userProfile?.weightKg || 70;
     const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
-    const newBACFormatted = newBAC.toFixed(2);
-    
-    // Determine status
     const status = newBAC <= legalLimit * 0.8 ? 'OK' : newBAC <= legalLimit ? 'Bientôt' : 'Attendre';
     const statusEmoji = newBAC <= legalLimit * 0.8 ? '✓' : newBAC <= legalLimit ? '~' : '⏱';
     
     toast.success(`${drink.emoji} ${drink.name}`, {
-      description: `${statusEmoji} ~${newBACFormatted} g/L • ${status}`,
+      description: `${statusEmoji} ~${newBAC.toFixed(2)} g/L • ${status}`,
       duration: 3000,
       className: 'bac-preview-toast',
-      icon: '🍺',
     });
     
     await quickLog(drink, undefined, 1, undefined);
@@ -109,7 +104,6 @@ export default function AlcoholPage() {
       description: `+${drinkUnits.toFixed(1)} unités • ~${newBAC.toFixed(2)} g/L`,
       duration: 3000,
       className: 'bac-preview-toast',
-      icon: '✅',
     });
     
     setShowMoodSelector(false);
@@ -145,9 +139,18 @@ export default function AlcoholPage() {
 
   const isFirstUse = logs.length === 0;
 
+  // Time indicator
+  const timeLabels: Record<TimeOfDay, { icon: string; label: string }> = {
+    morning: { icon: '🌅', label: 'Bon matin' },
+    afternoon: { icon: '☀️', label: 'Bon aprem' },
+    evening: { icon: '🌆', label: 'Bonne soiree' },
+    night: { icon: '🌙', label: 'Bonne nuit' },
+  };
+  const timeInfo = timeLabels[currentTimeOfDay];
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
-      {/* Confetti Celebration */}
+      {/* Confetti */}
       <ConfettiAnimation 
         show={showConfetti} 
         onComplete={() => setShowConfetti(false)}
@@ -165,7 +168,7 @@ export default function AlcoholPage() {
             Bien-être
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isFirstUse ? 'Commence ton suivi' : 'Ton espace personnel'}
+            {isFirstUse ? `${timeInfo.icon} ${timeInfo.label}` : `${timeInfo.icon} ${timeInfo.label}`}
           </p>
         </div>
         <div className="flex gap-1">
@@ -181,7 +184,7 @@ export default function AlcoholPage() {
         </div>
       </div>
 
-      {/* Undo delete notification */}
+      {/* Undo delete */}
       <AnimatePresence>
         {lastDeletedLog && (
           <motion.div 
@@ -204,7 +207,7 @@ export default function AlcoholPage() {
         )}
       </AnimatePresence>
 
-      {/* BAC Card Hero */}
+      {/* BAC Card */}
       <BACCard
         currentBAC={bacState.currentBAC}
         peakBAC={bacState.peakBAC}
@@ -217,9 +220,10 @@ export default function AlcoholPage() {
         safeToDriveTime={bacState.safeToDriveTime}
       />
 
-      {/* Quick Add Favorites Bar with BAC Preview */}
+      {/* Quick Add with Smart Suggestions */}
       <QuickAddBar
         favorites={favorites}
+        suggestedFavorites={suggestedFavorites}
         onQuickAdd={handleQuickAdd}
         onCreateDrink={() => setShowCreateDrink(true)}
         onToggleFavorite={toggleFavorite}
@@ -229,9 +233,10 @@ export default function AlcoholPage() {
         }}
         currentBAC={bacState.currentBAC}
         legalLimit={legalLimit}
+        onShowAllDrinks={() => setShowDrinkPicker(true)}
       />
 
-      {/* Drink Selection & Logging */}
+      {/* Drink Selection */}
       <div className="space-y-3">
         <AnimatePresence mode="wait">
           {!showMoodSelector ? (
@@ -252,7 +257,7 @@ export default function AlcoholPage() {
               ) : (
                 <div className="rounded-2xl bg-card border border-white/10 p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">Choisir une boissons</span>
+                    <span className="font-medium">Toutes les boissons</span>
                     <button onClick={() => setShowDrinkPicker(false)} className="p-1 rounded-lg hover:bg-white/10">
                       <X className="w-5 h-5" />
                     </button>
@@ -261,6 +266,7 @@ export default function AlcoholPage() {
                     drinks={drinks}
                     libraryDrinks={libraryDrinks}
                     userDrinks={userDrinks}
+                    smartDrinks={smartDrinks}
                     onSelect={handleSelectDrink}
                     onCreate={handleCreateDrink}
                     onToggleFavorite={toggleFavorite}
@@ -298,9 +304,7 @@ export default function AlcoholPage() {
                 </button>
               )}
 
-              {showTimeSelector && (
-                <TimeSelector onSelect={handleTimeSelect} />
-              )}
+              {showTimeSelector && <TimeSelector onSelect={handleTimeSelect} />}
 
               {selectedTime && (
                 <div className="flex items-center justify-between px-3 py-2 bg-accent/10 rounded-xl">
@@ -338,31 +342,12 @@ export default function AlcoholPage() {
       <HistoryCard logs={logs} onDeleteLog={deleteLog} />
 
       {/* Dialogs */}
-      <GoalSetterDialog
-        open={showGoalSetter}
-        onOpenChange={setShowGoalSetter}
-        onSetGoal={handleSetGoal}
-        initialLimit={weeklyLimit}
-      />
+      <GoalSetterDialog open={showGoalSetter} onOpenChange={setShowGoalSetter} onSetGoal={handleSetGoal} initialLimit={weeklyLimit} />
+      <ProfileEditorDialog open={showProfileEditor} onOpenChange={setShowProfileEditor} onUpdateProfile={handleUpdateProfile} initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }} />
+      <CreateDrinkDialog open={showCreateDrink} onOpenChange={setShowCreateDrink} onCreate={handleCreateDrink} />
+      <AnimatePresence>{showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}</AnimatePresence>
 
-      <ProfileEditorDialog
-        open={showProfileEditor}
-        onOpenChange={setShowProfileEditor}
-        onUpdateProfile={handleUpdateProfile}
-        initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }}
-      />
-
-      <CreateDrinkDialog
-        open={showCreateDrink}
-        onOpenChange={setShowCreateDrink}
-        onCreate={handleCreateDrink}
-      />
-
-      <AnimatePresence>
-        {showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}
-      </AnimatePresence>
-
-      {/* Premium Toast Styles with BAC */}
+      {/* Premium Toast Styles */}
       <style>{`
         .bac-preview-toast {
           background: linear-gradient(135deg, hsl(222 47% 11%), hsl(222 47% 15%)) !important;
