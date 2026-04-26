@@ -125,8 +125,8 @@ export default function QuickAddBar({
                 whileTap={{ scale: 0.95 }}
                 className={cn(
                   "flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-2xl min-w-[85px]",
-                  "border transition-all duration-200 relative",
-                  pressedId === drink.id 
+                  "border transition-all duration-200 relative overflow-visible pt-4",
+                  pressedId === drink.id
                     ? "bg-secondary border-secondary shadow-lg" 
                     : showConfirmation === drink.id
                       ? "bg-secondary/30 border-secondary/50"
@@ -136,7 +136,7 @@ export default function QuickAddBar({
               >
                 {/* Favorite star indicator */}
                 {!isFavorite && (
-                  <div className="absolute -top-1 -right-1">
+                  <div className="absolute -top-1.5 right-0">
                     <Star className="w-3 h-3 text-secondary/50" />
                   </div>
                 )}
@@ -168,7 +168,7 @@ export default function QuickAddBar({
                 
                 {/* BAC Preview badge */}
                 {previewBAC !== null && (
-                  <div className={cn("absolute -top-1.5 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full text-[10px] font-bold", getBadgeColor(status))}>
+                  <div className={cn("absolute -top-2 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded-full text-[10px] font-bold", getBadgeColor(status))}>
                     ~{formatBAC(previewBAC)}
                   </div>
                 )}
