@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Info, Plus, X, RotateCcw } from 'lucide-react';
@@ -16,6 +17,8 @@ import AlcoholInfo from './AlcoholInfo';
 import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
 import InsightsCard from './alcohol/InsightsCard';
 import HistoryCard from './alcohol/HistoryCard';
+import MonthlyHeatmap from './alcohol/MonthlyHeatmap';
+import BadgesSheet from './alcohol/BadgesSheet';
 import { GoalSetterDialog, ProfileEditorDialog, CreateDrinkDialog } from './alcohol/dialogs';
 import DrinkPicker from './alcohol/DrinkPicker';
 import MoodSelector from './alcohol/MoodSelector';
@@ -24,12 +27,14 @@ import TimeSelector from './alcohol/TimeSelector';
 import QuickAddBar from './alcohol/QuickAddBar';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
 import { toast } from 'sonner';
+import { Settings } from 'lucide-react';
 
 // Onboarding
 import { AlcoholOnboardingWizard } from '@/components/onboarding/alcohol/AlcoholOnboardingWizard';
 import { useAlcoholOnboarding } from '@/components/onboarding/alcohol/useAlcoholOnboarding';
 
 export default function AlcoholPage() {
+  const navigate = useNavigate();
   const {
     drinks, libraryDrinks, userDrinks, smartDrinks, favorites, suggestedFavorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -50,8 +55,9 @@ export default function AlcoholPage() {
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showDrinkPicker, setShowDrinkPicker] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showBadges, setShowBadges] = useState(false);
   
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
@@ -227,8 +233,14 @@ export default function AlcoholPage() {
             <Target className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowInfo(true)} className="rounded-xl">
-            <Info className="w-5 h-5" />
-          </Button>
+                      <Info className="w-5 h-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => setShowBadges(true)} className="rounded-xl" title="Badges">
+                      🏆
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/settings')} className="rounded-xl" title="Paramètres">
+                      <Settings className="w-5 h-5" />
+                    </Button>
         </div>
       </div>
 
@@ -390,16 +402,29 @@ export default function AlcoholPage() {
       />
       
       {/* Insights */}
-      <InsightsCard insights={insights} />
-      
-      {/* History */}
-      <HistoryCard logs={logs} onDeleteLog={deleteLog} />
+            <InsightsCard insights={insights} />
+            
+            {/* Monthly Heatmap */}
+            <MonthlyHeatmap logs={logs} onAddDrink={() => setShowDrinkPicker(true)} />
+            
+            {/* History */}
+            <HistoryCard logs={logs} onDeleteLog={deleteLog} />
 
       {/* Dialogs */}
       <GoalSetterDialog open={showGoalSetter} onOpenChange={setShowGoalSetter} onSetGoal={handleSetGoal} initialLimit={weeklyLimit} />
       <ProfileEditorDialog open={showProfileEditor} onOpenChange={setShowProfileEditor} onUpdateProfile={handleUpdateProfile} initialData={{ weightKg: userProfile?.weightKg || 70, sex: userProfile?.sex || 'unspecified' }} />
       <CreateDrinkDialog open={showCreateDrink} onOpenChange={setShowCreateDrink} onCreate={handleCreateDrink} />
       <AnimatePresence>{showInfo && <AlcoholInfo isModal onClose={() => setShowInfo(false)} />}</AnimatePresence>
+            
+            {/* Badges Sheet */}
+            <BadgesSheet
+              open={showBadges}
+              onOpenChange={setShowBadges}
+              currentStreak={insights?.streak || 0}
+              weeklyUnits={weeklyUnits}
+              weeklyLimit={weeklyLimit}
+              totalDaysTracked={logs.length > 0 ? Math.ceil((Date.now() - new Date(logs[logs.length - 1].timestamp).getTime()) / (1000 * 60 * 60 * 24)) : 0}
+            />
 
       {/* Premium Toast Styles */}
       <style>{`

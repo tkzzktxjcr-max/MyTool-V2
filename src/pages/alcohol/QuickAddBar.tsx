@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Star, Check, Clock, TrendingUp, Sparkles, ChevronRight } from 'lucide-react';
+import { Plus, Star, Check, Clock, TrendingUp, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { PremiumEmptyState } from '@/components/ui/PremiumEmptyState';
 import type { Drink } from '@/features/alcohol/service';
 import { calculateUnits } from '@/features/alcohol/utils/units';
 import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/service';
@@ -175,10 +176,17 @@ export default function QuickAddBar({
             );
           })
         ) : (
-          <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl text-muted-foreground text-sm">
-            <Sparkles className="w-4 h-4" />
-            <span>Aucune suggestion - ajoute des favoris</span>
-          </div>
+          <PremiumEmptyState
+            emoji="🍷"
+            title="Pas encore de favoris"
+            description={`Ajoute tes boissons préférées pour un accès rapide ${timeLabel}`}
+            action={{
+              label: "Créer une boissons",
+              onClick: onCreateDrink,
+              variant: 'secondary',
+            }}
+            className="px-2 py-3"
+          />
         )}
 
         {/* Create button */}

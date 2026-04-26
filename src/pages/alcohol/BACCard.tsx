@@ -54,7 +54,7 @@ export default function BACCard({
     
     if (!isAboveLimit && !isNearLimit) {
       return {
-        label: 'Sous la limite',
+        label: '🌿 Léger',
         sublabel: `Conduite autorisée`,
         icon: CheckCircle2,
         color: 'text-secondary',
@@ -65,7 +65,7 @@ export default function BACCard({
     
     if (isNearLimit) {
       return {
-        label: 'Approche de la limite',
+        label: '✨ Modéré',
         sublabel: safeToDriveTime ? `OK dans ${formatDistanceToNow(safeToDriveTime, { addSuffix: false })}` : 'Bientôt',
         icon: Clock,
         color: 'text-[hsl(38,92%,50%)]',
@@ -75,7 +75,7 @@ export default function BACCard({
     }
     
     return {
-      label: 'Au-dessus de la limite',
+      label: 'Retour à la limite dans ~2h',
       sublabel: safeToDriveTime ? `Conduite OK dans ~${formatDistanceToNow(safeToDriveTime, { addSuffix: false })}` : 'Plus tard',
       icon: Clock,
       color: 'text-destructive',
