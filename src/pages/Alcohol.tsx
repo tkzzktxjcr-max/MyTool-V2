@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
-import { Activity, Target, User, Info, Plus, X } from 'lucide-react';
+import { Activity, Target, User, Info, Plus, X, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import type { DrinkType, MoodType } from '@/features/alcohol/types';
@@ -25,6 +25,10 @@ import QuickAddBar from './alcohol/QuickAddBar';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
 import { toast } from 'sonner';
 
+// Onboarding
+import { AlcoholOnboardingWizard } from '@/components/onboarding/alcohol/AlcoholOnboardingWizard';
+import { useAlcoholOnboarding } from '@/components/onboarding/alcohol/useAlcoholOnboarding';
+
 export default function AlcoholPage() {
   const {
     drinks, libraryDrinks, userDrinks, smartDrinks, favorites, suggestedFavorites, currentTimeOfDay,
@@ -32,6 +36,12 @@ export default function AlcoholPage() {
     loadData, createDrink, quickLog, deleteLog, undoDelete, deleteDrink, toggleFavorite,
     setWeeklyGoal, updateUserProfile, getWeeklyUnits,
   } = useAlcohol();
+
+  // Onboarding state
+  const {
+    hasCompleted: onboardingCompleted,
+    reset: resetOnboarding,
+  } = useAlcoholOnboarding();
 
   const [showGoalSetter, setShowGoalSetter] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
@@ -41,6 +51,7 @@ export default function AlcoholPage() {
   const [showInfo, setShowInfo] = useState(false);
   const [showDrinkPicker, setShowDrinkPicker] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   
   const [quantity, setQuantity] = useState(1);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
@@ -50,6 +61,13 @@ export default function AlcoholPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Show onboarding if not completed
+  useEffect(() => {
+    if (!onboardingCompleted) {
+      setShowOnboarding(true);
+    }
+  }, [onboardingCompleted]);
 
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;
@@ -138,6 +156,15 @@ export default function AlcoholPage() {
     setShowTimeSelector(false);
   };
 
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+  };
+
+  const handleRestartOnboarding = () => {
+    resetOnboarding();
+    setShowOnboarding(true);
+  };
+
   const totalUnits = selectedDrink 
     ? calculateUnits(selectedDrink.defaultServingSize, selectedDrink.abv, quantity)
     : 0;
@@ -152,6 +179,16 @@ export default function AlcoholPage() {
     night: { icon: '🌙', label: 'Bonne nuit' },
   };
   const timeInfo = timeLabels[currentTimeOfDay];
+
+  // Show onboarding wizard if needed
+  if (showOnboarding && !onboardingCompleted) {
+    return (
+      <AlcoholOnboardingWizard
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingComplete}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
@@ -177,6 +214,9 @@ export default function AlcoholPage() {
           </p>
         </div>
         <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={handleRestartOnboarding} className="rounded-xl" title="Relancer l'onboarding">
+            <RotateCcw className="w-5 h-5" />
+          </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)} className="rounded-xl">
             <User className="w-5 h-5" />
           </Button>
