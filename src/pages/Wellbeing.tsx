@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
@@ -14,6 +13,7 @@ import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/services';
 import { toast } from 'sonner';
 import { AlcoholOnboardingWizard } from '@/components/onboarding/alcohol/AlcoholOnboardingWizard';
 import { useAlcoholOnboarding } from '@/components/onboarding/alcohol/useAlcoholOnboarding';
+import { consumePendingAutoOpen } from '@/lib/autoOpenStore';
 
 import BACCard from './alcohol/BACCard';
 import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
@@ -36,8 +36,6 @@ const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
 };
 
 export default function WellbeingPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -61,20 +59,15 @@ export default function WellbeingPage() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
 
-  // Use a ref to ensure autoOpenAdd is handled exactly once
-  const autoOpenHandled = useRef(false);
-
-  // Handle autoOpenAdd from Dashboard navigation
+  // Consume the pending auto-open flag on mount
+  const autoOpenConsumed = useRef(false);
   useEffect(() => {
-    if (autoOpenHandled.current) return;
-    const state = location.state as { autoOpenAdd?: boolean } | null;
-    if (state?.autoOpenAdd) {
-      autoOpenHandled.current = true;
+    if (autoOpenConsumed.current) return;
+    autoOpenConsumed.current = true;
+    if (consumePendingAutoOpen()) {
       setShowDrinkPicker(true);
-      // Clear the navigation state using React Router (replace current entry)
-      navigate('/wellbeing', { replace: true, state: {} });
     }
-  }, [location.state, navigate]);
+  }, []);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);

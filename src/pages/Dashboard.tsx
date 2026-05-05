@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import { cn } from '@/lib/utils';
+import { setPendingAutoOpen } from '@/lib/autoOpenStore';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -36,6 +37,11 @@ export default function Dashboard() {
   const weeklyLimit = HEALTH_GUIDELINES.maxWeeklyUnits;
   const currentStreak = insights?.streak || 0;
   const firstName = user?.name?.split(' ')[0] || 'Bienvenue';
+
+  const handleAddDrink = () => {
+    setPendingAutoOpen(true);
+    navigate('/wellbeing');
+  };
 
   if (!mounted || alcoholLoading || budgetLoading) {
     return (
@@ -73,7 +79,7 @@ export default function Dashboard() {
 
       {/* Main CTA */}
       <Button
-        onClick={() => navigate('/wellbeing', { state: { autoOpenAdd: true } })}
+        onClick={handleAddDrink}
         className="w-full h-14 rounded-2xl text-base font-medium bg-secondary hover:bg-secondary/90 shadow-lg shadow-secondary/20"
       >
         <Plus className="w-5 h-5 mr-2" />
