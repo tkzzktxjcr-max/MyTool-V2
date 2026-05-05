@@ -12,7 +12,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import { cn } from '@/lib/utils';
-import { setPendingAutoOpen } from '@/lib/autoOpenStore';
+
+const AUTO_OPEN_KEY = 'wellbeing_auto_open';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -39,7 +40,7 @@ export default function Dashboard() {
   const firstName = user?.name?.split(' ')[0] || 'Bienvenue';
 
   const handleAddDrink = () => {
-    setPendingAutoOpen(true);
+    sessionStorage.setItem(AUTO_OPEN_KEY, 'true');
     navigate('/wellbeing');
   };
 

@@ -13,7 +13,6 @@ import { getTimeOfDay, type TimeOfDay } from '@/features/alcohol/services';
 import { toast } from 'sonner';
 import { AlcoholOnboardingWizard } from '@/components/onboarding/alcohol/AlcoholOnboardingWizard';
 import { useAlcoholOnboarding } from '@/components/onboarding/alcohol/useAlcoholOnboarding';
-import { consumePendingAutoOpen } from '@/lib/autoOpenStore';
 
 import BACCard from './alcohol/BACCard';
 import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
@@ -27,6 +26,8 @@ import MoodSelector from './alcohol/MoodSelector';
 import QuantitySelector from './alcohol/QuantitySelector';
 import TimeSelector from './alcohol/TimeSelector';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
+
+const AUTO_OPEN_KEY = 'wellbeing_auto_open';
 
 const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
   morning: { icon: '☀️', label: 'Bon matin' },
@@ -50,8 +51,12 @@ export default function WellbeingPage() {
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
-  // Initialize from the auto-open flag — runs BEFORE first render, no timing issues
-  const [showDrinkPicker, setShowDrinkPicker] = useState(() => consumePendingAutoOpen());
+  // Read from sessionStorage synchronously in useState initializer
+  const [showDrinkPicker, setShowDrinkPicker] = useState(() => {
+    const shouldAutoOpen = sessionStorage.getItem(AUTO_OPEN_KEY) === 'true';
+    if (shouldAutoOpen) sessionStorage.removeItem(AUTO_OPEN_KEY);
+    return shouldAutoOpen;
+  });
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
