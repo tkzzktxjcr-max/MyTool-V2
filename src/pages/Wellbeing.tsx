@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
@@ -36,9 +35,6 @@ const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
 };
 
 export default function WellbeingPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const shouldAutoOpen = searchParams.get('add') === '1';
-
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -53,7 +49,11 @@ export default function WellbeingPage() {
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
-  const [showDrinkPicker, setShowDrinkPicker] = useState(false);
+  // Read directly from window.location — synchronous, no reactivity issues
+  const [showDrinkPicker, setShowDrinkPicker] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('add') === '1';
+  });
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
@@ -62,13 +62,13 @@ export default function WellbeingPage() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
 
-  // Auto-open drink picker from URL param, then clean up the URL
+  // Clean up URL once on mount without triggering React Router re-renders
   useEffect(() => {
-    if (shouldAutoOpen) {
-      setShowDrinkPicker(true);
-      setSearchParams({}, { replace: true });
+    if (window.location.search.includes('add=1')) {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, '', cleanUrl);
     }
-  }, [shouldAutoOpen, setSearchParams]);
+  }, []);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);
