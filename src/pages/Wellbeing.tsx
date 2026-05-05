@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
@@ -50,7 +50,8 @@ export default function WellbeingPage() {
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
-  const [showDrinkPicker, setShowDrinkPicker] = useState(false);
+  // Initialize from the auto-open flag — runs BEFORE first render, no timing issues
+  const [showDrinkPicker, setShowDrinkPicker] = useState(() => consumePendingAutoOpen());
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
@@ -58,16 +59,6 @@ export default function WellbeingPage() {
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
-
-  // Consume the pending auto-open flag on mount
-  const autoOpenConsumed = useRef(false);
-  useEffect(() => {
-    if (autoOpenConsumed.current) return;
-    autoOpenConsumed.current = true;
-    if (consumePendingAutoOpen()) {
-      setShowDrinkPicker(true);
-    }
-  }, []);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);
