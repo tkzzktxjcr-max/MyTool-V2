@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,13 +16,9 @@ import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 
 export default function InsightsPage() {
   const navigate = useNavigate();
-  const { insights, logs, goal, userProfile, loadData, getWeeklyUnits } = useAlcohol();
+  const { insights, logs, goal, userProfile, getWeeklyUnits } = useAlcohol();
   
   const [showBadges, setShowBadges] = useState(false);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
 
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = goal?.weeklyLimit || HEALTH_GUIDELINES.maxWeeklyUnits;

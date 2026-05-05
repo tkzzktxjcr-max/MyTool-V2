@@ -19,14 +19,6 @@ export const COLLECTIONS = {
   USER_PROFILES: import.meta.env.VITE_COLLECTION_USER_PROFILES || 'user_profiles',
 };
 
-// Debug: log collection IDs on load
-console.log('[Appwrite Config]', {
-  endpoint: APPWRITE_CONFIG.endpoint,
-  projectId: APPWRITE_CONFIG.projectId ? APPWRITE_CONFIG.projectId.substring(0, 8) + '...' : 'MISSING',
-  databaseId: APPWRITE_CONFIG.databaseId ? APPWRITE_CONFIG.databaseId.substring(0, 8) + '...' : 'MISSING',
-  collections: COLLECTIONS,
-});
-
 const client = new Client()
   .setEndpoint(APPWRITE_CONFIG.endpoint)
   .setProject(APPWRITE_CONFIG.projectId);
@@ -35,23 +27,11 @@ export const account = new Account(client);
 export const databases = new Databases(client);
 
 export const createDocument = async (collectionId: string, data: Record<string, unknown>) => {
-  try {
-    const result = await databases.createDocument(APPWRITE_CONFIG.databaseId, collectionId, ID.unique(), data);
-    return result;
-  } catch (error) {
-    console.error('[Appwrite] Error creating document:', error);
-    throw error;
-  }
+  return databases.createDocument(APPWRITE_CONFIG.databaseId, collectionId, ID.unique(), data);
 };
 
 export const listDocuments = async (collectionId: string, queries: string[] = []) => {
-  try {
-    const result = await databases.listDocuments(APPWRITE_CONFIG.databaseId, collectionId, queries);
-    return result;
-  } catch (error) {
-    console.error('[Appwrite] Error listing documents:', error);
-    throw error;
-  }
+  return databases.listDocuments(APPWRITE_CONFIG.databaseId, collectionId, queries);
 };
 
 export const updateDocument = async (collectionId: string, documentId: string, data: Record<string, unknown>) => {

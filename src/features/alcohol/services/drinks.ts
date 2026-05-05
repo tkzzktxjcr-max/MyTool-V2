@@ -2,6 +2,26 @@ import { createDocument, listDocuments, updateDocument, deleteDocument, Query } 
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { DrinkType } from '../types';
 
+interface DrinkDoc {
+  $id: string;
+  name: string;
+  type: string;
+  abv: number;
+  defaultServingSize?: number;
+  servingSize?: number;
+  emoji: string;
+  country?: string;
+  isFavorite?: boolean;
+  favoriteRank?: number | null;
+  usageCount?: number;
+  userId?: string | null;
+  isGlobal?: boolean;
+  popularity?: number;
+  category?: string | null;
+  brand?: string | null;
+  $createdAt: string;
+}
+
 export interface Drink {
   id: string;
   name: string;
@@ -21,21 +41,21 @@ export interface Drink {
   createdAt: string;
 }
 
-const mapDocToDrink = (doc: any): Drink => ({
+const mapDocToDrink = (doc: DrinkDoc): Drink => ({
   id: doc.$id, name: doc.name, type: doc.type as DrinkType, abv: doc.abv,
   defaultServingSize: doc.defaultServingSize || doc.servingSize || 33, emoji: doc.emoji,
-  country: doc.country, isFavorite: doc.isFavorite || false, favoriteRank: doc.favoriteRank,
-  usageCount: doc.usageCount || 0, userId: doc.userId, isGlobal: doc.isGlobal || false,
-  popularity: doc.popularity || 0, category: doc.category, brand: doc.brand, createdAt: doc.$createdAt,
+  country: doc.country, isFavorite: doc.isFavorite || false, favoriteRank: doc.favoriteRank ?? undefined,
+  usageCount: doc.usageCount || 0, userId: doc.userId ?? undefined, isGlobal: doc.isGlobal || false,
+  popularity: doc.popularity || 0, category: doc.category ?? undefined, brand: doc.brand ?? undefined, createdAt: doc.$createdAt,
 });
 
 export const drinksService = {
   async getAllDrinks(): Promise<Drink[]> {
-    const allDocs: any[] = [];
+    const allDocs: DrinkDoc[] = [];
     let offset = 0;
     while (true) {
       const res = await listDocuments(COLLECTIONS.DRINKS, [Query.limit(100), Query.offset(offset)]);
-      allDocs.push(...res.documents);
+      allDocs.push(...(res.documents as DrinkDoc[]));
       if (res.documents.length < 100) break;
       offset += 100;
       if (allDocs.length >= 1000) break;
@@ -45,15 +65,15 @@ export const drinksService = {
 
   async getUserDrinks(userId: string): Promise<Drink[]> {
     const res = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
-    return res.documents.map(mapDocToDrink);
+    return (res.documents as DrinkDoc[]).map(mapDocToDrink);
   },
 
   async createDrink(data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string; country?: string; userId?: string }): Promise<Drink> {
-    const doc: any = await createDocument(COLLECTIONS.DRINKS, {
+    const doc: DrinkDoc = await createDocument(COLLECTIONS.DRINKS, {
       name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.defaultServingSize,
       emoji: data.emoji, country: data.country || null, isFavorite: false, favoriteRank: null,
       usageCount: 0, userId: data.userId || null, isGlobal: false, popularity: 0, category: null, brand: null,
-    });
+    }) as DrinkDoc;
     return mapDocToDrink(doc);
   },
 

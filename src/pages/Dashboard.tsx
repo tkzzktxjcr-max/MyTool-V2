@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/features/auth/context';
@@ -32,16 +32,14 @@ const getMoodEmoji = (streak: number, weeklyUnits: number, weeklyLimit: number) 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { insights, loadData, getWeeklyUnits, bacState } = useAlcohol();
-  const { budgetUsed, loadEntries } = useBudget();
+  const { insights, getWeeklyUnits, bacState, isLoading: alcoholLoading } = useAlcohol();
+  const { budgetUsed, isLoading: budgetLoading } = useBudget();
 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    loadData();
-    loadEntries();
     setMounted(true);
-  }, [loadData, loadEntries]);
+  }, []);
 
   const weeklyUnits = getWeeklyUnits();
   const weeklyLimit = HEALTH_GUIDELINES.maxWeeklyUnits;
@@ -51,39 +49,15 @@ export default function Dashboard() {
 
   const getBACStatus = () => {
     if (bacState.currentBAC === 0) {
-      return {
-        label: 'Sobre maintenant',
-        color: 'text-secondary',
-        bgClass: 'bg-secondary/10 border-secondary/20',
-        icon: CheckCircle2,
-        sublabel: 'Pret pour la route',
-      };
+      return { label: 'Sobre maintenant', color: 'text-secondary', bgClass: 'bg-secondary/10 border-secondary/20', icon: CheckCircle2, sublabel: 'Pret pour la route' };
     }
     if (bacState.isAboveLimit) {
-      return {
-        label: 'Au-dessus de la limite',
-        color: 'text-destructive',
-        bgClass: 'bg-destructive/10 border-destructive/20',
-        icon: AlertTriangle,
-        sublabel: 'Conduite interdite',
-      };
+      return { label: 'Au-dessus de la limite', color: 'text-destructive', bgClass: 'bg-destructive/10 border-destructive/20', icon: AlertTriangle, sublabel: 'Conduite interdite' };
     }
     if (bacState.isNearLimit) {
-      return {
-        label: 'Proche de la limite',
-        color: 'text-[hsl(38,92%,50%)]',
-        bgClass: 'bg-[hsl(38,92%,50%)]/10 border-[hsl(38,92%,50%)]/20',
-        icon: AlertTriangle,
-        sublabel: 'Conduite non recommandee',
-      };
+      return { label: 'Proche de la limite', color: 'text-[hsl(38,92%,50%)]', bgClass: 'bg-[hsl(38,92%,50%)]/10 border-[hsl(38,92%,50%)]/20', icon: AlertTriangle, sublabel: 'Conduite non recommandee' };
     }
-    return {
-      label: 'Dans les limites',
-      color: 'text-secondary',
-      bgClass: 'bg-secondary/10 border-secondary/20',
-      icon: CheckCircle2,
-      sublabel: 'Conduite autorisee',
-    };
+    return { label: 'Dans les limites', color: 'text-secondary', bgClass: 'bg-secondary/10 border-secondary/20', icon: CheckCircle2, sublabel: 'Conduite autorisee' };
   };
 
   const bacStatus = getBACStatus();
@@ -91,7 +65,7 @@ export default function Dashboard() {
   const mood = getMoodEmoji(currentStreak, weeklyUnits, weeklyLimit);
   const progress = weeklyLimit > 0 ? Math.min((weeklyUnits / weeklyLimit) * 100, 100) : 0;
 
-  if (!mounted) {
+  if (!mounted || alcoholLoading || budgetLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <motion.div
@@ -174,7 +148,6 @@ export default function Dashboard() {
               </motion.div>
             </div>
 
-            {/* Driving status */}
             {bacState.currentBAC > 0 && (
               <div className="h-2 rounded-full bg-white/10 overflow-hidden">
                 <motion.div
@@ -193,7 +166,7 @@ export default function Dashboard() {
             {bacState.currentBAC === 0 && (
               <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-secondary/10">
                 <CheckCircle2 className="w-5 h-5 text-secondary" />
-                <span className="text-sm text-secondary font-medium">Z\u00e9ro alkohol dans le sang</span>
+                <span className="text-sm text-secondary font-medium">Zero alcool dans le sang</span>
               </div>
             )}
           </CardContent>
@@ -336,7 +309,7 @@ export default function Dashboard() {
                     Semaine parfaite
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Zero alkohol cette semaine. Profite de ta clarte d'esprit !
+                    Zero alcool cette semaine. Profite de ta clarte d'esprit !
                   </p>
                 </div>
               </div>
@@ -362,7 +335,7 @@ export default function Dashboard() {
       {/* Navigation Cards */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
         <div className="grid grid-cols-2 gap-3">
-          <Card hover className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-secondary/10" onClick={() => navigate('/wellbeing')}>
+          <Card className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-secondary/10" onClick={() => navigate('/wellbeing')}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center">
                 <Wine className="w-6 h-6 text-secondary" />
@@ -375,7 +348,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card hover className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10" onClick={() => navigate('/insights')}>
+          <Card className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10" onClick={() => navigate('/insights')}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
                 <BarChart3 className="w-6 h-6 text-primary" />
@@ -388,7 +361,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card hover className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-accent/10" onClick={() => navigate('/budget')}>
+          <Card className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-accent/10" onClick={() => navigate('/budget')}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center">
                 <Wallet className="w-6 h-6 text-accent" />
@@ -401,7 +374,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card hover className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-muted/10" onClick={() => navigate('/settings')}>
+          <Card className="cursor-pointer transition-all hover:scale-[1.02] hover:shadow-lg hover:shadow-muted/10" onClick={() => navigate('/settings')}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-muted-foreground" />

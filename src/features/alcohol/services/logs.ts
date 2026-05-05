@@ -4,6 +4,23 @@ import { DRINK_TYPES, HEALTH_GUIDELINES, type DrinkType, type MoodType, type Alc
 import { calculateUnitsWithQuantity } from '../utils/units';
 import type { Drink } from './drinks';
 
+interface AlcoholLogDoc {
+  $id: string;
+  userId: string;
+  drinkName?: string;
+  drinkEmoji?: string;
+  drinkType: string;
+  volumeCl?: number;
+  servingSize?: number;
+  abv: number;
+  units: number;
+  quantity?: number;
+  mood?: string;
+  date?: string;
+  timestamp?: string;
+  notes?: string;
+}
+
 export type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
 
 const DRINKS_BY_TIME: Record<TimeOfDay, DrinkType[]> = {
@@ -56,19 +73,25 @@ export const getSmartDrinksForTime = (drinks: Drink[], timeOfDay: TimeOfDay): Dr
   });
 };
 
+const mapDocToLog = (doc: AlcoholLogDoc): AlcoholLog => ({
+  id: doc.$id,
+  userId: doc.userId,
+  drinkName: doc.drinkName || DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
+  drinkEmoji: doc.drinkEmoji || DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
+  drinkType: doc.drinkType as DrinkType,
+  quantity: doc.quantity || 1,
+  servingSize: doc.volumeCl || doc.servingSize || 33,
+  abv: doc.abv,
+  units: doc.units,
+  mood: doc.mood as MoodType | undefined,
+  timestamp: doc.date || doc.timestamp || new Date().toISOString(),
+  notes: doc.notes,
+});
+
 export const alcoholService = {
   async getLogs(userId: string): Promise<AlcoholLog[]> {
-    try {
-      const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [Query.equal('userId', userId)]);
-      return response.documents.map((doc: any) => ({
-        id: doc.$id, userId: doc.userId,
-        drinkName: doc.drinkName || DRINK_TYPES[doc.drinkType as DrinkType]?.label || doc.drinkType,
-        drinkEmoji: doc.drinkEmoji || DRINK_TYPES[doc.drinkType as DrinkType]?.icon || '🥤',
-        drinkType: doc.drinkType as DrinkType, quantity: doc.quantity || 1,
-        servingSize: doc.volumeCl || doc.servingSize || 33, abv: doc.abv, units: doc.units,
-        mood: doc.mood, timestamp: doc.date || doc.timestamp, notes: doc.notes,
-      }));
-    } catch { return []; }
+    const response = await listDocuments(COLLECTIONS.ALCOHOL_LOGS, [Query.equal('userId', userId)]);
+    return response.documents.map((doc: unknown) => mapDocToLog(doc as AlcoholLogDoc));
   },
 
   async createLog(userId: string, data: {
@@ -83,9 +106,7 @@ export const alcoholService = {
       notes: data.notes || null, drinkName: data.drinkName || DRINK_TYPES[data.drinkType]?.label,
       drinkEmoji: data.drinkEmoji || DRINK_TYPES[data.drinkType]?.icon,
     });
-    return { id: doc.$id, userId: doc.userId, drinkName: doc.drinkName, drinkEmoji: doc.drinkEmoji,
-      drinkType: doc.drinkType as DrinkType, quantity: doc.quantity || 1, servingSize: doc.volumeCl || 33,
-      abv: doc.abv, units: doc.units, mood: doc.mood, timestamp: doc.date, notes: doc.notes };
+    return mapDocToLog(doc);
   },
 
   async deleteLog(logId: string): Promise<void> {

@@ -14,7 +14,7 @@ export const BUDGET_CATEGORIES: Record<BudgetCategory, { label: string; icon: st
 
 export interface BudgetEntry {
   id: string;
-  familyId: string;
+  userId: string;
   amount: number;
   category: BudgetCategory;
   description?: string;
@@ -41,7 +41,7 @@ export interface BudgetStats {
 
 export interface BudgetGoal {
   id: string;
-  familyId: string;
+  userId: string;
   monthlyLimit: number;
   alcoholLimit: number;
   createdAt: string;

@@ -1,16 +1,13 @@
-/**
- * Budget Service - Gestion du budget alcool avec achievements
- */
-
 import { listDocuments, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
+import type { FinancialStats } from '@/features/wellbeing/utils/financial';
 
 export interface BudgetAchievement {
   id: string;
   name: string;
   description: string;
   icon: string;
-  condition: (stats: any, achievements: BudgetAchievement[]) => boolean;
+  condition: (stats: FinancialStats, achievements: BudgetAchievement[]) => boolean;
   unlockedAt?: string;
 }
 
@@ -105,33 +102,33 @@ export interface BudgetProfile {
   updatedAt: string;
 }
 
-export const budgetService = {
+export const wellbeingBudgetService = {
   async getBudgetProfile(userId: string): Promise<BudgetProfile | null> {
-    try {
-      await listDocuments(COLLECTIONS.BUDGET_ENTRIES, [
-        Query.equal('userId', userId),
-        Query.limit(1),
-      ]);
-      
-      return {
-        id: 'default',
-        userId,
-        monthlyBudget: 100,
-        alcoholLimit: 30,
-        alertThresholds: [50, 75, 90, 100],
-        achievements: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    } catch {
+    const response = await listDocuments(COLLECTIONS.BUDGET_ENTRIES, [
+      Query.equal('createdBy', userId),
+      Query.limit(1),
+    ]);
+
+    if (response.documents.length === 0) {
       return null;
     }
+
+    return {
+      id: response.documents[0].$id,
+      userId,
+      monthlyBudget: 100,
+      alcoholLimit: 30,
+      alertThresholds: [50, 75, 90, 100],
+      achievements: [],
+      createdAt: response.documents[0].$createdAt,
+      updatedAt: response.documents[0].$updatedAt,
+    };
   },
 
-  async checkAchievements(userId: string, stats: any): Promise<BudgetAchievement[]> {
+  async checkAchievements(userId: string, stats: FinancialStats): Promise<BudgetAchievement[]> {
     const profile = await this.getBudgetProfile(userId);
     const unlockedIds = profile?.achievements || [];
-    
+
     const unlocked: BudgetAchievement[] = [];
     const achievedList = unlockedIds.map((id: string) => BUDGET_ACHIEVEMENTS.find(a => a.id === id)).filter(Boolean) as BudgetAchievement[];
 
@@ -159,37 +156,17 @@ export const budgetService = {
     const percentage = (spent / limit) * 100;
 
     if (percentage >= 100) {
-      return {
-        shouldAlert: true,
-        message: '⚠️ Budget dépassé !',
-        type: 'critical',
-      };
+      return { shouldAlert: true, message: '⚠️ Budget dépassé !', type: 'critical' };
     }
-
     if (percentage >= 90) {
-      return {
-        shouldAlert: true,
-        message: '🚨 Alerte ! 90% du budget utilisé.',
-        type: 'warning',
-      };
+      return { shouldAlert: true, message: '🚨 Alerte ! 90% du budget utilisé.', type: 'warning' };
     }
-
     if (percentage >= 75) {
-      return {
-        shouldAlert: true,
-        message: '📊 75% du budget utilisé.',
-        type: 'warning',
-      };
+      return { shouldAlert: true, message: '📊 75% du budget utilisé.', type: 'warning' };
     }
-
     if (percentage >= 50) {
-      return {
-        shouldAlert: true,
-        message: '💡 Moitié du budget atteint.',
-        type: 'info',
-      };
+      return { shouldAlert: true, message: '💡 Moitié du budget atteint.', type: 'info' };
     }
-
     return null;
   },
 };

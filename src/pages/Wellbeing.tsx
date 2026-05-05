@@ -38,7 +38,7 @@ export default function WellbeingPage() {
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
-    loadData, createDrink, quickLog, deleteLog, undoDelete, deleteDrink, toggleFavorite,
+    createDrink, quickLog, deleteLog, undoDelete, deleteDrink, toggleFavorite,
     setWeeklyGoal, updateUserProfile, getWeeklyUnits,
   } = useAlcohol();
 
@@ -57,8 +57,6 @@ export default function WellbeingPage() {
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
-
-  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);

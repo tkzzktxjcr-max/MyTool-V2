@@ -1,8 +1,5 @@
-/**
- * Financial Impact Calculator - Budget Alcool
- */
-
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import type { AlcoholLog } from '@/features/alcohol/types';
 
 const AVERAGE_PRICES: Record<string, number> = {
   beer: 4, lager: 4, pilsner: 4, stout: 6, wheat_beer: 5, ipa: 6, ale: 5,
@@ -43,12 +40,12 @@ export interface FinancialStats {
   byCategory: Record<string, number>;
 }
 
-export const estimateSpendForLog = (log: any): number => {
+export const estimateSpendForLog = (log: AlcoholLog): number => {
   const basePrice = AVERAGE_PRICES[log.drinkType] || AVERAGE_PRICES.other;
   return basePrice * (log.quantity || 1);
 };
 
-export const calculateFinancialStats = (logs: any[]): FinancialStats => {
+export const calculateFinancialStats = (logs: AlcoholLog[]): FinancialStats => {
   const now = new Date();
   const weekAgo = new Date(now); weekAgo.setDate(weekAgo.getDate() - 7);
   const monthAgo = new Date(now); monthAgo.setDate(monthAgo.getDate() - 30);
@@ -56,7 +53,7 @@ export const calculateFinancialStats = (logs: any[]): FinancialStats => {
   const prevMonthStart = subMonths(startOfMonth(now), 1);
   const prevMonthEnd = endOfMonth(prevMonthStart);
 
-  const filterByDate = (start: Date, end?: Date) => logs.filter((log: any) => {
+  const filterByDate = (start: Date, end?: Date) => logs.filter((log) => {
     const logDate = new Date(log.timestamp);
     return logDate >= start && (!end || logDate <= end);
   });
@@ -67,7 +64,7 @@ export const calculateFinancialStats = (logs: any[]): FinancialStats => {
   const yearlyLogs = filterByDate(yearAgo);
   const prevMonthLogs = filterByDate(prevMonthStart, prevMonthEnd);
 
-  const calcSpend = (arr: any[]) => arr.reduce((sum: number, log: any) => sum + estimateSpendForLog(log), 0);
+  const calcSpend = (arr: AlcoholLog[]) => arr.reduce((sum, log) => sum + estimateSpendForLog(log), 0);
 
   const dailySpend = calcSpend(dailyLogs);
   const weeklySpend = calcSpend(weeklyLogs);
@@ -91,7 +88,7 @@ export const calculateFinancialStats = (logs: any[]): FinancialStats => {
   };
 
   const byCategory: Record<string, number> = {};
-  logs.forEach((log: any) => {
+  logs.forEach((log) => {
     const cat = log.drinkType;
     byCategory[cat] = (byCategory[cat] || 0) + estimateSpendForLog(log);
   });

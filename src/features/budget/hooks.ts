@@ -1,15 +1,18 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context';
 import { budgetService } from './service';
 import { alcoholService } from '@/features/alcohol/services';
-import { budgetService as wellbeingBudgetService } from '@/features/wellbeing/services/budget';
+import { wellbeingBudgetService, type BudgetAchievement } from '@/features/wellbeing/services/budget';
 import { calculateFinancialStats, getBudgetStatus, getBudgetFeedback } from '@/features/wellbeing/utils/financial';
 import type { BudgetEntry, CreateBudgetEntryForm, BudgetCategory } from './types';
 
+const STALE_TIME = 2 * 60 * 1000; // 2 minutes
+
 export interface UseBudgetResult {
   entries: BudgetEntry[];
-  loading: boolean;
-  loadEntries: () => Promise<void>;
+  isLoading: boolean;
+  isError: boolean;
   createEntry: (form: CreateBudgetEntryForm) => Promise<BudgetEntry>;
   deleteEntry: (entryId: string) => Promise<void>;
   updateEntry: (entryId: string, data: Partial<BudgetEntry>) => Promise<BudgetEntry>;
@@ -23,83 +26,58 @@ export interface UseBudgetResult {
   expensesByCategory: Record<BudgetCategory, number>;
   monthlyBudgetGoal: number;
   setMonthlyBudgetGoal: (goal: number) => void;
-  achievements: any[];
-  newAchievements: any[];
+  achievements: BudgetAchievement[];
+  newAchievements: BudgetAchievement[];
   checkAchievements: () => Promise<void>;
   budgetAlert: { shouldAlert: boolean; message: string; type: 'info' | 'warning' | 'critical' } | null;
-  familyId: string | undefined;
-  setFamilyId: (id: string) => void;
 }
 
 export const useBudget = (): UseBudgetResult => {
   const { user } = useAuth();
-  const [entries, setEntries] = useState<BudgetEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [familyId, setFamilyId] = useState<string | undefined>(undefined);
-  const [alcoholLogs, setAlcoholLogs] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const userId = user?.$id;
+
   const [monthlyBudgetGoal, setMonthlyBudgetGoal] = useState(100);
-  const [achievements, setAchievements] = useState<any[]>([]);
-  const [newAchievements, setNewAchievements] = useState<any[]>([]);
+  const [newAchievements, setNewAchievements] = useState<BudgetAchievement[]>([]);
 
-  const loadEntries = useCallback(async () => {
-    if (!familyId) return;
-    setLoading(true);
-    try {
-      const data = await budgetService.getEntries(familyId);
-      setEntries(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [familyId]);
+  // ── Queries ──────────────────────────────────────────────────────────
+  const entriesQuery = useQuery({
+    queryKey: ['budget-entries', userId],
+    queryFn: () => budgetService.getEntries(userId!),
+    enabled: !!userId,
+    staleTime: STALE_TIME,
+  });
 
-  const loadAlcoholLogs = useCallback(async () => {
-    if (!user?.$id) return;
-    try {
-      const logs = await alcoholService.getLogs(user.$id);
-      setAlcoholLogs(logs);
-    } catch {
-      setAlcoholLogs([]);
-    }
-  }, [user?.$id]);
+  // Reuse the same cache key as useAlcohol for alcohol logs
+  const alcoholLogsQuery = useQuery({
+    queryKey: ['alcohol-logs', userId],
+    queryFn: () => alcoholService.getLogs(userId!),
+    enabled: !!userId,
+    staleTime: STALE_TIME,
+  });
 
-  const loadAchievements = useCallback(async () => {
-    if (!user?.$id) return;
-    try {
-      const allAchievements = await wellbeingBudgetService.getAllAchievements(user.$id);
-      setAchievements(allAchievements);
-    } catch {
-      setAchievements([]);
-    }
-  }, [user?.$id]);
+  const achievementsQuery = useQuery({
+    queryKey: ['budget-achievements', userId],
+    queryFn: () => wellbeingBudgetService.getAllAchievements(userId!),
+    enabled: !!userId,
+    staleTime: STALE_TIME,
+  });
 
-  const createEntry = async (form: CreateBudgetEntryForm): Promise<BudgetEntry> => {
-    if (!familyId || !user) throw new Error('No family or user');
-    const entry = await budgetService.createEntry(familyId, user.$id, form);
-    setEntries(prev => [entry, ...prev]);
-    return entry;
-  };
-
-  const deleteEntry = async (entryId: string): Promise<void> => {
-    await budgetService.deleteEntry(entryId);
-    setEntries(prev => prev.filter(e => e.id !== entryId));
-  };
-
-  const updateEntry = async (entryId: string, data: Partial<BudgetEntry>): Promise<BudgetEntry> => {
-    const updated = await budgetService.updateEntry(entryId, data);
-    setEntries(prev => prev.map(e => e.id === entryId ? updated : e));
-    return updated;
-  };
+  // ── Derived data ──────────────────────────────────────────────────────
+  const entries = entriesQuery.data ?? [];
+  const alcoholLogs = alcoholLogsQuery.data ?? [];
+  const achievements = achievementsQuery.data ?? [];
 
   const financialStats = useMemo(() => calculateFinancialStats(alcoholLogs), [alcoholLogs]);
 
   const totalExpenses = useMemo(() => 
     entries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0), [entries]
   );
-  
+
   const totalIncome = useMemo(() => 
     entries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0), [entries]
   );
-  
+
   const balance = useMemo(() => totalIncome - totalExpenses, [totalIncome, totalExpenses]);
 
   const expensesByCategory = useMemo(() => {
@@ -118,28 +96,74 @@ export const useBudget = (): UseBudgetResult => {
   const budgetStatus = getBudgetStatus(combinedExpenses, monthlyBudgetGoal);
   const budgetFeedback = getBudgetFeedback(financialStats, monthlyBudgetGoal);
 
-  const checkAchievements = useCallback(async () => {
-    if (!user?.$id) return;
-    try {
-      const newUnlocked = await wellbeingBudgetService.checkAchievements(user.$id, financialStats);
-      if (newUnlocked.length > 0) {
-        setNewAchievements(newUnlocked);
-        await loadAchievements();
-      }
-    } catch { /* silent */ }
-  }, [user?.$id, financialStats, loadAchievements]);
-
   const budgetAlert = useMemo((): { shouldAlert: boolean; message: string; type: 'info' | 'warning' | 'critical' } | null => {
     return wellbeingBudgetService.getAlertMessage(combinedExpenses, monthlyBudgetGoal);
   }, [combinedExpenses, monthlyBudgetGoal]);
 
-  useEffect(() => { if (familyId) loadEntries(); }, [familyId, loadEntries]);
-  useEffect(() => { loadAlcoholLogs(); loadAchievements(); }, [loadAlcoholLogs, loadAchievements]);
-  useEffect(() => { if (financialStats.monthlySpend > 0) checkAchievements(); }, [financialStats.monthlySpend, checkAchievements]);
+  // ── Mutations ─────────────────────────────────────────────────────────
+  const createEntryMutation = useMutation({
+    mutationFn: (form: CreateBudgetEntryForm) => {
+      if (!userId) throw new Error('Not authenticated');
+      return budgetService.createEntry(userId, form);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budget-entries', userId] });
+    },
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: (entryId: string) => budgetService.deleteEntry(entryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budget-entries', userId] });
+    },
+  });
+
+  const updateEntryMutation = useMutation({
+    mutationFn: ({ entryId, data }: { entryId: string; data: Partial<BudgetEntry> }) => {
+      return budgetService.updateEntry(entryId, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budget-entries', userId] });
+    },
+  });
+
+  // ── Wrapper functions ─────────────────────────────────────────────────
+  const createEntry = async (form: CreateBudgetEntryForm): Promise<BudgetEntry> => {
+    return createEntryMutation.mutateAsync(form);
+  };
+
+  const deleteEntry = async (entryId: string): Promise<void> => {
+    await deleteEntryMutation.mutateAsync(entryId);
+  };
+
+  const updateEntry = async (entryId: string, data: Partial<BudgetEntry>): Promise<BudgetEntry> => {
+    return updateEntryMutation.mutateAsync({ entryId, data });
+  };
+
+  // ── Achievement checking ──────────────────────────────────────────────
+  const checkAchievements = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const newUnlocked = await wellbeingBudgetService.checkAchievements(userId, financialStats);
+      if (newUnlocked.length > 0) {
+        setNewAchievements(newUnlocked);
+        queryClient.invalidateQueries({ queryKey: ['budget-achievements', userId] });
+      }
+    } catch { /* silent - achievements are non-critical */ }
+  }, [userId, financialStats, queryClient]);
+
+  useEffect(() => { 
+    if (financialStats.monthlySpend > 0) checkAchievements(); 
+  }, [financialStats.monthlySpend, checkAchievements]);
+
+  const isLoading = entriesQuery.isLoading || alcoholLogsQuery.isLoading;
+  const isError = entriesQuery.isError;
 
   return {
-    entries, loading, loadEntries, createEntry, deleteEntry, updateEntry,
-    financialStats, totalExpenses, totalIncome, balance, budgetUsed, budgetStatus, budgetFeedback, expensesByCategory,
-    monthlyBudgetGoal, setMonthlyBudgetGoal, achievements, newAchievements, checkAchievements, budgetAlert, familyId, setFamilyId,
+    entries, isLoading, isError, createEntry, deleteEntry, updateEntry,
+    financialStats, totalExpenses, totalIncome, balance, budgetUsed, 
+    budgetStatus, budgetFeedback, expensesByCategory,
+    monthlyBudgetGoal, setMonthlyBudgetGoal, achievements, newAchievements, 
+    checkAchievements, budgetAlert,
   };
 };
