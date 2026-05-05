@@ -13,8 +13,6 @@ import { fr } from 'date-fns/locale';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import { cn } from '@/lib/utils';
 
-const AUTO_OPEN_KEY = 'wellbeing_auto_open';
-
 const getGreeting = () => {
   const hour = new Date().getHours();
   if (hour < 12) return 'Bonjour';
@@ -40,8 +38,7 @@ export default function Dashboard() {
   const firstName = user?.name?.split(' ')[0] || 'Bienvenue';
 
   const handleAddDrink = () => {
-    sessionStorage.setItem(AUTO_OPEN_KEY, 'true');
-    navigate('/wellbeing');
+    navigate('/wellbeing?add=1');
   };
 
   if (!mounted || alcoholLoading || budgetLoading) {

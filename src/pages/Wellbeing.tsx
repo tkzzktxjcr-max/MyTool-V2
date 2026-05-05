@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
@@ -27,8 +28,6 @@ import QuantitySelector from './alcohol/QuantitySelector';
 import TimeSelector from './alcohol/TimeSelector';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
 
-const AUTO_OPEN_KEY = 'wellbeing_auto_open';
-
 const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
   morning: { icon: '☀️', label: 'Bon matin' },
   afternoon: { icon: '☀️', label: 'Bon aprem' },
@@ -37,6 +36,9 @@ const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
 };
 
 export default function WellbeingPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const shouldAutoOpen = searchParams.get('add') === '1';
+
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -51,12 +53,7 @@ export default function WellbeingPage() {
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
-  // Read from sessionStorage synchronously in useState initializer
-  const [showDrinkPicker, setShowDrinkPicker] = useState(() => {
-    const shouldAutoOpen = sessionStorage.getItem(AUTO_OPEN_KEY) === 'true';
-    if (shouldAutoOpen) sessionStorage.removeItem(AUTO_OPEN_KEY);
-    return shouldAutoOpen;
-  });
+  const [showDrinkPicker, setShowDrinkPicker] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
@@ -64,6 +61,14 @@ export default function WellbeingPage() {
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
+
+  // Auto-open drink picker from URL param, then clean up the URL
+  useEffect(() => {
+    if (shouldAutoOpen) {
+      setShowDrinkPicker(true);
+      setSearchParams({}, { replace: true });
+    }
+  }, [shouldAutoOpen, setSearchParams]);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);
