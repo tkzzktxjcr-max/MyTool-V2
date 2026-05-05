@@ -1,10 +1,6 @@
 /**
  * BAC Calculation Utility
  * Uses Widmark formula for accurate blood alcohol concentration estimation
- * 
- * REFERENCES:
- * - Widmark, E. M. P. (1932). "Die theoretischen Grundlagen der gerichtsmedizinischen Blutalkoholbestimmung"
- * - OMS Guidelines on Alcohol and Health (2018)
  */
 
 import { ALCOHOL, HEALTH } from '@/lib/constants';
@@ -37,10 +33,6 @@ export interface BACResult {
   timeline: BACDataPoint[];
 }
 
-/**
- * Calculate pure alcohol in grams from volume and ABV
- * Formula: grams = (volumeCl × 10) × (abv / 100) × alcoholDensity
- */
 export const calculateAlcoholGrams = (volumeCl: number, abv: number): number => {
   const volumeMl = volumeCl * 10;
   return volumeMl * (abv / 100) * ALCOHOL.DENSITY;
@@ -142,3 +134,19 @@ export const checkLegalLimit = (
   isAbove: bac > limit,
   isNear: bac > limit * 0.8 && bac <= limit,
 });
+
+/**
+ * Get qualitative user status for circle sharing
+ * Returns 'sober' | 'drinking' | 'at_risk' based on BAC and recent consumption
+ */
+export const getUserStatus = (
+  currentBAC: number,
+  isAboveLimit: boolean,
+  weeklyUnits: number,
+  weeklyLimit: number
+): 'sober' | 'drinking' | 'at_risk' => {
+  if (currentBAC === 0 && weeklyUnits === 0) return 'sober';
+  if (isAboveLimit || weeklyUnits > weeklyLimit * 1.2) return 'at_risk';
+  if (currentBAC > 0 || weeklyUnits > 0) return 'drinking';
+  return 'sober';
+};

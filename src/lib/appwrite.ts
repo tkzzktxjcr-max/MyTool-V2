@@ -17,6 +17,10 @@ export const COLLECTIONS = {
   DRINKS: import.meta.env.VITE_COLLECTION_DRINKS || 'drinks',
   GOALS: import.meta.env.VITE_COLLECTION_GOALS || 'goals',
   USER_PROFILES: import.meta.env.VITE_COLLECTION_USER_PROFILES || 'user_profiles',
+  CIRCLE_INVITATIONS: import.meta.env.VITE_COLLECTION_CIRCLE_INVITATIONS || 'circle_invitations',
+  CIRCLE_MEMBERS: import.meta.env.VITE_COLLECTION_CIRCLE_MEMBERS || 'circle_members',
+  CIRCLE_ALERTS: import.meta.env.VITE_COLLECTION_CIRCLE_ALERTS || 'circle_alerts',
+  CIRCLE_EMERGENCY: import.meta.env.VITE_COLLECTION_CIRCLE_EMERGENCY || 'circle_emergency_sessions',
 };
 
 const client = new Client()

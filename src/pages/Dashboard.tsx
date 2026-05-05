@@ -6,12 +6,14 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/features/auth/context';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { useBudget } from '@/features/budget/hooks';
+import { useCircle, useCircleAlerts } from '@/features/circle/hooks';
 import { Button } from '@/components/ui/button';
-import { Plus, Wine, BarChart3, Wallet, Settings, Flame, TrendingUp } from 'lucide-react';
+import { Plus, Wine, BarChart3, Wallet, Settings, Flame, TrendingUp, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import { cn } from '@/lib/utils';
+import CircleDashboardCard from './circle/CircleDashboardCard';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -25,6 +27,8 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { insights, getWeeklyUnits, isLoading: alcoholLoading } = useAlcohol();
   const { budgetUsed, isLoading: budgetLoading } = useBudget();
+  const { members, sharingEnabled } = useCircle();
+  const { unreadCount } = useCircleAlerts();
 
   const [mounted, setMounted] = useState(false);
 
@@ -110,6 +114,13 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Circle Widget */}
+      <CircleDashboardCard
+        membersCount={members.length}
+        sharingEnabled={sharingEnabled}
+        unreadAlerts={unreadCount}
+      />
 
       {/* Navigation Cards */}
       <div className="grid grid-cols-2 gap-3">

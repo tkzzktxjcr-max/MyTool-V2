@@ -3,18 +3,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Lock, Shield, Trash2, Download, Check, Info, ChevronRight, Sparkles, Heart } from 'lucide-react';
+import { ArrowLeft, Lock, Shield, Trash2, Download, Check, Info, ChevronRight, Sparkles, Heart, Users, Bell, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useCircle } from '@/features/circle/hooks';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
+  const { members, revokeMember } = useCircle();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
+  const [showCircleSettings, setShowCircleSettings] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleExportData = async () => {
@@ -41,6 +44,14 @@ export default function SettingsPage() {
     }
   };
 
+  const handleRevokeAll = async () => {
+    for (const member of members) {
+      await revokeMember(member.id);
+    }
+    toast.success('Tous les accès ont été révoqués');
+    setShowCircleSettings(false);
+  };
+
   const privacyChecks = [
     { icon: Check, label: 'Stockees localement sur ton appareil', description: 'Tes donnees ne transitent pas par nos serveurs' },
     { icon: Check, label: 'Jamais revendues ou partagees', description: 'Ta vie privee est notre priorite' },
@@ -62,6 +73,65 @@ export default function SettingsPage() {
       </header>
 
       <div className="p-4 space-y-6 max-w-2xl mx-auto">
+        {/* Circle Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-accent" />
+            <h2 className="text-lg font-semibold">Cercle de confiance</h2>
+          </div>
+
+          <Card className="overflow-hidden border-accent/20">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-accent" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Gérer mon cercle</p>
+                    <p className="text-xs text-muted-foreground">
+                      {members.length} proche{members.length > 1 ? 's' : ''} • Révoquer les accès
+                    </p>
+                  </div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowCircleSettings(true)}>
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="flex items-start gap-3">
+                  <Bell className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-accent">Données partagées</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Seuls les résumés agrégés sont partagés (état, unités/jour). Jamais tes boissons précises.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => setShowCircleSettings(true)}
+                className="w-full h-12 rounded-2xl justify-start px-4 bg-white/5 border-white/10 hover:bg-white/10"
+              >
+                <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mr-3">
+                  <Shield className="w-5 h-5 text-accent" />
+                </div>
+                <div className="text-left">
+                  <p className="font-medium">Confidentialité du cercle</p>
+                  <p className="text-xs text-muted-foreground">Révoquer les accès, purge des données</p>
+                </div>
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Privacy Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -223,6 +293,71 @@ export default function SettingsPage() {
           </p>
         </motion.div>
       </div>
+
+      {/* Circle Settings Sheet */}
+      <Sheet open={showCircleSettings} onOpenChange={setShowCircleSettings}>
+        <SheetContent side="bottom" className="rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle className="text-center flex items-center gap-2">
+              <Users className="w-5 h-5 text-accent" />
+              Gestion du cercle
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="mt-6 space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-white/5">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Users className="w-4 h-4 text-accent" />
+                Proches actuels
+              </h4>
+              {members.length === 0 ? (
+                <p className="text-muted-foreground">Aucun proche dans ton cercle</p>
+              ) : (
+                <div className="space-y-2">
+                  {members.map(m => (
+                    <div key={m.id} className="flex items-center justify-between p-2 rounded-lg bg-white/5">
+                      <span>{m.memberName}</span>
+                      <Button size="sm" variant="ghost" onClick={() => revokeMember(m.id)} className="h-7 text-xs text-destructive">
+                        <X className="w-3 h-3 mr-1" />
+                        Révoquer
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {members.length > 0 && (
+              <Button
+                variant="destructive"
+                onClick={handleRevokeAll}
+                className="w-full rounded-xl"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Révoquer tous les accès
+              </Button>
+            )}
+
+            <div className="p-4 rounded-xl bg-white/5">
+              <h4 className="font-semibold mb-2 flex items-center gap-2">
+                <Shield className="w-4 h-4 text-secondary" />
+                Droits à l'oubli
+              </h4>
+              <p className="text-muted-foreground">
+                La suppression d'un proche efface immédiatement toutes les données partagées avec lui. Les alertes sont purgées après 30 jours.
+              </p>
+            </div>
+
+            <Button
+              onClick={() => setShowCircleSettings(false)}
+              variant="outline"
+              className="w-full rounded-xl"
+            >
+              Fermer
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Privacy Details Sheet */}
       <Sheet open={showPrivacyDetails} onOpenChange={setShowPrivacyDetails}>

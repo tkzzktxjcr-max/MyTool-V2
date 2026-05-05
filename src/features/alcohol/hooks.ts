@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context';
 import { drinksService, alcoholService, goalsService, profileService, getSmartSuggestedFavorites, getTimeOfDay, getSmartDrinksForTime, type Drink, type UserProfile } from './services';
 import type { CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
-import { getBACAnalysis, checkLegalLimit, type SexType, type DrinkData } from './utils/bac';
+import { getBACAnalysis, checkLegalLimit, getUserStatus, type SexType, type DrinkData } from './utils/bac';
 import { calculateUnits, calculateUnitsWithQuantity } from './utils/units';
 import { deduplicateDrinks } from './utils/dedup';
+import { alertService } from '@/features/circle/services';
 import { toast } from 'sonner';
 
 export { type Drink };
@@ -16,6 +17,7 @@ export const useAlcohol = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.$id;
+  const userName = user?.name;
 
   // Last deleted log for undo functionality
   const [lastDeletedLog, setLastDeletedLog] = useState<AlcoholLog | null>(null);
@@ -131,6 +133,43 @@ export const useAlcohol = () => {
     [bacState.currentBAC, userProfile]
   );
 
+  // ── Alert triggering ─────────────────────────────────────────────────
+  const triggerCircleAlert = useCallback(async (
+    currentBAC: number,
+    weeklyUnits: number,
+    weeklyLimit: number
+  ) => {
+    if (!userId || !userName) return;
+    
+    const status = getUserStatus(currentBAC, bacState.isAboveLimit, weeklyUnits, weeklyLimit);
+    
+    if (status === 'at_risk') {
+      try {
+        await alertService.createAlert({
+          userId,
+          userName,
+          alertType: 'risk_detected',
+          severity: 'warning',
+          message: `${userName} a dépassé son seuil de consommation. Vérifiez qu'il/elle va bien.`,
+        });
+      } catch {
+        // Silent fail - alerts are non-critical
+      }
+    } else if (currentBAC > 0.8) {
+      try {
+        await alertService.createAlert({
+          userId,
+          userName,
+          alertType: 'threshold_exceeded',
+          severity: 'urgent',
+          message: `${userName} a un taux d'alcoolémie élevé (${currentBAC.toFixed(2)} g/L).`,
+        });
+      } catch {
+        // Silent fail
+      }
+    }
+  }, [userId, userName, bacState.isAboveLimit]);
+
   // ── Mutations ─────────────────────────────────────────────────────────
   const createDrinkMutation = useMutation({
     mutationFn: async ({ form, emoji }: { form: CreateDrinkForm; emoji?: string }) => {
@@ -176,6 +215,11 @@ export const useAlcohol = () => {
       drinksService.incrementUsage(variables.drink.id).catch(() => {});
       queryClient.invalidateQueries({ queryKey: ['drinks'] });
       setLastDeletedLog(null);
+      
+      // Trigger circle alerts after successful log
+      const weeklyUnits = getWeeklyUnits();
+      const weeklyLimit = goal?.weeklyLimit || 14;
+      triggerCircleAlert(bacState.currentBAC, weeklyUnits, weeklyLimit);
     },
   });
 

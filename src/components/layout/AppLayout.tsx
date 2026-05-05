@@ -6,6 +6,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   Wine, 
+  Users,
   Sparkles, 
   Wallet, 
   Settings, 
@@ -15,11 +16,14 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context';
+import { useCircleAlerts } from '@/features/circle/hooks';
+import NotificationBell from '@/features/circle/components/NotificationBell';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Tableau de bord' },
   { path: '/wellbeing', icon: Wine, label: 'Bien-être' },
+  { path: '/circle', icon: Users, label: 'Proches' },
   { path: '/insights', icon: Sparkles, label: 'Insights' },
   { path: '/budget', icon: Wallet, label: 'Budget' },
   { path: '/settings', icon: Settings, label: 'Paramètres' },
@@ -28,7 +32,9 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { unreadCount } = useCircleAlerts();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -40,12 +46,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-bold">WellHub</span>
         </Link>
-        <button 
-          onClick={() => setMobileMenuOpen(true)}
-          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationBell 
+            unreadCount={unreadCount} 
+            onClick={() => setShowNotifications(true)} 
+          />
+          <button 
+            onClick={() => setMobileMenuOpen(true)}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
       </header>
 
       {/* Mobile Bottom Navigation - Glass effect */}
@@ -118,6 +130,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       >
                         <item.icon className="w-5 h-5" />
                         <span className="font-medium">{item.label}</span>
+                        {item.path === '/circle' && unreadCount > 0 && (
+                          <span className="ml-auto w-5 h-5 rounded-full bg-destructive flex items-center justify-center text-[10px] font-bold text-white">
+                            {unreadCount > 9 ? '9+' : unreadCount}
+                          </span>
+                        )}
                       </div>
                     </Link>
                   );
@@ -177,6 +194,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
+                  {item.path === '/circle' && unreadCount > 0 && (
+                    <span className="ml-auto w-5 h-5 rounded-full bg-destructive flex items-center justify-center text-[10px] font-bold text-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </div>
               </Link>
             );

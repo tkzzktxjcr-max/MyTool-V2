@@ -11,6 +11,7 @@ import WellbeingPage from "./pages/Wellbeing";
 import InsightsPage from "./pages/Insights";
 import BudgetPage from "./pages/Budget";
 import SettingsPage from "./pages/Settings";
+import CirclePage from "./pages/Circle";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 
@@ -58,6 +59,7 @@ const AppRoutes = () => {
       <Route path="/auth" element={isAuthenticated ? <Navigate to="/" replace /> : <AuthPage />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/wellbeing" element={<ProtectedRoute><WellbeingPage /></ProtectedRoute>} />
+      <Route path="/circle" element={<ProtectedRoute><CirclePage /></ProtectedRoute>} />
       <Route path="/insights" element={<ProtectedRoute><InsightsPage /></ProtectedRoute>} />
       <Route path="/budget" element={<ProtectedRoute><BudgetPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
