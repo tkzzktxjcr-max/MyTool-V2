@@ -5,6 +5,7 @@ import { drinksService, alcoholService, goalsService, profileService, getSmartSu
 import type { CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
 import { getBACAnalysis, checkLegalLimit, type SexType, type DrinkData } from './utils/bac';
 import { calculateUnits, calculateUnitsWithQuantity } from './utils/units';
+import { deduplicateDrinks } from './utils/dedup';
 import { toast } from 'sonner';
 
 export { type Drink };
@@ -48,7 +49,9 @@ export const useAlcohol = () => {
   });
 
   // ── Derived data ──────────────────────────────────────────────────────
-  const drinks = drinksQuery.data ?? [];
+  const rawDrinks = drinksQuery.data ?? [];
+  const drinks = useMemo(() => deduplicateDrinks(rawDrinks, userId), [rawDrinks, userId]);
+
   const logs = logsQuery.data ?? [];
   const goal = goalQuery.data ?? null;
   const userProfile = profileQuery.data ?? null;
@@ -130,16 +133,30 @@ export const useAlcohol = () => {
 
   // ── Mutations ─────────────────────────────────────────────────────────
   const createDrinkMutation = useMutation({
-    mutationFn: ({ form, emoji }: { form: CreateDrinkForm; emoji?: string }) => {
+    mutationFn: async ({ form, emoji }: { form: CreateDrinkForm; emoji?: string }) => {
       if (!userId) throw new Error('Not authenticated');
+      
+      // Check if a drink with same name+type already exists
+      const existing = await drinksService.findExistingDrink(form.name, form.type);
+      if (existing) {
+        // Return existing drink instead of creating a duplicate
+        return existing;
+      }
+      
       return drinksService.createDrink({ 
         name: form.name, type: form.type, abv: form.abv, 
         defaultServingSize: form.defaultServingSize, emoji: emoji || '🥤', 
         country: form.country, userId 
       });
     },
-    onSuccess: () => {
+    onSuccess: (drink) => {
       queryClient.invalidateQueries({ queryKey: ['drinks'] });
+      // If the drink already existed, inform the user
+      if (!drink.userId || drink.isGlobal) {
+        toast.info('Boisson déjà existante', {
+          description: `"${drink.name}" existe déjà dans la bibliothèque.`,
+        });
+      }
     },
   });
 

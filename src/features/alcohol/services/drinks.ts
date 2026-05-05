@@ -68,6 +68,16 @@ export const drinksService = {
     return (res.documents as DrinkDoc[]).map(mapDocToDrink);
   },
 
+  async findExistingDrink(name: string, type: DrinkType): Promise<Drink | null> {
+    const res = await listDocuments(COLLECTIONS.DRINKS, [
+      Query.equal('name', name),
+      Query.equal('type', type),
+      Query.limit(1),
+    ]);
+    if (res.documents.length === 0) return null;
+    return mapDocToDrink(res.documents[0] as DrinkDoc);
+  },
+
   async createDrink(data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string; country?: string; userId?: string }): Promise<Drink> {
     const doc: DrinkDoc = await createDocument(COLLECTIONS.DRINKS, {
       name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.defaultServingSize,
