@@ -6,13 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Wallet, ArrowUpRight, ArrowDownRight, Trash2, Wine, Sparkles, Trophy, TrendingDown, TrendingUp, Coffee, Music, Book, Plane } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { BUDGET_CATEGORIES, type BudgetCategory, type CreateBudgetEntryForm } from '@/features/budget/types';
+import { BUDGET_CATEGORIES, type CreateBudgetEntryForm } from '@/features/budget/types';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
 import ConfettiAnimation from './alcohol/ConfettiAnimation';
 
@@ -25,13 +24,10 @@ export default function BudgetPage() {
   } = useBudget();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [type, setType] = useState<'expense' | 'income'>('expense');
-  const [formData, setFormData] = useState<CreateBudgetEntryForm>({
-    amount: 0, 
-    category: 'other', 
-    description: '', 
-    date: new Date(), 
-    type: 'expense'
+  const [formData, setFormData] = useState({
+    amount: 0,
+    description: '',
+    date: new Date(),
   });
   const [showConfetti, setShowConfetti] = useState(false);
   const [showBudgetGoal, setShowBudgetGoal] = useState(false);
@@ -44,9 +40,16 @@ export default function BudgetPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createEntry({ ...formData, type });
+    const budgetForm: CreateBudgetEntryForm = {
+      amount: formData.amount,
+      category: 'alcohol',
+      description: formData.description,
+      date: formData.date,
+      type: 'expense',
+    };
+    await createEntry(budgetForm);
     setIsDialogOpen(false);
-    setFormData({ amount: 0, category: 'other', description: '', date: new Date(), type: 'expense' });
+    setFormData({ amount: 0, description: '', date: new Date() });
   };
 
   const handleDelete = async (entryId: string) => {
@@ -78,9 +81,9 @@ export default function BudgetPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <motion.div
-          animate={{ rotate: 360, scale: [1, 1.1, 1] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
-          className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-primary"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          className="h-10 w-10 rounded-xl border-4 border-accent border-t-transparent"
         />
       </div>
     );
@@ -107,39 +110,19 @@ export default function BudgetPage() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-1" />Nouvelle entrée
+              <Plus className="w-4 h-4 mr-1" />Dépense alcool
             </Button>
           </DialogTrigger>
           <DialogContent className="mx-4">
             <DialogHeader>
-              <DialogTitle>{type === 'expense' ? 'Nouvelle dépense' : 'Nouveau revenu'}</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Wine className="w-5 h-5 text-accent" />
+                Dépense alcool
+              </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="flex gap-1 p-1 bg-muted rounded-xl">
-                <button 
-                  type="button" 
-                  onClick={() => { setType('expense'); setFormData(prev => ({ ...prev, type: 'expense' })); }}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
-                    type === 'expense' ? "bg-destructive/20 text-destructive" : "text-muted-foreground"
-                  )}
-                >
-                  Dépense
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => { setType('income'); setFormData(prev => ({ ...prev, type: 'income' })); }}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-sm font-medium transition-all",
-                    type === 'income' ? "bg-secondary/20 text-secondary" : "text-muted-foreground"
-                  )}
-                >
-                  Revenu
-                </button>
-              </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium">Montant (EUR)</label>
+                <label className="text-sm font-medium">Montant (€)</label>
                 <Input 
                   type="number" 
                   step="0.01" 
@@ -152,37 +135,28 @@ export default function BudgetPage() {
                 />
               </div>
 
-              {type === 'expense' && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Catégorie</label>
-                  <Select 
-                    value={formData.category} 
-                    onValueChange={(v) => setFormData(prev => ({ ...prev, category: v as BudgetCategory }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Sélectionner une catégorie" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BUDGET_CATEGORIES).map(([key, cat]) => (
-                        <SelectItem key={key} value={key}>
-                          {cat.icon} {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
                 <Input 
-                  placeholder="Courses, loisirs..." 
+                  placeholder="Soirée, apéro..." 
                   value={formData.description} 
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} 
                 />
               </div>
 
-              <Button type="submit" className="w-full">Ajouter</Button>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Date</label>
+                <Input 
+                  type="date" 
+                  value={formData.date instanceof Date ? format(formData.date, 'yyyy-MM-dd') : formData.date}
+                  onChange={(e) => setFormData(prev => ({ ...prev, date: new Date(e.target.value) }))} 
+                />
+              </div>
+
+              <Button type="submit" className="w-full">
+                <Wine className="w-4 h-4 mr-2" />
+                Ajouter
+              </Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -268,7 +242,7 @@ export default function BudgetPage() {
         </CardContent>
       </Card>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
         <Card className="border-secondary/20">
           <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between mb-3">
@@ -309,7 +283,7 @@ export default function BudgetPage() {
       </motion.div>
 
       {financialStats?.yearlySpend > 50 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4, delay: 0.1 }}>
           <Card>
             <CardContent className="p-4 md:p-5">
               <h3 className="font-semibold flex items-center gap-2 mb-3">
@@ -317,20 +291,17 @@ export default function BudgetPage() {
                 Tu pourrais aussi t'offrir...
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                {equivalents.map((eq, index) => {
+                {equivalents.map((eq) => {
                   const IconComp = eq.icon;
                   return (
-                    <motion.div
+                    <div
                       key={eq.name}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: index * 0.1 }}
                       className="p-3 rounded-xl bg-white/5 border border-white/10 text-center"
                     >
                       <IconComp className="w-6 h-6 mx-auto mb-1" style={{ color: eq.color }} />
                       <p className="text-xl font-bold">{eq.count}</p>
                       <p className="text-xs text-muted-foreground">{eq.name}</p>
-                    </motion.div>
+                    </div>
                   );
                 })}
               </div>
@@ -344,7 +315,7 @@ export default function BudgetPage() {
           <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground mb-1">
               <ArrowDownRight className="h-3 w-3 md:h-4 md:w-4 text-destructive" />
-              Dépenses (hors alco)
+              Dépenses
             </div>
             <div className="text-lg md:text-2xl font-bold text-destructive">
               -{totalExpenses.toFixed(2)}€
@@ -482,14 +453,11 @@ export default function BudgetPage() {
             </span>
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {achievements.map((achievement, index) => {
+            {achievements.map((achievement) => {
               const isUnlocked = !!achievement.unlockedAt;
               return (
-                <motion.div
+                <div
                   key={achievement.id}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: index * 0.05 }}
                   className={cn(
                     "flex flex-col items-center p-3 rounded-xl text-center transition-all",
                     isUnlocked 
@@ -504,7 +472,7 @@ export default function BudgetPage() {
                   )}>
                     {isUnlocked ? achievement.name : '???'}
                   </p>
-                </motion.div>
+                </div>
               );
             })}
           </div>

@@ -30,6 +30,7 @@ export function AlcoholOnboardingWizard({
     setGoal,
     setSex,
     setWeight,
+    setBudget,
     toggleFavoriteDrink,
     nextStep,
     prevStep,
@@ -83,7 +84,7 @@ export function AlcoholOnboardingWizard({
         description: 'Tes préférences ont été sauvegardées.',
       });
       onComplete?.();
-    } catch (e: any) {
+    } catch {
       toast.error('Erreur', {
         description: 'Impossible de sauvegarder. Réessaie plus tard.',
         icon: <AlertTriangle className="w-5 h-5" />,
@@ -133,7 +134,12 @@ export function AlcoholOnboardingWizard({
             <AnimatePresence mode="wait" custom={direction}>
               {step === 0 && (
                 <motion.div key="step-0" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
-                  <GoalStep selectedGoal={profile.goal} onSelectGoal={setGoal} />
+                  <GoalStep 
+                    selectedGoal={profile.goal} 
+                    onSelectGoal={setGoal} 
+                    budget={profile.budget}
+                    onBudgetChange={setBudget}
+                  />
                 </motion.div>
               )}
               {step === 1 && (

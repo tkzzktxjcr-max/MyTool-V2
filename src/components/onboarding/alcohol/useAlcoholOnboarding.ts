@@ -15,6 +15,7 @@ export interface AlcoholProfile {
   goal: AlcoholGoal;
   sex: SexType;
   weight: number;
+  budget: number;
   favoriteDrinks: string[];
 }
 
@@ -50,7 +51,7 @@ const loadStoredData = () => {
     if (stored) {
       const data = JSON.parse(stored);
       return {
-        profile: data.profile || { goal: null, sex: 'male', weight: 70, favoriteDrinks: [] },
+        profile: data.profile || { goal: null, sex: 'male', weight: 70, budget: 100, favoriteDrinks: [] },
         completed: data.completed || false,
         completedAt: data.completedAt || null,
       };
@@ -70,6 +71,7 @@ interface UseAlcoholOnboardingReturn {
   setGoal: (goal: AlcoholGoal) => void;
   setSex: (sex: SexType) => void;
   setWeight: (weight: number) => void;
+  setBudget: (budget: number) => void;
   toggleFavoriteDrink: (drinkId: string) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -85,7 +87,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   const initialData = useMemo(() => loadStoredData(), []);
   
   const [profile, setProfile] = useState<AlcoholProfile>(
-    initialData?.profile || { goal: null, sex: 'male', weight: 70, favoriteDrinks: [] }
+    initialData?.profile || { goal: null, sex: 'male', weight: 70, budget: 100, favoriteDrinks: [] }
   );
   const [step, setStep] = useState(0);
   const [hasCompleted, setHasCompleted] = useState(initialData?.completed || false);
@@ -100,11 +102,20 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
         const appProfile = await profileService.getProfile(user.$id);
         if (appProfile?.onboardingCompleted) {
           setHasCompleted(true);
+          setProfile(prev => ({
+            ...prev,
+            goal: prev.goal || 'moderate',
+            sex: appProfile.sex as SexType,
+            weight: appProfile.weightKg,
+            budget: appProfile.monthlyBudgetGoal || 100,
+            favoriteDrinks: prev.favoriteDrinks,
+          }));
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             profile: {
-              goal: appProfile.weightKg ? 'moderate' : null,
+              goal: prev.goal || 'moderate',
               sex: appProfile.sex as SexType,
               weight: appProfile.weightKg,
+              budget: appProfile.monthlyBudgetGoal || 100,
               favoriteDrinks: [],
             },
             completed: true,
@@ -146,6 +157,10 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
     setProfile(prev => ({ ...prev, weight }));
   }, []);
 
+  const setBudget = useCallback((budget: number) => {
+    setProfile(prev => ({ ...prev, budget }));
+  }, []);
+
   const toggleFavoriteDrink = useCallback((drinkId: string) => {
     setProfile(prev => ({
       ...prev,
@@ -170,7 +185,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   const canProceed = useCallback((): boolean => {
     switch (step) {
       case 0:
-        return profile.goal !== null;
+        return profile.goal !== null && profile.budget > 0;
       case 1:
         return profile.weight > 0 && profile.weight < 300;
       case 2:
@@ -191,6 +206,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
         weightKg: profile.weight,
         sex: profile.sex,
         legalLimit: 0.5,
+        monthlyBudgetGoal: profile.budget,
         onboardingCompleted: true,
       });
 
@@ -209,7 +225,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
   }, [user, profile, saveToStorage]);
 
   const reset = useCallback(() => {
-    setProfile({ goal: null, sex: 'male', weight: 70, favoriteDrinks: [] });
+    setProfile({ goal: null, sex: 'male', weight: 70, budget: 100, favoriteDrinks: [] });
     setStep(0);
     setHasCompleted(false);
     localStorage.removeItem(STORAGE_KEY);
@@ -225,6 +241,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
     setGoal,
     setSex,
     setWeight,
+    setBudget,
     toggleFavoriteDrink,
     nextStep,
     prevStep,

@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { Target, Scale, TrendingDown, Dumbbell, Ban, Check } from 'lucide-react';
+import { Target, Scale, TrendingDown, Dumbbell, Ban, Wallet } from 'lucide-react';
 import type { AlcoholGoal } from './useAlcoholOnboarding';
 
 interface GoalOption {
@@ -20,12 +20,23 @@ const GOALS: GoalOption[] = [
   { id: 'quit', icon: Ban, label: 'Arrêter', description: 'Zéro alcool' },
 ];
 
+const BUDGET_PRESETS = [30, 50, 100, 150];
+
 interface GoalStepProps {
   selectedGoal: AlcoholGoal;
   onSelectGoal: (goal: AlcoholGoal) => void;
+  budget: number;
+  onBudgetChange: (budget: number) => void;
 }
 
-export function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
+export function GoalStep({ selectedGoal, onSelectGoal, budget, onBudgetChange }: GoalStepProps) {
+  const handleBudgetInput = (value: string) => {
+    const num = parseInt(value) || 0;
+    if (num >= 0 && num <= 9999) {
+      onBudgetChange(num);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="text-center space-y-2">
@@ -94,6 +105,53 @@ export function GoalStep({ selectedGoal, onSelectGoal }: GoalStepProps) {
             </motion.button>
           );
         })}
+      </div>
+
+      {/* Budget Section */}
+      <div className="space-y-3 pt-2 border-t border-white/10">
+        <div className="flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-secondary" />
+          <h3 className="font-semibold">Budget mensuel alcool</h3>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Dépense maximale par mois pour l'alcool
+        </p>
+
+        <div className="relative">
+          <input
+            type="number"
+            min="0"
+            max="9999"
+            value={budget || ''}
+            onChange={(e) => handleBudgetInput(e.target.value)}
+            placeholder="100"
+            className={cn(
+              "w-full h-14 px-6 pr-12 rounded-2xl bg-white/5 border-2 text-center text-xl font-bold",
+              "focus:outline-none focus:border-secondary transition-colors",
+              budget > 0 ? "border-white/20" : "border-white/10"
+            )}
+          />
+          <span className="absolute right-6 top-1/2 -translate-y-1/2 text-muted-foreground text-lg">
+            €
+          </span>
+        </div>
+
+        <div className="flex justify-center gap-2">
+          {BUDGET_PRESETS.map(preset => (
+            <button
+              key={preset}
+              onClick={() => onBudgetChange(preset)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                budget === preset
+                  ? "bg-secondary text-white"
+                  : "bg-white/10 text-muted-foreground hover:bg-white/20"
+              )}
+            >
+              {preset}€
+            </button>
+          ))}
+        </div>
       </div>
 
       <p className="text-xs text-center text-muted-foreground">

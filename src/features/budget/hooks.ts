@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context';
 import { budgetService } from './service';
 import { alcoholService } from '@/features/alcohol/services';
+import { profileService } from '@/features/alcohol/services';
 import { wellbeingBudgetService, type BudgetAchievement } from '@/features/wellbeing/services/budget';
 import { calculateFinancialStats, getBudgetStatus, getBudgetFeedback } from '@/features/wellbeing/utils/financial';
 import type { BudgetEntry, CreateBudgetEntryForm, BudgetCategory } from './types';
 
-const STALE_TIME = 2 * 60 * 1000; // 2 minutes
+const STALE_TIME = 2 * 60 * 1000;
 
 export interface UseBudgetResult {
   entries: BudgetEntry[];
@@ -37,7 +38,6 @@ export const useBudget = (): UseBudgetResult => {
   const queryClient = useQueryClient();
   const userId = user?.$id;
 
-  const [monthlyBudgetGoal, setMonthlyBudgetGoal] = useState(100);
   const [newAchievements, setNewAchievements] = useState<BudgetAchievement[]>([]);
 
   // ── Queries ──────────────────────────────────────────────────────────
@@ -48,7 +48,6 @@ export const useBudget = (): UseBudgetResult => {
     staleTime: STALE_TIME,
   });
 
-  // Reuse the same cache key as useAlcohol for alcohol logs
   const alcoholLogsQuery = useQuery({
     queryKey: ['alcohol-logs', userId],
     queryFn: () => alcoholService.getLogs(userId!),
@@ -62,6 +61,34 @@ export const useBudget = (): UseBudgetResult => {
     enabled: !!userId,
     staleTime: STALE_TIME,
   });
+
+  const profileQuery = useQuery({
+    queryKey: ['alcohol-profile', userId],
+    queryFn: () => profileService.getProfile(userId!),
+    enabled: !!userId,
+    staleTime: STALE_TIME,
+  });
+
+  // ── Budget goal from profile ──────────────────────────────────────────
+  const profileBudgetGoal = profileQuery.data?.monthlyBudgetGoal;
+  const [localBudgetGoal, setLocalBudgetGoal] = useState(100);
+
+  useEffect(() => {
+    if (profileBudgetGoal !== undefined && profileBudgetGoal > 0) {
+      setLocalBudgetGoal(profileBudgetGoal);
+    }
+  }, [profileBudgetGoal]);
+
+  const monthlyBudgetGoal = localBudgetGoal;
+
+  const setMonthlyBudgetGoal = useCallback((goal: number) => {
+    setLocalBudgetGoal(goal);
+    if (userId) {
+      profileService.createOrUpdateProfile(userId, { monthlyBudgetGoal: goal }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['alcohol-profile', userId] });
+      }).catch(() => {});
+    }
+  }, [userId, queryClient]);
 
   // ── Derived data ──────────────────────────────────────────────────────
   const entries = entriesQuery.data ?? [];
@@ -82,7 +109,7 @@ export const useBudget = (): UseBudgetResult => {
 
   const expensesByCategory = useMemo(() => {
     const cats: Record<BudgetCategory, number> = {
-      groceries: 0, leisure: 0, bills: 0, transport: 0,
+      alcohol: 0, groceries: 0, leisure: 0, bills: 0, transport: 0,
       health: 0, education: 0, gifts: 0, savings: 0, other: 0,
     };
     entries.filter(e => e.type === 'expense').forEach(e => {

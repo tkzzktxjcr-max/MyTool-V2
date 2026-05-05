@@ -1,6 +1,7 @@
-export type BudgetCategory = 'groceries' | 'leisure' | 'bills' | 'transport' | 'health' | 'education' | 'gifts' | 'savings' | 'other';
+export type BudgetCategory = 'alcohol' | 'groceries' | 'leisure' | 'bills' | 'transport' | 'health' | 'education' | 'gifts' | 'savings' | 'other';
 
 export const BUDGET_CATEGORIES: Record<BudgetCategory, { label: string; icon: string; color: string }> = {
+  alcohol: { label: 'Alcool', icon: '🍷', color: '#7C3AED' },
   groceries: { label: 'Courses', icon: '🛒', color: '#FF6B6B' },
   leisure: { label: 'Loisirs', icon: '🎮', color: '#4ECDC4' },
   bills: { label: 'Factures', icon: '📄', color: '#45B7D1' },

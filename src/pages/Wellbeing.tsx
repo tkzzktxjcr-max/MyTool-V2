@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
@@ -30,11 +31,12 @@ import ConfettiAnimation from './alcohol/ConfettiAnimation';
 const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
   morning: { icon: '☀️', label: 'Bon matin' },
   afternoon: { icon: '☀️', label: 'Bon aprem' },
-  evening: { icon: '🌆', label: 'Bonne soiree' },
+  evening: { icon: '🌆', label: 'Bonne soirée' },
   night: { icon: '🌙', label: 'Bonne nuit' },
 };
 
 export default function WellbeingPage() {
+  const location = useLocation();
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -57,6 +59,15 @@ export default function WellbeingPage() {
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
+
+  // Handle autoOpenAdd from Dashboard navigation
+  useEffect(() => {
+    const state = location.state as { autoOpenAdd?: boolean } | null;
+    if (state?.autoOpenAdd) {
+      setShowDrinkPicker(true);
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);
@@ -87,7 +98,7 @@ export default function WellbeingPage() {
     const r = userProfile?.sex === 'female' ? 0.55 : 0.68;
     const weight = userProfile?.weightKg || 70;
     const newBAC = bacState.currentBAC + (drinkUnits * 10 * 0.789) / (weight * r);
-    const status = newBAC <= legalLimit * 0.8 ? 'OK' : newBAC <= legalLimit ? 'Bientot' : 'Attendre';
+    const status = newBAC <= legalLimit * 0.8 ? 'OK' : newBAC <= legalLimit ? 'Bientôt' : 'Attendre';
     
     toast.success(`${drink.name}`, {
       description: `${status} ~${newBAC.toFixed(2)} g/L`,
@@ -105,7 +116,7 @@ export default function WellbeingPage() {
     
     const totalUnits = calculateUnitsWithQuantity(selectedDrink.defaultServingSize, selectedDrink.abv, quantity);
     toast.success(`${selectedDrink.name} (x${quantity})`, {
-      description: `+${totalUnits.toFixed(1)} unites`,
+      description: `+${totalUnits.toFixed(1)} unités`,
       duration: 3000,
     });
     
@@ -117,29 +128,29 @@ export default function WellbeingPage() {
 
   const handleCreateDrinkFromPicker = async (data: { name: string; type: DrinkType; abv: number; servingSize: number }) => {
     await createDrink({ name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.servingSize }, 'Beer');
-    toast.success('Boisson creee !');
+    toast.success('Boisson créée !');
     setShowCreateDrink(false);
   };
 
   const handleCreateDrinkFromDialog = async (data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string }) => {
     await createDrink({ name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.defaultServingSize }, data.emoji);
-    toast.success('Boisson creee !');
+    toast.success('Boisson créée !');
     setShowCreateDrink(false);
   };
 
   const handleDeleteDrink = async (drinkId: string) => {
     await deleteDrink(drinkId);
-    toast.success('Boisson supprimee');
+    toast.success('Boisson supprimée');
   };
 
   const handleSetGoal = async (limit: number) => {
     await setWeeklyGoal(limit);
-    toast.success('Objectif mis a jour !');
+    toast.success('Objectif mis à jour !');
   };
 
   const handleUpdateProfile = async (data: { weightKg?: number; sex?: 'male' | 'female' | 'unspecified' }) => {
     await updateUserProfile(data);
-    toast.success('Profil mis a jour !');
+    toast.success('Profil mis à jour !');
   };
 
   const handleTimeSelect = (timestamp: string) => {
@@ -167,12 +178,12 @@ export default function WellbeingPage() {
             <div className="w-9 h-9 rounded-xl bg-secondary/20 flex items-center justify-center">
               <Activity className="w-5 h-5 text-secondary" />
             </div>
-            Bien-etre
+            Bien-être
           </h1>
           <p className="text-sm text-muted-foreground">{timeInfo.icon} {timeInfo.label}</p>
         </div>
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={handleRestartOnboarding} className="rounded-xl" title="Redemarrer">
+          <Button variant="ghost" size="icon" onClick={handleRestartOnboarding} className="rounded-xl" title="Redémarrer">
             <RotateCcw className="w-5 h-5" />
           </Button>
           <Button variant="ghost" size="icon" onClick={() => setShowProfileEditor(true)} className="rounded-xl" title="Profil">
@@ -200,7 +211,7 @@ export default function WellbeingPage() {
                 <Beer className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-sm font-medium">"{lastDeletedLog.drinkName}" supprime</p>
+                <p className="text-sm font-medium">"{lastDeletedLog.drinkName}" supprimé</p>
                 <p className="text-xs text-muted-foreground">il y a quelques secondes</p>
               </div>
             </div>
@@ -223,7 +234,7 @@ export default function WellbeingPage() {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">Acces rapide</span>
+          <span className="text-sm font-medium text-muted-foreground">Accès rapide</span>
           <span className="text-xs text-muted-foreground">Un seul tap</span>
         </div>
         
@@ -245,7 +256,7 @@ export default function WellbeingPage() {
             ))
           ) : (
             <div className="w-full text-center py-4 text-muted-foreground text-sm">
-              Ajoute des boissons favorites dans Parametres
+              Ajoute des boissons favorites dans Paramètres
             </div>
           )}
         </div>
@@ -313,7 +324,7 @@ export default function WellbeingPage() {
               {showTimeSelector && <TimeSelector onSelect={handleTimeSelect} />}
               {selectedTime && (
                 <div className="flex items-center justify-between px-3 py-2 bg-accent/10 rounded-xl">
-                  <span className="text-sm text-accent">Horodatage personnalise active</span>
+                  <span className="text-sm text-accent">Horodatage personnalisé activé</span>
                   <button onClick={() => setSelectedTime(undefined)} className="text-xs text-muted-foreground">Annuler</button>
                 </div>
               )}
@@ -324,7 +335,7 @@ export default function WellbeingPage() {
                 onClick={() => handleConfirmLog('none')}
                 className="w-full bg-secondary hover:bg-secondary/80 rounded-xl h-12 text-base font-medium"
               >
-                Confirmer ({quantity} = {totalUnits.toFixed(1)} unites)
+                Confirmer ({quantity} = {totalUnits.toFixed(1)} unités)
               </Button>
 
               <Button
