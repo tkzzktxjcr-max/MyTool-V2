@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { account } from '@/lib/appwrite';
 import { authService } from './service';
 import type { AuthContextType, UserProfile, AuthUser } from './types';
@@ -24,7 +24,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const appwriteUser = await account.get();
       setUser({ $id: appwriteUser.$id, email: appwriteUser.email, name: appwriteUser.name });
       await loadProfile();
-    } catch { setUser(null); setProfile(null); }
+    } catch {
+      setUser(null);
+      setProfile(null);
+    }
     finally { setLoading(false); }
   }, [loadProfile]);
 

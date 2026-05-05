@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useBudget } from '@/features/budget/hooks';
-import { useAlcohol } from '@/features/alcohol/hooks';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,16 +18,12 @@ import ConfettiAnimation from './alcohol/ConfettiAnimation';
 
 export default function BudgetPage() {
   const { 
-    entries, loading, loadEntries, createEntry, deleteEntry, 
+    entries, isLoading, createEntry, deleteEntry, 
     financialStats, totalExpenses, totalIncome, balance, 
     budgetUsed, budgetStatus, budgetFeedback, expensesByCategory,
     monthlyBudgetGoal, setMonthlyBudgetGoal, achievements, newAchievements,
-    familyId, setFamilyId 
   } = useBudget();
   
-  const { logs, loadData } = useAlcohol();
-  
-  // Local state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [formData, setFormData] = useState<CreateBudgetEntryForm>({
@@ -41,50 +36,27 @@ export default function BudgetPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [showBudgetGoal, setShowBudgetGoal] = useState(false);
 
-  // Initialize on mount
-  useEffect(() => { 
-    loadEntries(); 
-    loadData();
-    // Set demo family ID if not set
-    if (!familyId) {
-      setFamilyId('demo-family');
-    }
-  }, []);
-
-  // Show confetti on new achievements
   useEffect(() => {
     if (newAchievements.length > 0) {
       setShowConfetti(true);
     }
   }, [newAchievements]);
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await createEntry({ ...formData, type });
-      setIsDialogOpen(false);
-      setFormData({ amount: 0, category: 'other', description: '', date: new Date(), type: 'expense' });
-    } catch (error) {
-      console.error('[BudgetPage] Error creating entry:', error);
-    }
+    await createEntry({ ...formData, type });
+    setIsDialogOpen(false);
+    setFormData({ amount: 0, category: 'other', description: '', date: new Date(), type: 'expense' });
   };
 
-  // Handle delete
   const handleDelete = async (entryId: string) => {
-    try {
-      await deleteEntry(entryId);
-    } catch (error) {
-      console.error('[BudgetPage] Error deleting entry:', error);
-    }
+    await deleteEntry(entryId);
   };
 
-  // Recent entries sorted by date
   const recentEntries = [...entries]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 
-  // Chart data
   const monthlyTrend = [
     { month: 'Jan', spent: 85 },
     { month: 'Fév', spent: 72 },
@@ -93,7 +65,6 @@ export default function BudgetPage() {
     { month: 'Mai', spent: financialStats?.monthlySpend || 0 },
   ];
 
-  // Equivalents display
   const equivalents = [
     { icon: Coffee, name: 'cafés', count: financialStats?.yearlyEquivalents?.coffees || 0, color: '#92400E' },
     { icon: Music, name: 'concerts', count: financialStats?.yearlyEquivalents?.concert || 0, color: '#7C3AED' },
@@ -101,8 +72,19 @@ export default function BudgetPage() {
     { icon: Plane, name: 'week-ends', count: financialStats?.yearlyEquivalents?.weekendTrips || 0, color: '#0891B2' },
   ].filter(e => e.count > 0);
 
-  // Unlocked achievements
-  const unlockedAchievements = achievements.filter((a: any) => a.unlockedAt);
+  const unlockedAchievements = achievements.filter((a) => a.unlockedAt);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360, scale: [1, 1.1, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          className="h-12 w-12 rounded-xl bg-gradient-to-br from-accent to-primary"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 md:space-y-6 max-w-6xl mx-auto">
@@ -112,7 +94,6 @@ export default function BudgetPage() {
         message={`${newAchievements.length} achievement${newAchievements.length > 1 ? 's' : ''} débloqué${newAchievements.length > 1 ? 's' : ''} !`} 
       />
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-3xl font-bold flex items-center gap-2 md:gap-3">
@@ -134,7 +115,6 @@ export default function BudgetPage() {
               <DialogTitle>{type === 'expense' ? 'Nouvelle dépense' : 'Nouveau revenu'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Type selector */}
               <div className="flex gap-1 p-1 bg-muted rounded-xl">
                 <button 
                   type="button" 
@@ -158,7 +138,6 @@ export default function BudgetPage() {
                 </button>
               </div>
 
-              {/* Amount */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Montant (EUR)</label>
                 <Input 
@@ -173,7 +152,6 @@ export default function BudgetPage() {
                 />
               </div>
 
-              {/* Category (for expenses) */}
               {type === 'expense' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Catégorie</label>
@@ -195,7 +173,6 @@ export default function BudgetPage() {
                 </div>
               )}
 
-              {/* Description */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Description</label>
                 <Input 
@@ -211,7 +188,6 @@ export default function BudgetPage() {
         </Dialog>
       </div>
 
-      {/* Budget Goal Card */}
       <Card className={cn(
         "transition-all",
         budgetStatus === 'under' && "border-secondary/30",
@@ -244,7 +220,6 @@ export default function BudgetPage() {
             </div>
           </div>
 
-          {/* Progress bar */}
           <div className="h-3 rounded-full bg-white/10 overflow-hidden mb-2">
             <motion.div 
               initial={{ width: 0 }}
@@ -264,7 +239,6 @@ export default function BudgetPage() {
             <span>{Math.round(budgetUsed)}% utilisé</span>
           </div>
 
-          {/* Feedback */}
           <div className={cn(
             "mt-3 p-3 rounded-xl text-sm",
             budgetStatus === 'under' && "bg-secondary/10 text-secondary",
@@ -274,7 +248,6 @@ export default function BudgetPage() {
             {budgetFeedback}
           </div>
 
-          {/* Edit goal */}
           {showBudgetGoal && (
             <motion.div 
               initial={{ opacity: 0, height: 0 }}
@@ -295,7 +268,6 @@ export default function BudgetPage() {
         </CardContent>
       </Card>
 
-      {/* Alcohol Section */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
         <Card className="border-secondary/20">
           <CardContent className="p-4 md:p-5">
@@ -314,7 +286,6 @@ export default function BudgetPage() {
               </span>
             </div>
 
-            {/* Stats grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               <div className="p-3 rounded-xl bg-white/5 text-center">
                 <p className="text-lg font-bold">{financialStats?.weeklySpend?.toFixed(0) || 0}€</p>
@@ -337,7 +308,6 @@ export default function BudgetPage() {
         </Card>
       </motion.div>
 
-      {/* Equivalents */}
       {financialStats?.yearlySpend > 50 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <Card>
@@ -369,7 +339,6 @@ export default function BudgetPage() {
         </motion.div>
       )}
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
         <Card className="p-3 md:p-0">
           <CardContent className="pt-4 md:pt-6">
@@ -420,7 +389,6 @@ export default function BudgetPage() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-        {/* Chart */}
         <Card>
           <CardContent className="p-3 md:p-5">
             <h3 className="font-semibold flex items-center gap-2 mb-3 text-sm md:text-base">
@@ -456,7 +424,6 @@ export default function BudgetPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Transactions */}
         <Card>
           <CardContent className="p-3 md:p-5">
             <h3 className="font-semibold mb-3 text-sm md:text-base">Dernières transactions</h3>
@@ -505,7 +472,6 @@ export default function BudgetPage() {
         </Card>
       </div>
 
-      {/* Achievements */}
       <Card>
         <CardContent className="p-4 md:p-5">
           <h3 className="font-semibold flex items-center gap-2 mb-4">
@@ -516,7 +482,7 @@ export default function BudgetPage() {
             </span>
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-            {achievements.map((achievement: any, index: number) => {
+            {achievements.map((achievement, index) => {
               const isUnlocked = !!achievement.unlockedAt;
               return (
                 <motion.div

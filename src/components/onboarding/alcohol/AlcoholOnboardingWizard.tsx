@@ -21,7 +21,6 @@ export function AlcoholOnboardingWizard({
   onComplete, 
   onSkip 
 }: AlcoholOnboardingWizardProps) {
-  // ALL hooks must be declared FIRST
   const {
     profile,
     step,
@@ -43,16 +42,13 @@ export function AlcoholOnboardingWizard({
   const [isCompleting, setIsCompleting] = useState(false);
   const [direction, setDirection] = useState(1);
 
-  // Hook that reacts to completion
   useEffect(() => {
     if (hasCompleted) {
-      console.log('[AlcoholOnboarding] Already completed, closing wizard');
       setIsOpen(false);
       onComplete?.();
     }
   }, [hasCompleted, onComplete]);
 
-  // Show loading state while checking Appwrite
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -68,12 +64,10 @@ export function AlcoholOnboardingWizard({
     );
   }
 
-  // Don't show onboarding if already completed
   if (hasCompleted) {
     return null;
   }
 
-  // Handler functions (not hooks - can be anywhere)
   const handleClose = () => {
     setIsOpen(false);
     onSkip?.();
@@ -81,18 +75,15 @@ export function AlcoholOnboardingWizard({
 
   const handleComplete = async () => {
     setIsCompleting(true);
-    console.log('[Wizard] Starting completion...');
     
     try {
       await complete();
-      console.log('[Wizard] Completion successful');
       setIsOpen(false);
       toast.success('Configuration terminée ! 🎉', {
         description: 'Tes préférences ont été sauvegardées.',
       });
       onComplete?.();
     } catch (e: any) {
-      console.error('[Wizard] Completion failed:', e?.message || e);
       toast.error('Erreur', {
         description: 'Impossible de sauvegarder. Réessaie plus tard.',
         icon: <AlertTriangle className="w-5 h-5" />,
@@ -121,11 +112,6 @@ export function AlcoholOnboardingWizard({
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md w-[calc(100%-2rem)] max-h-[90vh] overflow-y-auto p-0 rounded-2xl">
         <div className="relative p-6">
-          {/* Debug banner - remove in production */}
-          <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-accent/20 rounded-full text-[10px] text-accent z-10">
-            Onboarding Alcohol
-          </div>
-
           <div className="absolute top-4 right-4">
             <button onClick={handleClose} className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all">
               <X className="w-5 h-5" />
