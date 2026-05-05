@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
@@ -37,6 +37,7 @@ const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
 
 export default function WellbeingPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -60,14 +61,20 @@ export default function WellbeingPage() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
 
+  // Use a ref to ensure autoOpenAdd is handled exactly once
+  const autoOpenHandled = useRef(false);
+
   // Handle autoOpenAdd from Dashboard navigation
   useEffect(() => {
+    if (autoOpenHandled.current) return;
     const state = location.state as { autoOpenAdd?: boolean } | null;
     if (state?.autoOpenAdd) {
+      autoOpenHandled.current = true;
       setShowDrinkPicker(true);
-      window.history.replaceState({}, '');
+      // Clear the navigation state using React Router (replace current entry)
+      navigate('/wellbeing', { replace: true, state: {} });
     }
-  }, [location.state]);
+  }, [location.state, navigate]);
 
   useEffect(() => {
     if (!onboardingCompleted) setShowOnboarding(true);
