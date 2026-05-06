@@ -1,0 +1,214 @@
+import { createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
+import { COLLECTIONS } from '@/lib/appwrite';
+import type { Friend, FriendRequest } from '../types';
+
+// ── Mappers ───────────────────────────────────────────────────────────
+
+interface MemberDoc {
+  $id: string;
+  userId: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  memberAvatar?: string;
+  isActive: boolean;
+  weeklyUnits?: number;
+  soberDays?: number;
+  streak?: number;
+  lastSummaryUpdate?: string;
+  $createdAt: string;
+}
+
+interface InvitationDoc {
+  $id: string;
+  inviterId: string;
+  inviterName?: string;
+  inviteeEmail: string;
+  inviteeId?: string;
+  status: string;
+  $createdAt: string;
+}
+
+const mapDocToFriend = (doc: MemberDoc): Friend => ({
+  id: doc.$id,
+  userId: doc.userId,
+  memberId: doc.memberId,
+  memberName: doc.memberName,
+  memberEmail: doc.memberEmail,
+  memberAvatar: doc.memberAvatar,
+  isActive: doc.isActive,
+  weeklyUnits: doc.weeklyUnits,
+  soberDays: doc.soberDays,
+  streak: doc.streak,
+  lastSummaryUpdate: doc.lastSummaryUpdate,
+  createdAt: doc.$createdAt,
+});
+
+const mapDocToRequest = (doc: InvitationDoc): FriendRequest => ({
+  id: doc.$id,
+  inviterId: doc.inviterId,
+  inviterName: doc.inviterName,
+  inviteeEmail: doc.inviteeEmail,
+  inviteeId: doc.inviteeId,
+  status: doc.status as FriendRequest['status'],
+  createdAt: doc.$createdAt,
+});
+
+// ── Service ───────────────────────────────────────────────────────────
+
+export const friendsService = {
+  // Envoyer une demande d'ami
+  async sendRequest(inviterId: string, inviterName: string, inviterEmail: string, inviteeEmail: string): Promise<FriendRequest> {
+    const doc: InvitationDoc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
+      inviterId,
+      inviterName: inviterName || null,
+      inviteeEmail: inviteeEmail.toLowerCase().trim(),
+      status: 'pending',
+    }) as InvitationDoc;
+    return mapDocToRequest(doc);
+  },
+
+  // Mes demandes reçues
+  async getReceivedRequests(inviteeEmail: string): Promise<FriendRequest[]> {
+    const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('inviteeEmail', inviteeEmail.toLowerCase().trim()),
+      Query.equal('status', 'pending'),
+      Query.orderDesc('$createdAt'),
+    ]);
+    return (res.documents as InvitationDoc[]).map(mapDocToRequest);
+  },
+
+  // Mes demandes envoyées
+  async getSentRequests(inviterId: string): Promise<FriendRequest[]> {
+    const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('inviterId', inviterId),
+      Query.equal('status', 'pending'),
+      Query.orderDesc('$createdAt'),
+    ]);
+    return (res.documents as InvitationDoc[]).map(mapDocToRequest);
+  },
+
+  // Accepter une demande → crée la relation d'amitié
+  async acceptRequest(requestId: string, inviteeId: string, inviteeName: string, inviteeEmail: string): Promise<void> {
+    // Récupérer l'invitation
+    const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('$id', requestId),
+      Query.limit(1),
+    ]);
+    if (res.documents.length === 0) return;
+    const invitation = mapDocToRequest(res.documents[0] as InvitationDoc);
+
+    // Marquer comme acceptée
+    await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, {
+      status: 'accepted',
+      inviteeId,
+    });
+
+    // Créer mon doc (je partage mes stats avec l'inviter)
+    await createDocument(
+      COLLECTIONS.CIRCLE_MEMBERS,
+      {
+        userId: inviteeId,
+        memberId: invitation.inviterId,
+        memberName: invitation.inviterName || 'Ami',
+        memberEmail: invitation.inviteeEmail, // on n'a pas l'email de l'inviter ici, mais c'est OK
+        isActive: true,
+      },
+      [
+        Permission.read(Role.user(inviteeId)),
+        Permission.read(Role.user(invitation.inviterId)),
+        Permission.update(Role.user(inviteeId)),
+        Permission.delete(Role.user(inviteeId)),
+      ]
+    );
+  },
+
+  // Refuser une demande
+  async declineRequest(requestId: string): Promise<void> {
+    await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, { status: 'declined' });
+  },
+
+  // Voir les amis (récupère les docs créés PAR mes amis où je suis le memberId)
+  // → donc je vois LEURS stats
+  async getFriends(userId: string): Promise<Friend[]> {
+    const res = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('memberId', userId),
+      Query.equal('isActive', true),
+      Query.orderDesc('$createdAt'),
+    ]);
+    return (res.documents as MemberDoc[]).map(mapDocToFriend);
+  },
+
+  // Mettre à jour mon résumé partagé (sur tous mes docs)
+  async updateMySummary(userId: string, summary: { weeklyUnits: number; soberDays: number; streak: number }): Promise<void> {
+    const res = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('userId', userId),
+      Query.equal('isActive', true),
+    ]);
+    for (const doc of res.documents) {
+      await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, {
+        weeklyUnits: summary.weeklyUnits,
+        soberDays: summary.soberDays,
+        streak: summary.streak,
+        lastSummaryUpdate: new Date().toISOString(),
+      });
+    }
+  },
+
+  // Supprimer un ami (désactive les deux sens)
+  async removeFriend(userId: string, friendId: string): Promise<void> {
+    // Mes docs où je partage avec lui
+    const myDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('userId', userId),
+      Query.equal('memberId', friendId),
+    ]);
+    for (const doc of myDocs.documents) {
+      await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
+    }
+
+    // Ses docs où il partage avec moi
+    const hisDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('userId', friendId),
+      Query.equal('memberId', userId),
+    ]);
+    for (const doc of hisDocs.documents) {
+      await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
+    }
+  },
+
+  // Synchroniser : quand mes invitations envoyées sont acceptées, je crée mon doc d'amitié
+  async syncAcceptedInvitations(userId: string, userName: string, userEmail: string): Promise<void> {
+    const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('inviterId', userId),
+      Query.equal('status', 'accepted'),
+    ]);
+
+    for (const inv of res.documents as InvitationDoc[]) {
+      // Vérifier si j'ai déjà un doc pour cet ami
+      const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+        Query.equal('userId', userId),
+        Query.equal('memberId', inv.inviteeId),
+        Query.limit(1),
+      ]);
+
+      if (existing.documents.length === 0 && inv.inviteeId) {
+        await createDocument(
+          COLLECTIONS.CIRCLE_MEMBERS,
+          {
+            userId,
+            memberId: inv.inviteeId,
+            memberName: inv.inviterName || 'Ami',
+            memberEmail: inv.inviteeEmail,
+            isActive: true,
+          },
+          [
+            Permission.read(Role.user(userId)),
+            Permission.read(Role.user(inv.inviteeId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId)),
+          ]
+        );
+      }
+    }
+  },
+};

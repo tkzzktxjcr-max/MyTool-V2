@@ -6,14 +6,12 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/features/auth/context';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { useBudget } from '@/features/budget/hooks';
-import { useCircle, useCircleAlerts } from '@/features/circle/hooks';
 import { Button } from '@/components/ui/button';
 import { Plus, Wine, BarChart3, Wallet, Settings, Flame, TrendingUp, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 import { cn } from '@/lib/utils';
-import CircleDashboardCard from './circle/CircleDashboardCard';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -27,8 +25,6 @@ export default function Dashboard() {
   const { user } = useAuth();
   const { insights, getWeeklyUnits, isLoading: alcoholLoading } = useAlcohol();
   const { budgetUsed, isLoading: budgetLoading } = useBudget();
-  const { members, sharingEnabled } = useCircle();
-  const { unreadCount } = useCircleAlerts();
 
   const [mounted, setMounted] = useState(false);
 
@@ -115,12 +111,21 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Circle Widget */}
-      <CircleDashboardCard
-        membersCount={members.length}
-        sharingEnabled={sharingEnabled}
-        unreadAlerts={unreadCount}
-      />
+      {/* Friends Widget */}
+      <button
+        onClick={() => navigate('/friends')}
+        className="w-full rounded-2xl glass-card p-4 flex items-center gap-3 text-left transition-colors hover:bg-white/[0.08]"
+      >
+        <div className="w-11 h-11 rounded-xl bg-accent/20 flex items-center justify-center flex-shrink-0">
+          <Users className="w-5 h-5 text-accent" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-sm">Mes amis</p>
+          <p className="text-xs text-muted-foreground">
+            Partage ton parcours avec tes proches
+          </p>
+        </div>
+      </button>
 
       {/* Navigation Cards */}
       <div className="grid grid-cols-2 gap-3">

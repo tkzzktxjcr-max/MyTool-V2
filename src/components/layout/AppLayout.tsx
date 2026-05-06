@@ -13,17 +13,14 @@ import {
   Menu,
   X,
   LogOut,
-  BarChart3
 } from 'lucide-react';
 import { useAuth } from '@/features/auth/context';
-import { useCircleAlerts } from '@/features/circle/hooks';
-import NotificationBell from '@/features/circle/components/NotificationBell';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/', icon: Home, label: 'Tableau de bord' },
   { path: '/wellbeing', icon: Wine, label: 'Bien-être' },
-  { path: '/circle', icon: Users, label: 'Proches' },
+  { path: '/friends', icon: Users, label: 'Amis' },
   { path: '/insights', icon: Sparkles, label: 'Insights' },
   { path: '/budget', icon: Wallet, label: 'Budget' },
   { path: '/settings', icon: Settings, label: 'Paramètres' },
@@ -32,13 +29,11 @@ const navItems = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { unreadCount } = useCircleAlerts();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header - Glass effect */}
+      {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
@@ -46,21 +41,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <span className="font-bold">WellHub</span>
         </Link>
-        <div className="flex items-center gap-2">
-          <NotificationBell 
-            unreadCount={unreadCount} 
-            onClick={() => setShowNotifications(true)} 
-          />
-          <button 
-            onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-        </div>
+        <button 
+          onClick={() => setMobileMenuOpen(true)}
+          className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+        >
+          <Menu className="w-6 h-6" />
+        </button>
       </header>
 
-      {/* Mobile Bottom Navigation - Glass effect */}
+      {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-t border-white/10 px-2 py-2 flex justify-around items-center">
         {navItems.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.path;
@@ -104,7 +93,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
               </div>
               
-              {/* Logo */}
               <div className="p-6 border-b border-white/10">
                 <Link to="/" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl">
@@ -114,7 +102,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Link>
               </div>
 
-              {/* Navigation */}
               <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
                 {navItems.map((item) => {
                   const isActive = location.pathname === item.path;
@@ -130,18 +117,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                       >
                         <item.icon className="w-5 h-5" />
                         <span className="font-medium">{item.label}</span>
-                        {item.path === '/circle' && unreadCount > 0 && (
-                          <span className="ml-auto w-5 h-5 rounded-full bg-destructive flex items-center justify-center text-[10px] font-bold text-white">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                          </span>
-                        )}
                       </div>
                     </Link>
                   );
                 })}
               </nav>
 
-              {/* User section */}
               <div className="p-4 border-t border-white/10">
                 {user && (
                   <div className="flex items-center gap-3">
@@ -166,9 +147,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar - Glass effect */}
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-card backdrop-blur-xl border-r border-white/10 z-40">
-        {/* Logo */}
         <div className="p-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl">
@@ -178,7 +158,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -194,18 +173,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <item.icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
-                  {item.path === '/circle' && unreadCount > 0 && (
-                    <span className="ml-auto w-5 h-5 rounded-full bg-destructive flex items-center justify-center text-[10px] font-bold text-white">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
                 </div>
               </Link>
             );
           })}
         </nav>
 
-        {/* User section */}
         <div className="p-4 border-t border-white/10">
           {user && (
             <div className="flex items-center gap-3">
