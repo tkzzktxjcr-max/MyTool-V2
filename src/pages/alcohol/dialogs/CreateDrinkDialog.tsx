@@ -21,7 +21,13 @@ export function CreateDrinkDialog({ open, onOpenChange, onCreate }: CreateDrinkD
   const handleTypeChange = (type: string) => {
     const drinkType = type as DrinkType;
     const defaults = DRINK_TYPES[drinkType];
-    setForm({ name: defaults?.label || '', type: drinkType, abv: defaults?.defaultAbv || 5, servingSize: drinkType === 'wine' ? 15 : drinkType === 'spirit' ? 4 : 33, emoji: defaults?.icon || 'CupSoda' });
+    setForm({ 
+      name: defaults?.label || '', 
+      type: drinkType, 
+      abv: defaults?.defaultAbv || 5, 
+      servingSize: drinkType === 'wine' ? 15 : drinkType === 'spirit' ? 4 : 33, 
+      emoji: defaults?.icon || 'CupSoda' 
+    });
   };
 
   const handleSubmit = () => {
@@ -45,16 +51,16 @@ export function CreateDrinkDialog({ open, onOpenChange, onCreate }: CreateDrinkD
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-secondary" />
-            Créer une consommation
+            Creer une consommation
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-5">
           <div className="space-y-2">
             <label className="text-sm font-medium">Nom</label>
-            <Input placeholder="Ma bière préférée" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="rounded-xl h-12" />
+            <Input placeholder="Ma biere preferee" value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))} className="rounded-xl h-12" />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Icône</label>
+            <label className="text-sm font-medium">Icone</label>
             <div className="flex flex-wrap gap-2">
               {ICON_OPTIONS.map(({ icon: IconComp, value, label }) => (
                 <button key={value} onClick={() => setForm(p => ({ ...p, emoji: value }))}
@@ -82,12 +88,12 @@ export function CreateDrinkDialog({ open, onOpenChange, onCreate }: CreateDrinkD
               <Input type="number" min="1" max="200" value={form.servingSize} onChange={(e) => setForm(p => ({ ...p, servingSize: parseInt(e.target.value) || 0 }))} className="rounded-xl h-12 text-center font-medium" />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Degré (%)</label>
+              <label className="text-sm font-medium">Degre (%)</label>
               <Input type="number" min="0.1" max="100" step="0.1" value={form.abv} onChange={(e) => setForm(p => ({ ...p, abv: parseFloat(e.target.value) || 0 }))} className="rounded-xl h-12 text-center font-medium" />
             </div>
           </div>
           <Button onClick={handleSubmit} className="w-full rounded-xl h-12 bg-secondary hover:bg-secondary/80" disabled={!form.name.trim()}>
-            <Check className="w-4 h-4 mr-2" />Créer
+            <Check className="w-4 h-4 mr-2" />Creer
           </Button>
         </div>
       </DialogContent>

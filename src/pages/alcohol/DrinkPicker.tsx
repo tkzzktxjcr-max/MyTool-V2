@@ -47,12 +47,12 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
   const userDrinks = filtered.filter(d => d.userId === currentUserId);
   const libraryDrinks = filtered.filter(d => !d.userId);
 
-  const handleTypeChange = (type: DrinkType) => {
-    const defaults = DRINK_TYPES[type];
+  const handleTypeChange = (drinkType: DrinkType) => {
+    const defaults = DRINK_TYPES[drinkType];
     setNewDrink({
-      type,
+      type: drinkType,
       abv: defaults?.defaultAbv || 5,
-      servingSize: type === 'wine' ? 12 : type === 'spirit' ? 4 : 33,
+      servingSize: drinkType === 'wine' ? 12 : drinkType === 'spirit' ? 4 : 33,
       name: defaults?.label || '',
     });
   };
@@ -65,7 +65,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
   };
 
   const handleDelete = () => {
-    if (deleteTarget && onDeleteDrink) {
+    if (deleteTarget && onDeleteDrink && !deleteTarget.isGlobal) {
       onDeleteDrink(deleteTarget.id);
       setDeleteTarget(null);
     }
@@ -85,7 +85,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium truncate">{drink.name}</p>
-            {drink.isGlobal && <Globe className="w-3.5 h-3.5" />}
+            {drink.isGlobal && <Globe className="w-3.5 h-3.5 text-muted-foreground" />}
             {isUserDrink && <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/20 text-secondary">Perso</span>}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -101,7 +101,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
               <Star className={cn("w-5 h-5", drink.isFavorite && "fill-current")} />
             </button>
           )}
-          {isUserDrink && onDeleteDrink && (
+          {isUserDrink && onDeleteDrink && !drink.isGlobal && (
             <button
               onClick={(e) => { e.stopPropagation(); setDeleteTarget(drink); }}
               className="p-2 text-muted-foreground hover:text-destructive"
@@ -215,12 +215,21 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
               <div className="flex items-center gap-2 px-2 py-1">
                 <Globe className="w-3.5 h-3.5" />
                 <span className="text-xs text-muted-foreground font-medium">Bibliotheque</span>
+                <span className="text-xs text-secondary">({libraryDrinks.length})</span>
               </div>
               <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
-                {libraryDrinks.slice(0, 6).map(d => renderItem(d, false))}
+                {libraryDrinks.slice(0, 8).map(d => renderItem(d, false))}
               </div>
             </div>
           )}
+
+          <button
+            onClick={() => setShowCreate(true)}
+            className="w-full py-3 rounded-2xl border-2 border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:border-secondary/30 transition-all flex items-center justify-center gap-2"
+          >
+            <Check className="w-4 h-4" />
+            <span className="text-sm font-medium">Creer une boisson personnalisee</span>
+          </button>
         </>
       )}
 
