@@ -1,7 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context';
-import { drinksService, alcoholService, goalsService, profileService, getSmartSuggestedFavorites, getTimeOfDay, getSmartDrinksForTime, type Drink, type UserProfile } from './services';
+import { drinksService, alcoholService, goalsService, profileService, getSmartSuggestedFavorites, getTimeOfDay, getSmartDrinksForTime, initializeDefaultDrinks, type Drink, type UserProfile } from './services';
 import type { CreateDrinkForm, DrinkType, MoodType, AlcoholInsight, AlcoholGoal, AlcoholLog } from './types';
 import { getBACAnalysis, checkLegalLimit, getUserStatus, type SexType, type DrinkData } from './utils/bac';
 import { calculateUnits, calculateUnitsWithQuantity } from './utils/units';
@@ -21,6 +21,7 @@ export const useAlcohol = () => {
 
   // Last deleted log for undo functionality
   const [lastDeletedLog, setLastDeletedLog] = useState<AlcoholLog | null>(null);
+  const [hasInitializedDefaults, setHasInitializedDefaults] = useState(false);
 
   // ── Queries ──────────────────────────────────────────────────────────
   const drinksQuery = useQuery({
@@ -49,6 +50,28 @@ export const useAlcohol = () => {
     enabled: !!userId,
     staleTime: STALE_TIME,
   });
+
+  // ── Default drinks initialization ───────────────────────────────────
+  useEffect(() => {
+    if (!userId || hasInitializedDefaults || drinksQuery.isLoading) return;
+
+    const globalDrinks = drinksQuery.data?.filter((d) => !d.userId) ?? [];
+    if (globalDrinks.length > 0) {
+      setHasInitializedDefaults(true);
+      return;
+    }
+
+    initializeDefaultDrinks()
+      .then((result) => {
+        if (result.created > 0) {
+          queryClient.invalidateQueries({ queryKey: ['drinks'] });
+        }
+        setHasInitializedDefaults(true);
+      })
+      .catch(() => {
+        setHasInitializedDefaults(true);
+      });
+  }, [userId, drinksQuery.data, drinksQuery.isLoading, hasInitializedDefaults, queryClient]);
 
   // ── Derived data ──────────────────────────────────────────────────────
   const rawDrinks = drinksQuery.data ?? [];

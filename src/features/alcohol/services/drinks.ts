@@ -78,11 +78,32 @@ export const drinksService = {
     return mapDocToDrink(res.documents[0] as DrinkDoc);
   },
 
-  async createDrink(data: { name: string; type: DrinkType; abv: number; defaultServingSize: number; emoji: string; country?: string; userId?: string }): Promise<Drink> {
+  async createDrink(data: { 
+    name: string; 
+    type: DrinkType; 
+    abv: number; 
+    defaultServingSize: number; 
+    emoji: string; 
+    country?: string; 
+    userId?: string;
+    isGlobal?: boolean;
+    popularity?: number;
+  }): Promise<Drink> {
     const doc: DrinkDoc = await createDocument(COLLECTIONS.DRINKS, {
-      name: data.name, type: data.type, abv: data.abv, defaultServingSize: data.defaultServingSize,
-      emoji: data.emoji, country: data.country || null, isFavorite: false, favoriteRank: null,
-      usageCount: 0, userId: data.userId || null, isGlobal: false, popularity: 0, category: null, brand: null,
+      name: data.name, 
+      type: data.type, 
+      abv: data.abv, 
+      defaultServingSize: data.defaultServingSize,
+      emoji: data.emoji, 
+      country: data.country || null, 
+      isFavorite: false, 
+      favoriteRank: null,
+      usageCount: 0, 
+      userId: data.userId || null, 
+      isGlobal: data.isGlobal ?? false, 
+      popularity: data.popularity ?? 0, 
+      category: null, 
+      brand: null,
     }) as DrinkDoc;
     return mapDocToDrink(doc);
   },
