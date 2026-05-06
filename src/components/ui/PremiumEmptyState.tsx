@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { Button, type ButtonProps } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface PremiumEmptyStateProps {
@@ -11,7 +11,7 @@ interface PremiumEmptyStateProps {
   action?: {
     label: string;
     onClick: () => void;
-    variant?: ButtonProps['variant'];
+    variant?: React.ComponentProps<typeof Button>['variant'];
   };
   className?: string;
 }
