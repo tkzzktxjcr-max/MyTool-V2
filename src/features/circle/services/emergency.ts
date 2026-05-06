@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { EmergencySession } from '../types';
 
@@ -25,6 +25,8 @@ const mapDocToSession = (doc: EmergencyDoc): EmergencySession => ({
 
 export const emergencyService = {
   async startSession(userId: string, duration: number, memberIds: string[]): Promise<EmergencySession> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const now = new Date();
     const expiresAt = new Date(now.getTime() + duration * 60 * 60 * 1000);
     
@@ -35,11 +37,17 @@ export const emergencyService = {
       startedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       memberIds: JSON.stringify(memberIds),
-    });
+    }, [
+      Permission.read(Role.user(userId)),
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+    ]);
     return mapDocToSession(doc as unknown as EmergencyDoc);
   },
 
   async getActiveSession(userId: string): Promise<EmergencySession | null> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const response = await listDocuments(COLLECTIONS.CIRCLE_EMERGENCY, [
       Query.equal('userId', userId),
       Query.equal('isActive', true),
@@ -56,20 +64,40 @@ export const emergencyService = {
   },
 
   async deactivateSession(sessionId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_EMERGENCY, [
+      Query.equal('$id', sessionId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const doc = response.documents[0] as unknown as EmergencyDoc;
+    if (doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     await updateDocument(COLLECTIONS.CIRCLE_EMERGENCY, sessionId, { isActive: false });
   },
 
   async deleteSession(sessionId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_EMERGENCY, [
+      Query.equal('$id', sessionId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const doc = response.documents[0] as unknown as EmergencyDoc;
+    if (doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     await deleteDocument(COLLECTIONS.CIRCLE_EMERGENCY, sessionId);
   },
 
   async cleanupExpiredSessions(): Promise<void> {
+    const currentUser = await account.get();
     const response = await listDocuments(COLLECTIONS.CIRCLE_EMERGENCY, [
       Query.equal('isActive', true),
       Query.lessThan('expiresAt', new Date().toISOString()),
     ]);
     for (const doc of response.documents) {
-      await updateDocument(COLLECTIONS.CIRCLE_EMERGENCY, doc.$id, { isActive: false });
+      const session = doc as unknown as EmergencyDoc;
+      if (session.userId === currentUser.$id) {
+        await updateDocument(COLLECTIONS.CIRCLE_EMERGENCY, doc.$id, { isActive: false });
+      }
     }
   },
 };

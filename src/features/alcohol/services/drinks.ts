@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { DrinkType } from '../types';
 
@@ -64,6 +64,8 @@ export const drinksService = {
   },
 
   async getUserDrinks(userId: string): Promise<Drink[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const res = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
     return (res.documents as unknown as DrinkDoc[]).map(mapDocToDrink);
   },
@@ -89,6 +91,10 @@ export const drinksService = {
     isGlobal?: boolean;
     popularity?: number;
   }): Promise<Drink> {
+    if (data.userId) {
+      const currentUser = await account.get();
+      if (currentUser.$id !== data.userId) throw new Error('Unauthorized');
+    }
     const doc = await createDocument(COLLECTIONS.DRINKS, {
       name: data.name, 
       type: data.type, 
@@ -104,14 +110,20 @@ export const drinksService = {
       popularity: data.popularity ?? 0, 
       category: null, 
       brand: null,
-    });
+    }, data.userId ? [
+      Permission.read(Role.user(data.userId)),
+      Permission.update(Role.user(data.userId)),
+      Permission.delete(Role.user(data.userId)),
+    ] : undefined);
     return mapDocToDrink(doc as unknown as DrinkDoc);
   },
 
   async toggleFavorite(drinkId: string, rank?: number): Promise<void> {
+    const currentUser = await account.get();
     const res = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('$id', drinkId)]);
     if (res.documents.length === 0) return;
-    const doc = res.documents[0];
+    const doc = res.documents[0] as unknown as DrinkDoc;
+    if (doc.userId && doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     if (doc.isFavorite) {
       await updateDocument(COLLECTIONS.DRINKS, drinkId, { isFavorite: false, favoriteRank: null });
     } else {
@@ -120,13 +132,21 @@ export const drinksService = {
   },
 
   async incrementUsage(drinkId: string): Promise<void> {
+    const currentUser = await account.get();
     const res = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('$id', drinkId)]);
     if (res.documents.length === 0) return;
-    const currentUsageCount = res.documents[0].usageCount || 0;
+    const doc = res.documents[0] as unknown as DrinkDoc;
+    if (doc.userId && doc.userId !== currentUser.$id) throw new Error('Unauthorized');
+    const currentUsageCount = doc.usageCount || 0;
     await updateDocument(COLLECTIONS.DRINKS, drinkId, { usageCount: currentUsageCount + 1 });
   },
 
   async deleteDrink(drinkId: string): Promise<void> {
+    const currentUser = await account.get();
+    const res = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('$id', drinkId)]);
+    if (res.documents.length === 0) return;
+    const doc = res.documents[0] as unknown as DrinkDoc;
+    if (doc.userId && doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     await deleteDocument(COLLECTIONS.DRINKS, drinkId);
   },
 };

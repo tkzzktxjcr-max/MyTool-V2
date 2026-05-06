@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, Permission, Role, Query } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, Permission, Role, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { Friend, FriendRequest } from '../types';
 
@@ -59,17 +59,27 @@ const mapDocToRequest = (doc: InvitationDoc): FriendRequest => ({
 export const friendsService = {
   // Envoyer une demande d'ami
   async sendRequest(inviterId: string, inviterName: string, inviterEmail: string, inviteeEmail: string): Promise<FriendRequest> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
     const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
       inviterId,
       inviterName: inviterName || null,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
       status: 'pending',
-    });
+    }, [
+      Permission.read(Role.user(inviterId)),
+      Permission.update(Role.user(inviterId)),
+      Permission.delete(Role.user(inviterId)),
+    ]);
     return mapDocToRequest(doc as unknown as InvitationDoc);
   },
 
   // Mes demandes reçues
   async getReceivedRequests(inviteeEmail: string): Promise<FriendRequest[]> {
+    const currentUser = await account.get();
+    if (currentUser.email.toLowerCase() !== inviteeEmail.toLowerCase().trim()) {
+      throw new Error('Unauthorized');
+    }
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviteeEmail', inviteeEmail.toLowerCase().trim()),
       Query.equal('status', 'pending'),
@@ -80,6 +90,8 @@ export const friendsService = {
 
   // Mes demandes envoyées
   async getSentRequests(inviterId: string): Promise<FriendRequest[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviterId', inviterId),
       Query.equal('status', 'pending'),
@@ -90,21 +102,24 @@ export const friendsService = {
 
   // Accepter une demande → crée la relation d'amitié
   async acceptRequest(requestId: string, inviteeId: string, inviteeName: string, inviteeEmail: string): Promise<void> {
-    // Récupérer l'invitation
+    const currentUser = await account.get();
+    if (currentUser.$id !== inviteeId) throw new Error('Unauthorized');
+    
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('$id', requestId),
       Query.limit(1),
     ]);
     if (res.documents.length === 0) return;
     const invitation = mapDocToRequest(res.documents[0] as unknown as InvitationDoc);
+    if (invitation.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+      throw new Error('Unauthorized');
+    }
 
-    // Marquer comme acceptée
     await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, {
       status: 'accepted',
       inviteeId,
     });
 
-    // Créer mon doc (je partage mes stats avec l'inviter)
     await createDocument(
       COLLECTIONS.CIRCLE_MEMBERS,
       {
@@ -125,12 +140,24 @@ export const friendsService = {
 
   // Refuser une demande
   async declineRequest(requestId: string): Promise<void> {
+    const currentUser = await account.get();
+    const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('$id', requestId),
+      Query.limit(1),
+    ]);
+    if (res.documents.length === 0) return;
+    const invitation = mapDocToRequest(res.documents[0] as unknown as InvitationDoc);
+    if (invitation.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase() && invitation.inviterId !== currentUser.$id) {
+      throw new Error('Unauthorized');
+    }
     await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, { status: 'declined' });
   },
 
   // Voir les amis (récupère les docs créés PAR mes amis où je suis le memberId)
   // → donc je vois LEURS stats
   async getFriends(userId: string): Promise<Friend[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const res = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('memberId', userId),
       Query.equal('isActive', true),
@@ -141,6 +168,8 @@ export const friendsService = {
 
   // Mettre à jour mon résumé partagé (sur tous mes docs)
   async updateMySummary(userId: string, summary: { weeklyUnits: number; soberDays: number; streak: number }): Promise<void> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const res = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', userId),
       Query.equal('isActive', true),
@@ -157,7 +186,9 @@ export const friendsService = {
 
   // Supprimer un ami (désactive les deux sens)
   async removeFriend(userId: string, friendId: string): Promise<void> {
-    // Mes docs où je partage avec lui
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
+    
     const myDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', userId),
       Query.equal('memberId', friendId),
@@ -166,7 +197,6 @@ export const friendsService = {
       await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
     }
 
-    // Ses docs où il partage avec moi
     const hisDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', friendId),
       Query.equal('memberId', userId),
@@ -178,13 +208,14 @@ export const friendsService = {
 
   // Synchroniser : quand mes invitations envoyées sont acceptées, je crée mon doc d'amitié
   async syncAcceptedInvitations(userId: string, userName: string, userEmail: string): Promise<void> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviterId', userId),
       Query.equal('status', 'accepted'),
     ]);
 
     for (const inv of res.documents as unknown as InvitationDoc[]) {
-      // Vérifier si j'ai déjà un doc pour cet ami
       const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
         Query.equal('userId', userId),
         Query.equal('memberId', inv.inviteeId),

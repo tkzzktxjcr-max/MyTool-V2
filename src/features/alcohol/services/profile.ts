@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, Query } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 
 interface ProfileDoc {
@@ -26,6 +26,8 @@ export interface UserProfile {
 
 export const profileService = {
   async getProfile(userId: string): Promise<UserProfile | null> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const response = await listDocuments(COLLECTIONS.USER_PROFILES, [Query.equal('userId', userId)]);
     if (response.documents.length === 0) return null;
     const doc = response.documents[0] as unknown as ProfileDoc;
@@ -48,8 +50,11 @@ export const profileService = {
     monthlyBudgetGoal?: number;
     onboardingCompleted?: boolean;
   }): Promise<UserProfile> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const existing = await this.getProfile(userId);
     if (existing) {
+      if (existing.userId !== userId) throw new Error('Unauthorized');
       const doc = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
         weightKg: data.weightKg ?? existing.weightKg,
         sex: data.sex ?? existing.sex,
@@ -76,7 +81,11 @@ export const profileService = {
       legalLimit: data.legalLimit || 0.5,
       monthlyBudgetGoal: data.monthlyBudgetGoal || 100,
       onboardingCompleted: data.onboardingCompleted || false,
-    });
+    }, [
+      Permission.read(Role.user(userId)),
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+    ]);
     const created = doc as unknown as ProfileDoc;
     return {
       id: created.$id,

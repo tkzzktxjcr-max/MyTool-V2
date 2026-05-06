@@ -1,4 +1,4 @@
-import { databases, APPWRITE_CONFIG, COLLECTIONS, ID, Query } from '@/lib/appwrite';
+import { account, databases, APPWRITE_CONFIG, COLLECTIONS, ID, Query, Permission, Role } from '@/lib/appwrite';
 import type { BudgetEntry, CreateBudgetEntryForm, BudgetCategory } from './types';
 
 interface BudgetEntryDoc {
@@ -26,6 +26,8 @@ const mapDocToEntry = (doc: BudgetEntryDoc): BudgetEntry => ({
 
 export const budgetService = {
   async getEntries(userId: string): Promise<BudgetEntry[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const response = await databases.listDocuments(
       APPWRITE_CONFIG.databaseId,
       COLLECTIONS.BUDGET_ENTRIES,
@@ -35,6 +37,8 @@ export const budgetService = {
   },
 
   async createEntry(userId: string, form: CreateBudgetEntryForm): Promise<BudgetEntry> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const doc = await databases.createDocument(
       APPWRITE_CONFIG.databaseId,
       COLLECTIONS.BUDGET_ENTRIES,
@@ -47,26 +51,51 @@ export const budgetService = {
         date: form.date instanceof Date ? form.date.toISOString() : form.date,
         type: form.type,
         createdBy: userId,
-      }
+      },
+      [
+        Permission.read(Role.user(userId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ]
     );
     return mapDocToEntry(doc as unknown as BudgetEntryDoc);
   },
 
   async deleteEntry(entryId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      COLLECTIONS.BUDGET_ENTRIES,
+      [Query.equal('$id', entryId), Query.limit(1)]
+    );
+    if (response.documents.length === 0) return;
+    const doc = response.documents[0] as unknown as BudgetEntryDoc;
+    if (doc.createdBy !== currentUser.$id) throw new Error('Unauthorized');
     await databases.deleteDocument(APPWRITE_CONFIG.databaseId, COLLECTIONS.BUDGET_ENTRIES, entryId);
   },
 
   async updateEntry(entryId: string, data: Partial<BudgetEntry>): Promise<BudgetEntry> {
-    const doc = await databases.updateDocument(
+    const currentUser = await account.get();
+    const response = await databases.listDocuments(
+      APPWRITE_CONFIG.databaseId,
+      COLLECTIONS.BUDGET_ENTRIES,
+      [Query.equal('$id', entryId), Query.limit(1)]
+    );
+    if (response.documents.length === 0) throw new Error('Not found');
+    const doc = response.documents[0] as unknown as BudgetEntryDoc;
+    if (doc.createdBy !== currentUser.$id) throw new Error('Unauthorized');
+    const updated = await databases.updateDocument(
       APPWRITE_CONFIG.databaseId,
       COLLECTIONS.BUDGET_ENTRIES,
       entryId,
       data
     );
-    return mapDocToEntry(doc as unknown as BudgetEntryDoc);
+    return mapDocToEntry(updated as unknown as BudgetEntryDoc);
   },
 
   async getMonthlyStats(userId: string, month: Date): Promise<{ income: number; expenses: number }> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const startOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
     const endOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59);
 
@@ -92,6 +121,8 @@ export const budgetService = {
   },
 
   async getStatsByCategory(userId: string): Promise<Record<BudgetCategory, number>> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const entries = await this.getEntries(userId);
     const stats: Record<BudgetCategory, number> = {
       alcohol: 0, groceries: 0, leisure: 0, bills: 0, transport: 0,

@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { CircleMember, CirclePermissions, CircleRole } from '../types';
 
@@ -37,6 +37,8 @@ const defaultPermissions = (): CirclePermissions => ({
 
 export const circleService = {
   async getMembers(userId: string): Promise<CircleMember[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const response = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', userId),
       Query.equal('isActive', true),
@@ -45,12 +47,15 @@ export const circleService = {
   },
 
   async getMemberById(memberId: string): Promise<CircleMember | null> {
+    const currentUser = await account.get();
     const response = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('$id', memberId),
       Query.limit(1),
     ]);
     if (response.documents.length === 0) return null;
-    return mapDocToMember(response.documents[0] as unknown as MemberDoc);
+    const member = mapDocToMember(response.documents[0] as unknown as MemberDoc);
+    if (member.userId !== currentUser.$id && member.memberId !== currentUser.$id) throw new Error('Unauthorized');
+    return member;
   },
 
   async addMember(userId: string, data: {
@@ -60,11 +65,8 @@ export const circleService = {
     role?: CircleRole;
     permissions?: CirclePermissions;
   }): Promise<CircleMember> {
-    const docPermissions = [
-      Permission.update(Role.user(userId)),
-      Permission.delete(Role.user(userId)),
-    ];
-
+    const currentUser = await account.get();
+    if (currentUser.$id !== userId) throw new Error('Unauthorized');
     const doc = await createDocument(
       COLLECTIONS.CIRCLE_MEMBERS,
       {
@@ -76,26 +78,57 @@ export const circleService = {
         permissions: JSON.stringify(data.permissions || defaultPermissions()),
         isActive: true,
       },
-      docPermissions
+      [
+        Permission.read(Role.user(userId)),
+        Permission.read(Role.user(data.memberId)),
+        Permission.update(Role.user(userId)),
+        Permission.delete(Role.user(userId)),
+      ]
     );
     return mapDocToMember(doc as unknown as MemberDoc);
   },
 
   async updatePermissions(memberId: string, permissions: CirclePermissions): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('$id', memberId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const doc = response.documents[0] as unknown as MemberDoc;
+    if (doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, memberId, {
       permissions: JSON.stringify(permissions),
     });
   },
 
   async revokeMember(memberId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('$id', memberId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const doc = response.documents[0] as unknown as MemberDoc;
+    if (doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, memberId, { isActive: false });
   },
 
   async deleteMember(memberId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('$id', memberId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const doc = response.documents[0] as unknown as MemberDoc;
+    if (doc.userId !== currentUser.$id) throw new Error('Unauthorized');
     await deleteDocument(COLLECTIONS.CIRCLE_MEMBERS, memberId);
   },
 
   async getCirclesWhereMember(memberId: string): Promise<CircleMember[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== memberId) throw new Error('Unauthorized');
     const response = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('memberId', memberId),
       Query.equal('isActive', true),

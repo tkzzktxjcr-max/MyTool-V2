@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { CircleInvitation, InvitationStatus } from '../types';
 
@@ -40,6 +40,8 @@ const getExpirationDate = (days: number = 7): string => {
 
 export const invitationService = {
   async createInvitation(inviterId: string, inviteeEmail: string, inviterName?: string, message?: string): Promise<CircleInvitation> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
     const token = generateToken();
     const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
       inviterId,
@@ -49,11 +51,17 @@ export const invitationService = {
       status: 'pending',
       message: message || null,
       expiresAt: getExpirationDate(),
-    });
+    }, [
+      Permission.read(Role.user(inviterId)),
+      Permission.update(Role.user(inviterId)),
+      Permission.delete(Role.user(inviterId)),
+    ]);
     return mapDocToInvitation(doc as unknown as InvitationDoc);
   },
 
   async getSentInvitations(inviterId: string): Promise<CircleInvitation[]> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
     const response = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviterId', inviterId),
       Query.orderDesc('$createdAt'),
@@ -62,6 +70,10 @@ export const invitationService = {
   },
 
   async getReceivedInvitations(inviteeEmail: string): Promise<CircleInvitation[]> {
+    const currentUser = await account.get();
+    if (currentUser.email.toLowerCase() !== inviteeEmail.toLowerCase().trim()) {
+      throw new Error('Unauthorized');
+    }
     const response = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviteeEmail', inviteeEmail.toLowerCase().trim()),
       Query.equal('status', 'pending'),
@@ -71,6 +83,17 @@ export const invitationService = {
   },
 
   async acceptInvitation(invitationId: string, inviteeId: string): Promise<void> {
+    const currentUser = await account.get();
+    if (currentUser.$id !== inviteeId) throw new Error('Unauthorized');
+    const response = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('$id', invitationId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) throw new Error('Invitation not found');
+    const inv = response.documents[0] as unknown as InvitationDoc;
+    if (inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+      throw new Error('Unauthorized');
+    }
     await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, invitationId, {
       status: 'accepted',
       inviteeId,
@@ -78,6 +101,16 @@ export const invitationService = {
   },
 
   async declineInvitation(invitationId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('$id', invitationId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const inv = response.documents[0] as unknown as InvitationDoc;
+    if (inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase() && inv.inviterId !== currentUser.$id) {
+      throw new Error('Unauthorized');
+    }
     await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, invitationId, { status: 'declined' });
   },
 
@@ -92,16 +125,29 @@ export const invitationService = {
   },
 
   async getInvitationByToken(token: string): Promise<CircleInvitation | null> {
+    const currentUser = await account.get();
     const response = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('token', token),
       Query.equal('status', 'pending'),
       Query.limit(1),
     ]);
     if (response.documents.length === 0) return null;
-    return mapDocToInvitation(response.documents[0] as unknown as InvitationDoc);
+    const inv = mapDocToInvitation(response.documents[0] as unknown as InvitationDoc);
+    if (inv.inviterId !== currentUser.$id && inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
+      throw new Error('Unauthorized');
+    }
+    return inv;
   },
 
   async deleteInvitation(invitationId: string): Promise<void> {
+    const currentUser = await account.get();
+    const response = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
+      Query.equal('$id', invitationId),
+      Query.limit(1),
+    ]);
+    if (response.documents.length === 0) return;
+    const inv = response.documents[0] as unknown as InvitationDoc;
+    if (inv.inviterId !== currentUser.$id) throw new Error('Unauthorized');
     await deleteDocument(COLLECTIONS.CIRCLE_INVITATIONS, invitationId);
   },
 };
