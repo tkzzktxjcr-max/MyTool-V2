@@ -41,7 +41,7 @@ export const circleService = {
       Query.equal('userId', userId),
       Query.equal('isActive', true),
     ]);
-    return (response.documents as MemberDoc[]).map(mapDocToMember);
+    return (response.documents as unknown as MemberDoc[]).map(mapDocToMember);
   },
 
   async getMemberById(memberId: string): Promise<CircleMember | null> {
@@ -50,7 +50,7 @@ export const circleService = {
       Query.limit(1),
     ]);
     if (response.documents.length === 0) return null;
-    return mapDocToMember(response.documents[0] as MemberDoc);
+    return mapDocToMember(response.documents[0] as unknown as MemberDoc);
   },
 
   async addMember(userId: string, data: {
@@ -60,13 +60,12 @@ export const circleService = {
     role?: CircleRole;
     permissions?: CirclePermissions;
   }): Promise<CircleMember> {
-    // Document-level security: only the circle owner (userId) can update or delete this member
     const docPermissions = [
       Permission.update(Role.user(userId)),
       Permission.delete(Role.user(userId)),
     ];
 
-    const doc: MemberDoc = await createDocument(
+    const doc = await createDocument(
       COLLECTIONS.CIRCLE_MEMBERS,
       {
         userId,
@@ -78,8 +77,8 @@ export const circleService = {
         isActive: true,
       },
       docPermissions
-    ) as MemberDoc;
-    return mapDocToMember(doc);
+    );
+    return mapDocToMember(doc as unknown as MemberDoc);
   },
 
   async updatePermissions(memberId: string, permissions: CirclePermissions): Promise<void> {
@@ -101,6 +100,6 @@ export const circleService = {
       Query.equal('memberId', memberId),
       Query.equal('isActive', true),
     ]);
-    return (response.documents as MemberDoc[]).map(mapDocToMember);
+    return (response.documents as unknown as MemberDoc[]).map(mapDocToMember);
   },
 };

@@ -28,7 +28,7 @@ export const profileService = {
   async getProfile(userId: string): Promise<UserProfile | null> {
     const response = await listDocuments(COLLECTIONS.USER_PROFILES, [Query.equal('userId', userId)]);
     if (response.documents.length === 0) return null;
-    const doc = response.documents[0] as ProfileDoc;
+    const doc = response.documents[0] as unknown as ProfileDoc;
     return {
       id: doc.$id,
       userId: doc.userId,
@@ -50,41 +50,43 @@ export const profileService = {
   }): Promise<UserProfile> {
     const existing = await this.getProfile(userId);
     if (existing) {
-      const doc: ProfileDoc = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
+      const doc = await updateDocument(COLLECTIONS.USER_PROFILES, existing.id, {
         weightKg: data.weightKg ?? existing.weightKg,
         sex: data.sex ?? existing.sex,
         legalLimit: data.legalLimit ?? existing.legalLimit,
         monthlyBudgetGoal: data.monthlyBudgetGoal ?? existing.monthlyBudgetGoal,
         onboardingCompleted: data.onboardingCompleted ?? existing.onboardingCompleted,
-      }) as ProfileDoc;
+      });
+      const updated = doc as unknown as ProfileDoc;
       return {
-        id: doc.$id,
-        userId: doc.userId,
-        weightKg: doc.weightKg || 70,
-        sex: (doc.sex as 'male' | 'female' | 'unspecified') || 'unspecified',
-        legalLimit: doc.legalLimit || 0.5,
-        monthlyBudgetGoal: doc.monthlyBudgetGoal || 100,
-        onboardingCompleted: doc.onboardingCompleted ?? false,
-        updatedAt: doc.$updatedAt,
+        id: updated.$id,
+        userId: updated.userId,
+        weightKg: updated.weightKg || 70,
+        sex: (updated.sex as 'male' | 'female' | 'unspecified') || 'unspecified',
+        legalLimit: updated.legalLimit || 0.5,
+        monthlyBudgetGoal: updated.monthlyBudgetGoal || 100,
+        onboardingCompleted: updated.onboardingCompleted ?? false,
+        updatedAt: updated.$updatedAt,
       };
     }
-    const doc: ProfileDoc = await createDocument(COLLECTIONS.USER_PROFILES, {
+    const doc = await createDocument(COLLECTIONS.USER_PROFILES, {
       userId,
       weightKg: data.weightKg || 70,
       sex: data.sex || 'unspecified',
       legalLimit: data.legalLimit || 0.5,
       monthlyBudgetGoal: data.monthlyBudgetGoal || 100,
       onboardingCompleted: data.onboardingCompleted || false,
-    }) as ProfileDoc;
+    });
+    const created = doc as unknown as ProfileDoc;
     return {
-      id: doc.$id,
-      userId: doc.userId,
-      weightKg: doc.weightKg || 70,
-      sex: (doc.sex as 'male' | 'female' | 'unspecified') || 'unspecified',
-      legalLimit: doc.legalLimit || 0.5,
-      monthlyBudgetGoal: doc.monthlyBudgetGoal || 100,
-      onboardingCompleted: doc.onboardingCompleted ?? false,
-      updatedAt: doc.$createdAt,
+      id: created.$id,
+      userId: created.userId,
+      weightKg: created.weightKg || 70,
+      sex: (created.sex as 'male' | 'female' | 'unspecified') || 'unspecified',
+      legalLimit: created.legalLimit || 0.5,
+      monthlyBudgetGoal: created.monthlyBudgetGoal || 100,
+      onboardingCompleted: created.onboardingCompleted ?? false,
+      updatedAt: created.$createdAt,
     };
   },
 };

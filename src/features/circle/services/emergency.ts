@@ -21,7 +21,6 @@ const mapDocToSession = (doc: EmergencyDoc): EmergencySession => ({
   startedAt: doc.startedAt,
   expiresAt: doc.expiresAt,
   memberIds: JSON.parse(doc.memberIds || '[]'),
-  createdAt: doc.$createdAt,
 });
 
 export const emergencyService = {
@@ -29,15 +28,15 @@ export const emergencyService = {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + duration * 60 * 60 * 1000);
     
-    const doc: EmergencyDoc = await createDocument(COLLECTIONS.CIRCLE_EMERGENCY, {
+    const doc = await createDocument(COLLECTIONS.CIRCLE_EMERGENCY, {
       userId,
       isActive: true,
       duration,
       startedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       memberIds: JSON.stringify(memberIds),
-    }) as EmergencyDoc;
-    return mapDocToSession(doc);
+    });
+    return mapDocToSession(doc as unknown as EmergencyDoc);
   },
 
   async getActiveSession(userId: string): Promise<EmergencySession | null> {
@@ -48,7 +47,7 @@ export const emergencyService = {
     ]);
     if (response.documents.length === 0) return null;
     
-    const session = mapDocToSession(response.documents[0] as EmergencyDoc);
+    const session = mapDocToSession(response.documents[0] as unknown as EmergencyDoc);
     if (new Date(session.expiresAt) < new Date()) {
       await this.deactivateSession(session.id);
       return null;

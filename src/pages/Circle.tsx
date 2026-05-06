@@ -109,7 +109,6 @@ export default function CirclePage() {
           </div>
           <button
             onClick={() => {
-              // Toggle sharing logic would go here
               toast.info(sharingEnabled ? 'Partage désactivé' : 'Partage activé');
             }}
             className={cn(
@@ -282,14 +281,14 @@ export default function CirclePage() {
       <AddMemberSheet
         open={showAddMember}
         onOpenChange={setShowAddMember}
-        onSendInvitation={sendInvitation}
+        onSendInvitation={async (email, message) => { await sendInvitation(email, message); }}
       />
 
       <EmergencyModeSheet
         open={showEmergency}
         onOpenChange={setShowEmergency}
         memberIds={memberIdsWithAutoAlerts}
-        onActivate={startEmergency}
+        onActivate={async (duration, memberIds) => { await startEmergency(duration, memberIds); }}
       />
 
       <NotificationSheet
@@ -298,7 +297,7 @@ export default function CirclePage() {
         alerts={alerts}
         onMarkAsRead={markAsRead}
         onDismiss={dismissAlert}
-        onMarkAllAsRead={markAllAsRead}
+        onMarkAllAsRead={async () => { await markAllAsRead(alerts); }}
       />
     </div>
   );

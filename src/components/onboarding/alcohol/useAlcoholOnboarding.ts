@@ -112,7 +112,7 @@ export function useAlcoholOnboarding(): UseAlcoholOnboardingReturn {
           }));
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             profile: {
-              goal: prev.goal || 'moderate',
+              goal: profile.goal || 'moderate',
               sex: appProfile.sex as SexType,
               weight: appProfile.weightKg,
               budget: appProfile.monthlyBudgetGoal || 100,

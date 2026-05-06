@@ -55,7 +55,7 @@ export const drinksService = {
     let offset = 0;
     while (true) {
       const res = await listDocuments(COLLECTIONS.DRINKS, [Query.limit(100), Query.offset(offset)]);
-      allDocs.push(...(res.documents as DrinkDoc[]));
+      allDocs.push(...(res.documents as unknown as DrinkDoc[]));
       if (res.documents.length < 100) break;
       offset += 100;
       if (allDocs.length >= 1000) break;
@@ -65,7 +65,7 @@ export const drinksService = {
 
   async getUserDrinks(userId: string): Promise<Drink[]> {
     const res = await listDocuments(COLLECTIONS.DRINKS, [Query.equal('userId', userId)]);
-    return (res.documents as DrinkDoc[]).map(mapDocToDrink);
+    return (res.documents as unknown as DrinkDoc[]).map(mapDocToDrink);
   },
 
   async findExistingDrink(name: string, type: DrinkType): Promise<Drink | null> {
@@ -75,7 +75,7 @@ export const drinksService = {
       Query.limit(1),
     ]);
     if (res.documents.length === 0) return null;
-    return mapDocToDrink(res.documents[0] as DrinkDoc);
+    return mapDocToDrink(res.documents[0] as unknown as DrinkDoc);
   },
 
   async createDrink(data: { 
@@ -89,7 +89,7 @@ export const drinksService = {
     isGlobal?: boolean;
     popularity?: number;
   }): Promise<Drink> {
-    const doc: DrinkDoc = await createDocument(COLLECTIONS.DRINKS, {
+    const doc = await createDocument(COLLECTIONS.DRINKS, {
       name: data.name, 
       type: data.type, 
       abv: data.abv, 
@@ -104,8 +104,8 @@ export const drinksService = {
       popularity: data.popularity ?? 0, 
       category: null, 
       brand: null,
-    }) as DrinkDoc;
-    return mapDocToDrink(doc);
+    });
+    return mapDocToDrink(doc as unknown as DrinkDoc);
   },
 
   async toggleFavorite(drinkId: string, rank?: number): Promise<void> {

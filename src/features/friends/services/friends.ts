@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
+import { createDocument, listDocuments, updateDocument, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { Friend, FriendRequest } from '../types';
 
@@ -59,13 +59,13 @@ const mapDocToRequest = (doc: InvitationDoc): FriendRequest => ({
 export const friendsService = {
   // Envoyer une demande d'ami
   async sendRequest(inviterId: string, inviterName: string, inviterEmail: string, inviteeEmail: string): Promise<FriendRequest> {
-    const doc: InvitationDoc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
+    const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
       inviterId,
       inviterName: inviterName || null,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
       status: 'pending',
-    }) as InvitationDoc;
-    return mapDocToRequest(doc);
+    });
+    return mapDocToRequest(doc as unknown as InvitationDoc);
   },
 
   // Mes demandes reçues
@@ -75,7 +75,7 @@ export const friendsService = {
       Query.equal('status', 'pending'),
       Query.orderDesc('$createdAt'),
     ]);
-    return (res.documents as InvitationDoc[]).map(mapDocToRequest);
+    return (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
   },
 
   // Mes demandes envoyées
@@ -85,7 +85,7 @@ export const friendsService = {
       Query.equal('status', 'pending'),
       Query.orderDesc('$createdAt'),
     ]);
-    return (res.documents as InvitationDoc[]).map(mapDocToRequest);
+    return (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
   },
 
   // Accepter une demande → crée la relation d'amitié
@@ -96,7 +96,7 @@ export const friendsService = {
       Query.limit(1),
     ]);
     if (res.documents.length === 0) return;
-    const invitation = mapDocToRequest(res.documents[0] as InvitationDoc);
+    const invitation = mapDocToRequest(res.documents[0] as unknown as InvitationDoc);
 
     // Marquer comme acceptée
     await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, {
@@ -111,7 +111,7 @@ export const friendsService = {
         userId: inviteeId,
         memberId: invitation.inviterId,
         memberName: invitation.inviterName || 'Ami',
-        memberEmail: invitation.inviteeEmail, // on n'a pas l'email de l'inviter ici, mais c'est OK
+        memberEmail: invitation.inviteeEmail,
         isActive: true,
       },
       [
@@ -136,7 +136,7 @@ export const friendsService = {
       Query.equal('isActive', true),
       Query.orderDesc('$createdAt'),
     ]);
-    return (res.documents as MemberDoc[]).map(mapDocToFriend);
+    return (res.documents as unknown as MemberDoc[]).map(mapDocToFriend);
   },
 
   // Mettre à jour mon résumé partagé (sur tous mes docs)
@@ -183,7 +183,7 @@ export const friendsService = {
       Query.equal('status', 'accepted'),
     ]);
 
-    for (const inv of res.documents as InvitationDoc[]) {
+    for (const inv of res.documents as unknown as InvitationDoc[]) {
       // Vérifier si j'ai déjà un doc pour cet ami
       const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
         Query.equal('userId', userId),

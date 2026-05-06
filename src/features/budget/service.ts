@@ -31,11 +31,11 @@ export const budgetService = {
       COLLECTIONS.BUDGET_ENTRIES,
       [Query.equal('createdBy', userId), Query.orderDesc('$createdAt')]
     );
-    return (response.documents as BudgetEntryDoc[]).map(mapDocToEntry);
+    return (response.documents as unknown as BudgetEntryDoc[]).map(mapDocToEntry);
   },
 
   async createEntry(userId: string, form: CreateBudgetEntryForm): Promise<BudgetEntry> {
-    const doc: BudgetEntryDoc = await databases.createDocument(
+    const doc = await databases.createDocument(
       APPWRITE_CONFIG.databaseId,
       COLLECTIONS.BUDGET_ENTRIES,
       ID.unique(),
@@ -48,8 +48,8 @@ export const budgetService = {
         type: form.type,
         createdBy: userId,
       }
-    ) as BudgetEntryDoc;
-    return mapDocToEntry(doc);
+    );
+    return mapDocToEntry(doc as unknown as BudgetEntryDoc);
   },
 
   async deleteEntry(entryId: string): Promise<void> {
@@ -57,13 +57,13 @@ export const budgetService = {
   },
 
   async updateEntry(entryId: string, data: Partial<BudgetEntry>): Promise<BudgetEntry> {
-    const doc: BudgetEntryDoc = await databases.updateDocument(
+    const doc = await databases.updateDocument(
       APPWRITE_CONFIG.databaseId,
       COLLECTIONS.BUDGET_ENTRIES,
       entryId,
       data
-    ) as BudgetEntryDoc;
-    return mapDocToEntry(doc);
+    );
+    return mapDocToEntry(doc as unknown as BudgetEntryDoc);
   },
 
   async getMonthlyStats(userId: string, month: Date): Promise<{ income: number; expenses: number }> {
@@ -83,7 +83,7 @@ export const budgetService = {
     let income = 0;
     let expenses = 0;
 
-    response.documents.forEach((doc: BudgetEntryDoc) => {
+    (response.documents as unknown as BudgetEntryDoc[]).forEach((doc) => {
       if (doc.type === 'income') income += doc.amount;
       else if (doc.type === 'expense') expenses += doc.amount;
     });
@@ -94,7 +94,7 @@ export const budgetService = {
   async getStatsByCategory(userId: string): Promise<Record<BudgetCategory, number>> {
     const entries = await this.getEntries(userId);
     const stats: Record<BudgetCategory, number> = {
-      groceries: 0, leisure: 0, bills: 0, transport: 0,
+      alcohol: 0, groceries: 0, leisure: 0, bills: 0, transport: 0,
       health: 0, education: 0, gifts: 0, savings: 0, other: 0
     };
 

@@ -41,7 +41,7 @@ const getExpirationDate = (days: number = 7): string => {
 export const invitationService = {
   async createInvitation(inviterId: string, inviteeEmail: string, inviterName?: string, message?: string): Promise<CircleInvitation> {
     const token = generateToken();
-    const doc: InvitationDoc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
+    const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
       inviterId,
       inviterName: inviterName || null,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
@@ -49,8 +49,8 @@ export const invitationService = {
       status: 'pending',
       message: message || null,
       expiresAt: getExpirationDate(),
-    }) as InvitationDoc;
-    return mapDocToInvitation(doc);
+    });
+    return mapDocToInvitation(doc as unknown as InvitationDoc);
   },
 
   async getSentInvitations(inviterId: string): Promise<CircleInvitation[]> {
@@ -58,7 +58,7 @@ export const invitationService = {
       Query.equal('inviterId', inviterId),
       Query.orderDesc('$createdAt'),
     ]);
-    return (response.documents as InvitationDoc[]).map(mapDocToInvitation);
+    return (response.documents as unknown as InvitationDoc[]).map(mapDocToInvitation);
   },
 
   async getReceivedInvitations(inviteeEmail: string): Promise<CircleInvitation[]> {
@@ -67,7 +67,7 @@ export const invitationService = {
       Query.equal('status', 'pending'),
       Query.greaterThanEqual('expiresAt', new Date().toISOString()),
     ]);
-    return (response.documents as InvitationDoc[]).map(mapDocToInvitation);
+    return (response.documents as unknown as InvitationDoc[]).map(mapDocToInvitation);
   },
 
   async acceptInvitation(invitationId: string, inviteeId: string): Promise<void> {
@@ -98,7 +98,7 @@ export const invitationService = {
       Query.limit(1),
     ]);
     if (response.documents.length === 0) return null;
-    return mapDocToInvitation(response.documents[0] as InvitationDoc);
+    return mapDocToInvitation(response.documents[0] as unknown as InvitationDoc);
   },
 
   async deleteInvitation(invitationId: string): Promise<void> {

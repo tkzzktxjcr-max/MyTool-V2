@@ -35,7 +35,7 @@ export const alertService = {
     message: string;
     locationData?: { lat: number; lng: number; timestamp: string };
   }): Promise<CircleAlert> {
-    const doc: AlertDoc = await createDocument(COLLECTIONS.CIRCLE_ALERTS, {
+    const doc = await createDocument(COLLECTIONS.CIRCLE_ALERTS, {
       userId: data.userId,
       userName: data.userName,
       alertType: data.alertType,
@@ -43,8 +43,8 @@ export const alertService = {
       message: data.message,
       locationData: data.locationData ? JSON.stringify(data.locationData) : null,
       isRead: false,
-    }) as AlertDoc;
-    return mapDocToAlert(doc);
+    });
+    return mapDocToAlert(doc as unknown as AlertDoc);
   },
 
   async getAlertsForUser(userId: string): Promise<CircleAlert[]> {
@@ -53,7 +53,7 @@ export const alertService = {
       Query.orderDesc('$createdAt'),
       Query.limit(50),
     ]);
-    return (response.documents as AlertDoc[]).map(mapDocToAlert);
+    return (response.documents as unknown as AlertDoc[]).map(mapDocToAlert);
   },
 
   async getAlertsForRecipient(memberId: string): Promise<CircleAlert[]> {
@@ -62,7 +62,7 @@ export const alertService = {
       Query.orderDesc('$createdAt'),
       Query.limit(50),
     ]);
-    return (response.documents as AlertDoc[]).map(mapDocToAlert);
+    return (response.documents as unknown as AlertDoc[]).map(mapDocToAlert);
   },
 
   async markAsRead(alertId: string): Promise<void> {
