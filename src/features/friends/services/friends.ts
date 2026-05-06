@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, Permission, Role } from '@/lib/appwrite';
+import { createDocument, listDocuments, updateDocument, Permission, Role, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { Friend, FriendRequest } from '../types';
 
