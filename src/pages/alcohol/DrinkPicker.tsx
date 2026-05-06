@@ -44,7 +44,11 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
     ? drinks.filter(d => d.name.toLowerCase().includes(query.toLowerCase()))
     : drinks;
 
-  const userDrinks = filtered.filter(d => d.userId === currentUserId);
+  // FIX: Only show as "user drink" if it has a real userId matching currentUserId
+  // Global drinks (userId is undefined/null) go to library only
+  const userDrinks = currentUserId 
+    ? filtered.filter(d => d.userId === currentUserId)
+    : [];
   const libraryDrinks = filtered.filter(d => !d.userId);
 
   const handleTypeChange = (drinkType: DrinkType) => {
@@ -71,8 +75,10 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
     }
   };
 
-  const renderItem = (drink: Drink, isUserDrink: boolean) => {
+  const renderItem = (drink: Drink) => {
     const Icon = getDrinkIcon(drink.type);
+    const isUserDrink = !!drink.userId && drink.userId === currentUserId;
+    
     return (
       <div
         key={drink.id}
@@ -205,7 +211,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
                 <span className="text-xs text-secondary">({userDrinks.length})</span>
               </div>
               <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
-                {userDrinks.slice(0, 6).map(d => renderItem(d, true))}
+                {userDrinks.slice(0, 6).map(d => renderItem(d))}
               </div>
             </div>
           )}
@@ -218,7 +224,7 @@ export default function DrinkPicker({ drinks, onSelect, onCreate, onToggleFavori
                 <span className="text-xs text-secondary">({libraryDrinks.length})</span>
               </div>
               <div className="rounded-2xl bg-card border border-white/10 overflow-hidden">
-                {libraryDrinks.slice(0, 8).map(d => renderItem(d, false))}
+                {libraryDrinks.slice(0, 8).map(d => renderItem(d))}
               </div>
             </div>
           )}

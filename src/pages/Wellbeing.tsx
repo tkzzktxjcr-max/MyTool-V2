@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
+import { useAuth } from '@/features/auth/context';
 import { Button } from '@/components/ui/button';
 import { Activity, Target, User, Plus, X, RotateCcw, Check, Beer, Trophy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -35,6 +36,7 @@ const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
 };
 
 export default function WellbeingPage() {
+  const { user } = useAuth();
   const {
     drinks, favorites, currentTimeOfDay,
     logs, insights, goal, userProfile, lastDeletedLog, bacState,
@@ -49,7 +51,6 @@ export default function WellbeingPage() {
   const [showCreateDrink, setShowCreateDrink] = useState(false);
   const [showMoodSelector, setShowMoodSelector] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<Drink | null>(null);
-  // Read directly from window.location — synchronous, no reactivity issues
   const [showDrinkPicker, setShowDrinkPicker] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('add') === '1';
@@ -62,7 +63,6 @@ export default function WellbeingPage() {
   const [showTimeSelector, setShowTimeSelector] = useState(false);
   const [previousWeeklyUnits, setPreviousWeeklyUnits] = useState(0);
 
-  // Clean up URL once on mount without triggering React Router re-renders
   useEffect(() => {
     if (window.location.search.includes('add=1')) {
       const cleanUrl = window.location.pathname + window.location.hash;
@@ -287,6 +287,7 @@ export default function WellbeingPage() {
                     onCreate={handleCreateDrinkFromPicker}
                     onToggleFavorite={toggleFavorite}
                     onDeleteDrink={handleDeleteDrink}
+                    currentUserId={user?.$id}
                   />
                 </div>
               )}
