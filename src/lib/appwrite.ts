@@ -1,4 +1,4 @@
-import { Client, Account, Databases, ID, Query } from 'appwrite';
+import { Client, Account, Databases, ID, Query, Permission, Role } from 'appwrite';
 
 export const APPWRITE_CONFIG = {
   endpoint: import.meta.env.VITE_APPWRITE_ENDPOINT || 'https://cloud.appwrite.io/v1',
@@ -30,20 +30,20 @@ const client = new Client()
 export const account = new Account(client);
 export const databases = new Databases(client);
 
-export const createDocument = async (collectionId: string, data: Record<string, unknown>) => {
-  return databases.createDocument(APPWRITE_CONFIG.databaseId, collectionId, ID.unique(), data);
+export const createDocument = async (collectionId: string, data: Record<string, unknown>, permissions?: string[]) => {
+  return databases.createDocument(APPWRITE_CONFIG.databaseId, collectionId, ID.unique(), data, permissions);
 };
 
 export const listDocuments = async (collectionId: string, queries: string[] = []) => {
   return databases.listDocuments(APPWRITE_CONFIG.databaseId, collectionId, queries);
 };
 
-export const updateDocument = async (collectionId: string, documentId: string, data: Record<string, unknown>) => {
-  return databases.updateDocument(APPWRITE_CONFIG.databaseId, collectionId, documentId, data);
+export const updateDocument = async (collectionId: string, documentId: string, data: Record<string, unknown>, permissions?: string[]) => {
+  return databases.updateDocument(APPWRITE_CONFIG.databaseId, collectionId, documentId, data, permissions);
 };
 
 export const deleteDocument = async (collectionId: string, documentId: string) => {
   return databases.deleteDocument(APPWRITE_CONFIG.databaseId, collectionId, documentId);
 };
 
-export { client, ID, Query };
+export { client, ID, Query, Permission, Role };

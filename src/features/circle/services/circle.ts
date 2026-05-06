@@ -1,4 +1,4 @@
-import { createDocument, listDocuments, updateDocument, deleteDocument, Query } from '@/lib/appwrite';
+import { createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { CircleMember, CirclePermissions, CircleRole } from '../types';
 
@@ -60,15 +60,25 @@ export const circleService = {
     role?: CircleRole;
     permissions?: CirclePermissions;
   }): Promise<CircleMember> {
-    const doc: MemberDoc = await createDocument(COLLECTIONS.CIRCLE_MEMBERS, {
-      userId,
-      memberId: data.memberId,
-      memberName: data.memberName,
-      memberEmail: data.memberEmail,
-      role: data.role || 'friend',
-      permissions: JSON.stringify(data.permissions || defaultPermissions()),
-      isActive: true,
-    }) as MemberDoc;
+    // Document-level security: only the circle owner (userId) can update or delete this member
+    const docPermissions = [
+      Permission.update(Role.user(userId)),
+      Permission.delete(Role.user(userId)),
+    ];
+
+    const doc: MemberDoc = await createDocument(
+      COLLECTIONS.CIRCLE_MEMBERS,
+      {
+        userId,
+        memberId: data.memberId,
+        memberName: data.memberName,
+        memberEmail: data.memberEmail,
+        role: data.role || 'friend',
+        permissions: JSON.stringify(data.permissions || defaultPermissions()),
+        isActive: true,
+      },
+      docPermissions
+    ) as MemberDoc;
     return mapDocToMember(doc);
   },
 
