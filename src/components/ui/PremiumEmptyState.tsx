@@ -1,65 +1,56 @@
 "use client";
 
-import { Sparkles, Star, Heart, Beer, Wine, Coffee } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface PremiumEmptyStateProps {
-  emoji?: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
   title: string;
-  description: string;
+  description?: string;
   action?: {
     label: string;
     onClick: () => void;
-    variant?: 'primary' | 'secondary' | 'outline';
+    variant?: ButtonProps['variant'];
   };
   className?: string;
 }
 
-// Map emoji strings to Lucide icon components
-const EMOJI_TO_ICON: Record<string, React.ComponentType<{ className?: string }>> = {
-  '📝': Star,
-  '🌱': Sparkles,
-  '🍷': Wine,
-  '🍺': Beer,
-  '🌅': Coffee,
-  '✨': Sparkles,
-};
-
-export function PremiumEmptyState({ 
-  emoji, 
+export function PremiumEmptyState({
   icon,
-  title, 
-  description, 
+  title,
+  description,
   action,
-  className 
+  className,
 }: PremiumEmptyStateProps) {
-  // Get the appropriate icon component
-  const IconComponent = emoji ? EMOJI_TO_ICON[emoji] : null;
-  
   return (
-    <div className={cn("text-center py-6 px-4", className)}>
-      {/* Icon */}
-      <div className="w-14 h-14 rounded-2xl bg-secondary/10 flex items-center justify-center mx-auto mb-3">
-        {icon || (IconComponent ? (
-          <IconComponent className="w-7 h-7 text-secondary" />
-        ) : (
-          <Sparkles className="w-7 h-7 text-secondary" />
-        ))}
-      </div>
-      
-      {/* Title */}
-      <h4 className="text-base font-semibold mb-1">{title}</h4>
-      
-      {/* Description */}
-      <p className="text-sm text-muted-foreground max-w-[240px] mx-auto mb-4">
-        {description}
-      </p>
-      
-      {/* Action button */}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "flex flex-col items-center justify-center text-center py-10 px-6",
+        className
+      )}
+    >
+      <motion.div
+        initial={{ scale: 0.8 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', damping: 12 }}
+        className="mb-4"
+      >
+        {icon}
+      </motion.div>
+
+      <h3 className="text-lg font-semibold mb-2">{title}</h3>
+
+      {description && (
+        <p className="text-sm text-muted-foreground max-w-xs mb-6">
+          {description}
+        </p>
+      )}
+
       {action && (
-        <Button 
+        <Button
           onClick={action.onClick}
           variant={action.variant || 'secondary'}
           size="sm"
@@ -68,8 +59,6 @@ export function PremiumEmptyState({
           {action.label}
         </Button>
       )}
-    </div>
+    </motion.div>
   );
 }
-
-export default PremiumEmptyState;
