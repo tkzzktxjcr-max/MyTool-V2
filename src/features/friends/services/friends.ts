@@ -69,11 +69,36 @@ export const friendsService = {
     };
     if (inviterName?.trim()) data.inviterName = inviterName.trim();
 
-    const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, [
+    const permissions = [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
       Permission.delete(Role.user(inviterId)),
-    ]);
+    ];
+
+    let doc;
+    try {
+      doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, permissions);
+    } catch (err: any) {
+      if (err?.code === 400) {
+        console.warn('[circle_invitations] createDocument with permissions failed (400). Retrying without permissions.', {
+          data,
+          originalError: err?.message,
+        });
+        try {
+          doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data);
+        } catch (err2: any) {
+          console.error('[circle_invitations] createDocument without permissions also failed', {
+            data,
+            error: err2?.message,
+            code: err2?.code,
+          });
+          throw err2;
+        }
+      } else {
+        throw err;
+      }
+    }
+
     return mapDocToRequest(doc as unknown as InvitationDoc);
   },
 
