@@ -18,7 +18,6 @@ export interface FriendRequest {
   id: string;
   inviterId: string;
   inviterName?: string;
-  inviterEmail?: string;
   inviteeEmail: string;
   inviteeId?: string;
   status: 'pending' | 'accepted' | 'declined';

@@ -24,7 +24,6 @@ interface InvitationDoc {
   $id: string;
   inviterId: string;
   inviterName?: string;
-  inviterEmail?: string;
   inviteeEmail: string;
   inviteeId?: string;
   token: string;
@@ -52,7 +51,6 @@ const mapDocToRequest = (doc: InvitationDoc): FriendRequest => ({
   id: doc.$id,
   inviterId: doc.inviterId,
   inviterName: doc.inviterName,
-  inviterEmail: doc.inviterEmail,
   inviteeEmail: doc.inviteeEmail,
   inviteeId: doc.inviteeId,
   status: doc.status as FriendRequest['status'],
@@ -75,14 +73,13 @@ const getExpirationDate = (): string => {
 
 export const friendsService = {
   // Envoyer une demande d'ami
-  async sendRequest(inviterId: string, inviterName: string, inviterEmail: string, inviteeEmail: string): Promise<FriendRequest> {
+  async sendRequest(inviterId: string, inviterName: string, _inviterEmail: string, inviteeEmail: string): Promise<FriendRequest> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
 
     const data: Record<string, unknown> = {
       inviterId,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
-      inviterEmail: inviterEmail.toLowerCase().trim(),
       token: generateToken(),
       status: 'pending',
       expiresAt: getExpirationDate(),
@@ -148,7 +145,7 @@ export const friendsService = {
   },
 
   // Accepter une demande → crée directement le circle_members (pas d'update sur l'invitation)
-  async acceptRequest(requestId: string, inviteeId: string, inviteeName: string, inviteeEmail: string): Promise<void> {
+  async acceptRequest(requestId: string, inviteeId: string, _inviteeName: string, _inviteeEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviteeId) throw new Error('Unauthorized');
 
@@ -166,7 +163,7 @@ export const friendsService = {
     await circleService.addMember(inviteeId, {
       memberId: invitation.inviterId,
       memberName: invitation.inviterName || 'Ami',
-      memberEmail: invitation.inviterEmail || '',
+      memberEmail: '',
       role: 'friend',
       permissions: {
         realtimeStatus: false,
@@ -178,7 +175,7 @@ export const friendsService = {
   },
 
   // Refuser une demande (l'invité ne peut pas modifier l'invitation, on ignore pour l'instant)
-  async declineRequest(requestId: string): Promise<void> {
+  async declineRequest(_requestId: string): Promise<void> {
     // L'invité n'a pas les droits d'update sur l'invitation.
     // Pour l'instant, on ne fait rien côté invité.
     // L'inviter peut annuler son invitation via deleteInvitation.
@@ -238,7 +235,7 @@ export const friendsService = {
   },
 
   // Synchroniser : quand mes invitations envoyées sont acceptées, je crée mon doc d'amitié
-  async syncAcceptedInvitations(userId: string, userName: string, userEmail: string): Promise<void> {
+  async syncAcceptedInvitations(userId: string, _userName: string, _userEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
 
