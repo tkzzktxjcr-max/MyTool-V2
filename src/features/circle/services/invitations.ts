@@ -59,6 +59,7 @@ export const invitationService = {
     const permissions = [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
+      Permission.update(Role.users()),
       Permission.delete(Role.user(inviterId)),
     ];
 
@@ -68,7 +69,6 @@ export const invitationService = {
     } catch (err: any) {
       console.error('[circle_invitations] createDocument failed', {
         code: err?.code,
-        type: err?.type,
         message: err?.message,
         response: err?.response,
         dataSent: data,

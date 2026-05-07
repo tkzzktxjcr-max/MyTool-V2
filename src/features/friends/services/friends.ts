@@ -88,6 +88,7 @@ export const friendsService = {
     const permissions = [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
+      Permission.update(Role.users()),
       Permission.delete(Role.user(inviterId)),
     ];
 
