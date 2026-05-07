@@ -42,20 +42,30 @@ export const invitationService = {
   async createInvitation(inviterId: string, inviteeEmail: string, inviterName?: string, message?: string): Promise<CircleInvitation> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
+
     const token = generateToken();
-    const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
+
+    // On construit l'objet sans jamais passer null/undefined explicite pour les champs optionnels
+    const data: Record<string, unknown> = {
       inviterId,
-      inviterName: inviterName || null,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
       token,
       status: 'pending',
-      message: message || null,
       expiresAt: getExpirationDate(),
-    }, [
-      Permission.read(Role.user(inviterId)),
-      Permission.update(Role.user(inviterId)),
-      Permission.delete(Role.user(inviterId)),
-    ]);
+    };
+
+    if (inviterName?.trim()) data.inviterName = inviterName.trim();
+    if (message?.trim()) data.message = message.trim();
+
+    const doc = await createDocument(
+      COLLECTIONS.CIRCLE_INVITATIONS,
+      data,
+      [
+        Permission.read(Role.user(inviterId)),
+        Permission.update(Role.user(inviterId)),
+        Permission.delete(Role.user(inviterId)),
+      ]
+    );
     return mapDocToInvitation(doc as unknown as InvitationDoc);
   },
 

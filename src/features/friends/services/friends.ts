@@ -61,12 +61,15 @@ export const friendsService = {
   async sendRequest(inviterId: string, inviterName: string, inviterEmail: string, inviteeEmail: string): Promise<FriendRequest> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviterId) throw new Error('Unauthorized');
-    const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, {
+
+    const data: Record<string, unknown> = {
       inviterId,
-      inviterName: inviterName || null,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
       status: 'pending',
-    }, [
+    };
+    if (inviterName?.trim()) data.inviterName = inviterName.trim();
+
+    const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
       Permission.delete(Role.user(inviterId)),
