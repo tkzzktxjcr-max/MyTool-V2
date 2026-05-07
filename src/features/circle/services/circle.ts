@@ -67,6 +67,8 @@ export const circleService = {
   }): Promise<CircleMember> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
+    if (!data.memberId) throw new Error('memberId is required');
+
     const doc = await createDocument(
       COLLECTIONS.CIRCLE_MEMBERS,
       {
@@ -80,7 +82,7 @@ export const circleService = {
       },
       [
         Permission.read(Role.user(userId)),
-        Permission.read(Role.user(data.memberId)),
+        Permission.read(Role.users()),
         Permission.update(Role.user(userId)),
         Permission.delete(Role.user(userId)),
       ]

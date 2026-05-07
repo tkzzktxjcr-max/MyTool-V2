@@ -113,6 +113,9 @@ export const invitationService = {
     if (inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
       throw new Error('Unauthorized');
     }
+    if (!inv.inviterId) {
+      throw new Error('Invalid invitation: missing inviterId');
+    }
 
     // Créer le membre directement au lieu de modifier l'invitation
     await circleService.addMember(inviteeId, {

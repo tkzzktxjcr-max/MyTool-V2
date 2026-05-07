@@ -158,6 +158,9 @@ export const friendsService = {
     if (invitation.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
       throw new Error('Unauthorized');
     }
+    if (!invitation.inviterId) {
+      throw new Error('Invalid invitation: missing inviterId');
+    }
 
     // Créer le membre directement au lieu de modifier l'invitation
     await circleService.addMember(inviteeId, {
@@ -262,7 +265,7 @@ export const friendsService = {
           },
           [
             Permission.read(Role.user(userId)),
-            Permission.read(Role.user(inv.inviteeId)),
+            Permission.read(Role.users()),
             Permission.update(Role.user(userId)),
             Permission.delete(Role.user(userId)),
           ]
@@ -293,7 +296,7 @@ export const friendsService = {
           },
           [
             Permission.read(Role.user(userId)),
-            Permission.read(Role.user(doc.userId)),
+            Permission.read(Role.users()),
             Permission.update(Role.user(userId)),
             Permission.delete(Role.user(userId)),
           ]
