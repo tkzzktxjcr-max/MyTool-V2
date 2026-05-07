@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context';
+import { useAlcohol } from '@/features/alcohol/hooks';
 import { friendsService } from '../services/friends';
 import type { Friend, FriendRequest } from '../types';
 
@@ -12,6 +13,8 @@ export const useFriends = () => {
   const userId = user?.$id;
   const userName = user?.name;
   const userEmail = user?.email;
+
+  const { insights, getWeeklyUnits } = useAlcohol();
 
   // ── Queries ──────────────────────────────────────────────────────────
   const friendsQuery = useQuery({
@@ -42,6 +45,15 @@ export const useFriends = () => {
       queryClient.invalidateQueries({ queryKey: ['friends', userId] });
     }).catch(() => {});
   }, [userId, userName, userEmail, queryClient]);
+
+  // Auto-update my summary when page loads
+  useEffect(() => {
+    if (!userId) return;
+    const weeklyUnits = getWeeklyUnits();
+    const streak = insights?.streak || 0;
+    const soberDays = insights?.dailyTrend?.filter(d => d.units === 0).length || 0;
+    friendsService.updateMySummary(userId, { weeklyUnits, soberDays, streak }).catch(() => {});
+  }, [userId, insights, getWeeklyUnits]);
 
   // ── Derived data ─────────────────────────────────────────────────────
   const friends = friendsQuery.data ?? [];
