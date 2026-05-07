@@ -185,16 +185,37 @@ export const friendsService = {
     console.log('[friends/declineRequest] ignored — invitee has no update permission');
   },
 
-  // Voir les amis (récupère les docs créés PAR mes amis où je suis le memberId)
+  // Voir les amis : cherche dans les deux sens (je suis propriétaire OU je suis membre)
   async getFriends(userId: string): Promise<Friend[]> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
-    const res = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+
+    // 1. Documents que J'AI créés (userId = moi)
+    const res1 = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('userId', userId),
+      Query.equal('isActive', true),
+      Query.orderDesc('$createdAt'),
+    ]);
+    const friends1 = (res1.documents as unknown as MemberDoc[]).map(mapDocToFriend);
+
+    // 2. Documents où JE suis le membre (memberId = moi)
+    const res2 = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('memberId', userId),
       Query.equal('isActive', true),
       Query.orderDesc('$createdAt'),
     ]);
-    return (res.documents as unknown as MemberDoc[]).map(mapDocToFriend);
+    const friends2 = (res2.documents as unknown as MemberDoc[]).map(mapDocToFriend);
+
+    // Merge et déduplique par id
+    const seen = new Set<string>();
+    const merged: Friend[] = [];
+    for (const f of [...friends1, ...friends2]) {
+      if (!seen.has(f.id)) {
+        seen.add(f.id);
+        merged.push(f);
+      }
+    }
+    return merged;
   },
 
   // Mettre à jour mon résumé partagé (sur tous mes docs)
