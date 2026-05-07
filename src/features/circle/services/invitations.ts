@@ -1,5 +1,6 @@
 import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
+import { circleService } from './circle';
 import type { CircleInvitation, InvitationStatus } from '../types';
 
 interface InvitationDoc {
@@ -59,7 +60,6 @@ export const invitationService = {
     const permissions = [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
-      Permission.update(Role.users()),
       Permission.delete(Role.user(inviterId)),
     ];
 
@@ -113,9 +113,19 @@ export const invitationService = {
     if (inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase()) {
       throw new Error('Unauthorized');
     }
-    await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, invitationId, {
-      status: 'accepted',
-      inviteeId,
+
+    // Créer le membre directement au lieu de modifier l'invitation
+    await circleService.addMember(inviteeId, {
+      memberId: inv.inviterId,
+      memberName: inv.inviterName || 'Ami',
+      memberEmail: '',
+      role: 'friend',
+      permissions: {
+        realtimeStatus: false,
+        consumptionLevel: false,
+        locationOnAlert: false,
+        autoAlerts: false,
+      },
     });
   },
 
@@ -130,7 +140,9 @@ export const invitationService = {
     if (inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase() && inv.inviterId !== currentUser.$id) {
       throw new Error('Unauthorized');
     }
-    await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, invitationId, { status: 'declined' });
+    // L'invité n'a pas les droits d'update, donc on ne modifie pas l'invitation
+    // L'inviter peut l'annuler via deleteInvitation
+    console.log('[circle/declineInvitation] ignored — invitee has no update permission');
   },
 
   async expireOldInvitations(): Promise<void> {

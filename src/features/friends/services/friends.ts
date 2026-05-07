@@ -1,5 +1,6 @@
 import { account, createDocument, listDocuments, updateDocument, Permission, Role, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
+import { circleService } from '@/features/circle/services/circle';
 import type { Friend, FriendRequest } from '../types';
 
 // ── Mappers ───────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ interface InvitationDoc {
   $id: string;
   inviterId: string;
   inviterName?: string;
+  inviterEmail?: string;
   inviteeEmail: string;
   inviteeId?: string;
   token: string;
@@ -50,6 +52,7 @@ const mapDocToRequest = (doc: InvitationDoc): FriendRequest => ({
   id: doc.$id,
   inviterId: doc.inviterId,
   inviterName: doc.inviterName,
+  inviterEmail: doc.inviterEmail,
   inviteeEmail: doc.inviteeEmail,
   inviteeId: doc.inviteeId,
   status: doc.status as FriendRequest['status'],
@@ -79,6 +82,7 @@ export const friendsService = {
     const data: Record<string, unknown> = {
       inviterId,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
+      inviterEmail: inviterEmail.toLowerCase().trim(),
       token: generateToken(),
       status: 'pending',
       expiresAt: getExpirationDate(),
@@ -88,7 +92,6 @@ export const friendsService = {
     const permissions = [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
-      Permission.update(Role.users()),
       Permission.delete(Role.user(inviterId)),
     ];
 
@@ -106,18 +109,30 @@ export const friendsService = {
     }
   },
 
-  // Mes demandes reçues
+  // Mes demandes reçues (filtre celles déjà acceptées via circle_members)
   async getReceivedRequests(inviteeEmail: string): Promise<FriendRequest[]> {
     const currentUser = await account.get();
     if (currentUser.email.toLowerCase() !== inviteeEmail.toLowerCase().trim()) {
       throw new Error('Unauthorized');
     }
+
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviteeEmail', inviteeEmail.toLowerCase().trim()),
       Query.equal('status', 'pending'),
       Query.orderDesc('$createdAt'),
     ]);
-    return (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
+    const invitations = (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
+
+    // Récupérer les amis déjà acceptés pour filtrer
+    const memberRes = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('userId', currentUser.$id),
+      Query.equal('isActive', true),
+    ]);
+    const acceptedInviterIds = new Set(
+      (memberRes.documents as unknown as MemberDoc[]).map(d => d.memberId)
+    );
+
+    return invitations.filter(inv => !acceptedInviterIds.has(inv.inviterId));
   },
 
   // Mes demandes envoyées
@@ -132,11 +147,11 @@ export const friendsService = {
     return (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
   },
 
-  // Accepter une demande → crée la relation d'amitié
+  // Accepter une demande → crée directement le circle_members (pas d'update sur l'invitation)
   async acceptRequest(requestId: string, inviteeId: string, inviteeName: string, inviteeEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviteeId) throw new Error('Unauthorized');
-    
+
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('$id', requestId),
       Query.limit(1),
@@ -147,46 +162,30 @@ export const friendsService = {
       throw new Error('Unauthorized');
     }
 
-    await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, {
-      status: 'accepted',
-      inviteeId,
-    });
-
-    await createDocument(
-      COLLECTIONS.CIRCLE_MEMBERS,
-      {
-        userId: inviteeId,
-        memberId: invitation.inviterId,
-        memberName: invitation.inviterName || 'Ami',
-        memberEmail: invitation.inviteeEmail,
-        isActive: true,
+    // Créer le membre directement au lieu de modifier l'invitation
+    await circleService.addMember(inviteeId, {
+      memberId: invitation.inviterId,
+      memberName: invitation.inviterName || 'Ami',
+      memberEmail: invitation.inviterEmail || '',
+      role: 'friend',
+      permissions: {
+        realtimeStatus: false,
+        consumptionLevel: false,
+        locationOnAlert: false,
+        autoAlerts: false,
       },
-      [
-        Permission.read(Role.user(inviteeId)),
-        Permission.read(Role.user(invitation.inviterId)),
-        Permission.update(Role.user(inviteeId)),
-        Permission.delete(Role.user(inviteeId)),
-      ]
-    );
+    });
   },
 
-  // Refuser une demande
+  // Refuser une demande (l'invité ne peut pas modifier l'invitation, on ignore pour l'instant)
   async declineRequest(requestId: string): Promise<void> {
-    const currentUser = await account.get();
-    const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
-      Query.equal('$id', requestId),
-      Query.limit(1),
-    ]);
-    if (res.documents.length === 0) return;
-    const invitation = mapDocToRequest(res.documents[0] as unknown as InvitationDoc);
-    if (invitation.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase() && invitation.inviterId !== currentUser.$id) {
-      throw new Error('Unauthorized');
-    }
-    await updateDocument(COLLECTIONS.CIRCLE_INVITATIONS, requestId, { status: 'declined' });
+    // L'invité n'a pas les droits d'update sur l'invitation.
+    // Pour l'instant, on ne fait rien côté invité.
+    // L'inviter peut annuler son invitation via deleteInvitation.
+    console.log('[friends/declineRequest] ignored — invitee has no update permission');
   },
 
   // Voir les amis (récupère les docs créés PAR mes amis où je suis le memberId)
-  // → donc je vois LEURS stats
   async getFriends(userId: string): Promise<Friend[]> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
@@ -220,7 +219,7 @@ export const friendsService = {
   async removeFriend(userId: string, friendId: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
-    
+
     const myDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', userId),
       Query.equal('memberId', friendId),
@@ -242,18 +241,18 @@ export const friendsService = {
   async syncAcceptedInvitations(userId: string, userName: string, userEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
+
+    // 1. Ancienne méthode : invitations marquées "accepted"
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviterId', userId),
       Query.equal('status', 'accepted'),
     ]);
-
     for (const inv of res.documents as unknown as InvitationDoc[]) {
       const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
         Query.equal('userId', userId),
         Query.equal('memberId', inv.inviteeId),
         Query.limit(1),
       ]);
-
       if (existing.documents.length === 0 && inv.inviteeId) {
         await createDocument(
           COLLECTIONS.CIRCLE_MEMBERS,
@@ -267,6 +266,37 @@ export const friendsService = {
           [
             Permission.read(Role.user(userId)),
             Permission.read(Role.user(inv.inviteeId)),
+            Permission.update(Role.user(userId)),
+            Permission.delete(Role.user(userId)),
+          ]
+        );
+      }
+    }
+
+    // 2. Nouvelle méthode : détecter les circle_members créés par l'invité (memberId = moi)
+    const memberRes = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+      Query.equal('memberId', userId),
+      Query.equal('isActive', true),
+    ]);
+    for (const doc of memberRes.documents as unknown as MemberDoc[]) {
+      const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+        Query.equal('userId', userId),
+        Query.equal('memberId', doc.userId),
+        Query.limit(1),
+      ]);
+      if (existing.documents.length === 0) {
+        await createDocument(
+          COLLECTIONS.CIRCLE_MEMBERS,
+          {
+            userId,
+            memberId: doc.userId,
+            memberName: doc.memberName || 'Ami',
+            memberEmail: doc.memberEmail,
+            isActive: true,
+          },
+          [
+            Permission.read(Role.user(userId)),
+            Permission.read(Role.user(doc.userId)),
             Permission.update(Role.user(userId)),
             Permission.delete(Role.user(userId)),
           ]
