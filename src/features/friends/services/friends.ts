@@ -25,7 +25,9 @@ interface InvitationDoc {
   inviterName?: string;
   inviteeEmail: string;
   inviteeId?: string;
+  token: string;
   status: string;
+  expiresAt: string;
   $createdAt: string;
 }
 
@@ -54,6 +56,18 @@ const mapDocToRequest = (doc: InvitationDoc): FriendRequest => ({
   createdAt: doc.$createdAt,
 });
 
+// ── Helpers ───────────────────────────────────────────────────────────
+
+const generateToken = (): string => {
+  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
+const getExpirationDate = (): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + 7);
+  return date.toISOString();
+};
+
 // ── Service ───────────────────────────────────────────────────────────
 
 export const friendsService = {
@@ -65,7 +79,9 @@ export const friendsService = {
     const data: Record<string, unknown> = {
       inviterId,
       inviteeEmail: inviteeEmail.toLowerCase().trim(),
+      token: generateToken(),
       status: 'pending',
+      expiresAt: getExpirationDate(),
     };
     if (inviterName?.trim()) data.inviterName = inviterName.trim();
 
