@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { showSuccess } from '@/utils/toast';
 
 type AuthMode = 'login' | 'register';
 
@@ -48,8 +49,16 @@ export default function AuthPage() {
       if (mode === 'login') await login(formData.email, formData.password);
       else await register(formData.email, formData.password, formData.name);
       navigate('/');
-    } catch { setError('Identifiants incorrects'); }
-    finally { setLoading(false); }
+    } catch (err: any) {
+      if (err.name === 'LoginPendingError') {
+        showSuccess('Inscription réussie ! Veuillez vous connecter');
+        setMode('login');
+      } else if (err.message?.toLowerCase().includes('already exists') || err.code === 409) {
+        setError('Cet email est déjà utilisé');
+      } else {
+        setError(err.message || 'Identifiants incorrects');
+      }
+    } finally { setLoading(false); }
   };
 
   return (
