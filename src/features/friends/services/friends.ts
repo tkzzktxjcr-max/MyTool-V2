@@ -75,31 +75,18 @@ export const friendsService = {
       Permission.delete(Role.user(inviterId)),
     ];
 
-    let doc;
     try {
-      doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, permissions);
+      const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, permissions);
+      return mapDocToRequest(doc as unknown as InvitationDoc);
     } catch (err: any) {
-      if (err?.code === 400) {
-        console.warn('[circle_invitations] createDocument with permissions failed (400). Retrying without permissions.', {
-          data,
-          originalError: err?.message,
-        });
-        try {
-          doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data);
-        } catch (err2: any) {
-          console.error('[circle_invitations] createDocument without permissions also failed', {
-            data,
-            error: err2?.message,
-            code: err2?.code,
-          });
-          throw err2;
-        }
-      } else {
-        throw err;
-      }
+      console.error('[friends/sendRequest] createDocument failed', {
+        code: err?.code,
+        message: err?.message,
+        response: err?.response,
+        dataSent: data,
+      });
+      throw err;
     }
-
-    return mapDocToRequest(doc as unknown as InvitationDoc);
   },
 
   // Mes demandes reçues

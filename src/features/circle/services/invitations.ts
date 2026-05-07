@@ -1,4 +1,4 @@
-import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role, AppwriteException } from '@/lib/appwrite';
+import { account, createDocument, listDocuments, updateDocument, deleteDocument, Query, Permission, Role } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
 import type { CircleInvitation, InvitationStatus } from '../types';
 
@@ -32,9 +32,9 @@ const generateToken = (): string => {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 };
 
-const getExpirationDate = (days: number = 7): string => {
+const getExpirationDate = (): string => {
   const date = new Date();
-  date.setDate(date.getDate() + days);
+  date.setDate(date.getDate() + 7);
   return date.toISOString();
 };
 
@@ -56,39 +56,26 @@ export const invitationService = {
     if (inviterName?.trim()) data.inviterName = inviterName.trim();
     if (message?.trim()) data.message = message.trim();
 
-    // Permissions document-level (nécessite que la collection soit en mode "Document Level")
     const permissions = [
       Permission.read(Role.user(inviterId)),
       Permission.update(Role.user(inviterId)),
       Permission.delete(Role.user(inviterId)),
     ];
 
-    let doc;
     try {
-      doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, permissions);
+      const doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data, permissions);
+      return mapDocToInvitation(doc as unknown as InvitationDoc);
     } catch (err: any) {
-      // Si 400, c'est souvent que la collection est en "Collection Level" → on retente sans permissions
-      if (err?.code === 400) {
-        console.warn('[circle_invitations] createDocument with permissions failed (400). Retrying without permissions. Check Appwrite Console: the collection may be in "Collection Level" mode.', {
-          data,
-          originalError: err?.message,
-        });
-        try {
-          doc = await createDocument(COLLECTIONS.CIRCLE_INVITATIONS, data);
-        } catch (err2: any) {
-          console.error('[circle_invitations] createDocument without permissions also failed', {
-            data,
-            error: err2?.message,
-            code: err2?.code,
-          });
-          throw err2;
-        }
-      } else {
-        throw err;
-      }
+      console.error('[circle_invitations] createDocument failed', {
+        code: err?.code,
+        type: err?.type,
+        message: err?.message,
+        response: err?.response,
+        dataSent: data,
+        permissionsSent: permissions,
+      });
+      throw err;
     }
-
-    return mapDocToInvitation(doc as unknown as InvitationDoc);
   },
 
   async getSentInvitations(inviterId: string): Promise<CircleInvitation[]> {
