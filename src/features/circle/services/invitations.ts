@@ -57,8 +57,9 @@ export const invitationService = {
     if (inviterName?.trim()) data.inviterName = inviterName.trim();
     if (message?.trim()) data.message = message.trim();
 
+    // FIX: Permission.read(Role.users()) pour que le destinataire puisse lire
     const permissions = [
-      Permission.read(Role.user(inviterId)),
+      Permission.read(Role.users()),
       Permission.update(Role.user(inviterId)),
       Permission.delete(Role.user(inviterId)),
     ];
@@ -117,7 +118,6 @@ export const invitationService = {
       throw new Error('Invalid invitation: missing inviterId');
     }
 
-    // Créer le membre directement au lieu de modifier l'invitation
     await circleService.addMember(inviteeId, {
       memberId: inv.inviterId,
       memberName: inv.inviterName || 'Ami',
@@ -143,8 +143,6 @@ export const invitationService = {
     if (inv.inviteeEmail.toLowerCase() !== currentUser.email.toLowerCase() && inv.inviterId !== currentUser.$id) {
       throw new Error('Unauthorized');
     }
-    // L'invité n'a pas les droits d'update, donc on ne modifie pas l'invitation
-    // L'inviter peut l'annuler via deleteInvitation
     console.log('[circle/declineInvitation] ignored — invitee has no update permission');
   },
 

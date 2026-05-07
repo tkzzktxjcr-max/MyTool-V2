@@ -86,8 +86,9 @@ export const friendsService = {
     };
     if (inviterName?.trim()) data.inviterName = inviterName.trim();
 
+    // FIX: Permission.read(Role.users()) pour que le destinataire puisse lire l'invitation
     const permissions = [
-      Permission.read(Role.user(inviterId)),
+      Permission.read(Role.users()),
       Permission.update(Role.user(inviterId)),
       Permission.delete(Role.user(inviterId)),
     ];
@@ -106,7 +107,7 @@ export const friendsService = {
     }
   },
 
-  // Mes demandes reçues (filtre celles déjà acceptées via circle_members)
+  // Mes demandes reçues
   async getReceivedRequests(inviteeEmail: string): Promise<FriendRequest[]> {
     const currentUser = await account.get();
     if (currentUser.email.toLowerCase() !== inviteeEmail.toLowerCase().trim()) {
@@ -120,7 +121,7 @@ export const friendsService = {
     ]);
     const invitations = (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
 
-    // Récupérer les amis déjà acceptés pour filtrer
+    // Filtre : exclure les invitations d'amis déjà acceptés
     const memberRes = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', currentUser.$id),
       Query.equal('isActive', true),
@@ -144,7 +145,7 @@ export const friendsService = {
     return (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
   },
 
-  // Accepter une demande → crée directement le circle_members (pas d'update sur l'invitation)
+  // Accepter une demande
   async acceptRequest(requestId: string, inviteeId: string, inviteeName: string, _inviteeEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviteeId) throw new Error('Unauthorized');
@@ -162,7 +163,6 @@ export const friendsService = {
       throw new Error('Invalid invitation: missing inviterId');
     }
 
-    // Créer le membre directement : je (invitee) partage avec l'inviter
     await circleService.addMember(inviteeId, {
       memberId: invitation.inviterId,
       memberName: invitation.inviterName || 'Ami',
@@ -177,13 +177,12 @@ export const friendsService = {
     });
   },
 
-  // Refuser une demande (l'invité ne peut pas modifier l'invitation, on ignore pour l'instant)
+  // Refuser une demande
   async declineRequest(_requestId: string): Promise<void> {
     console.log('[friends/declineRequest] ignored — invitee has no update permission');
   },
 
   // Voir les amis : uniquement les docs où JE suis propriétaire
-  // Le doc symétrique est créé par syncAcceptedInvitations
   async getFriends(userId: string): Promise<Friend[]> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
@@ -197,7 +196,7 @@ export const friendsService = {
     return (res.documents as unknown as MemberDoc[]).map(mapDocToFriend);
   },
 
-  // Mettre à jour mon résumé partagé (sur tous mes docs)
+  // Mettre à jour mon résumé partagé
   async updateMySummary(userId: string, summary: { weeklyUnits: number; soberDays: number; streak: number }): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
@@ -215,12 +214,11 @@ export const friendsService = {
     }
   },
 
-  // Supprimer un ami (désactive les deux sens)
+  // Supprimer un ami
   async removeFriend(userId: string, friendId: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
 
-    // Mes docs où friendId est membre
     const myDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', userId),
       Query.equal('memberId', friendId),
@@ -229,7 +227,6 @@ export const friendsService = {
       await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
     }
 
-    // Les docs de friendId où je suis membre
     const hisDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', friendId),
       Query.equal('memberId', userId),
@@ -239,20 +236,17 @@ export const friendsService = {
     }
   },
 
-  // Synchroniser : détecter les docs créés par d'autres où je suis membre,
-  // et créer le doc symétrique avec le bon nom
+  // Synchroniser : détecter les docs créés par d'autres où je suis membre
   async syncAcceptedInvitations(userId: string, userName: string, _userEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
 
-    // 1. Détecter les circle_members créés par d'autres où je suis membre
     const memberRes = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('memberId', userId),
       Query.equal('isActive', true),
     ]);
 
     for (const doc of memberRes.documents as unknown as MemberDoc[]) {
-      // Vérifier si j'ai déjà un doc symétrique
       const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
         Query.equal('userId', userId),
         Query.equal('memberId', doc.userId),
@@ -260,7 +254,6 @@ export const friendsService = {
       ]);
       if (existing.documents.length > 0) continue;
 
-      // Récupérer le nom du propriétaire (doc.userId)
       let ownerName = 'Ami';
       try {
         const profileRes = await listDocuments(COLLECTIONS.USERS_PROFILE, [
@@ -271,7 +264,7 @@ export const friendsService = {
           ownerName = (profileRes.documents[0] as any).name || 'Ami';
         }
       } catch {
-        // Ignore profile fetch errors
+        // Ignore
       }
 
       await createDocument(
@@ -292,7 +285,7 @@ export const friendsService = {
       );
     }
 
-    // 2. Ancienne méthode : invitations marquées "accepted" (rétrocompatibilité)
+    // Rétrocompatibilité : invitations marquées "accepted"
     const res = await listDocuments(COLLECTIONS.CIRCLE_INVITATIONS, [
       Query.equal('inviterId', userId),
       Query.equal('status', 'accepted'),
