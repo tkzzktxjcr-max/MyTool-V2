@@ -32,11 +32,11 @@ interface InvitationDoc {
   $createdAt: string;
 }
 
-const mapDocToFriend = (doc: MemberDoc): Friend => ({
+const mapDocToFriend = (doc: MemberDoc, ownerName?: string): Friend => ({
   id: doc.$id,
   userId: doc.userId,
   memberId: doc.memberId,
-  memberName: doc.memberName,
+  memberName: ownerName || doc.memberName,
   memberEmail: doc.memberEmail,
   memberAvatar: doc.memberAvatar,
   isActive: doc.isActive,
@@ -86,7 +86,6 @@ export const friendsService = {
     };
     if (inviterName?.trim()) data.inviterName = inviterName.trim();
 
-    // FIX: Permission.read(Role.users()) pour que le destinataire puisse lire l'invitation
     const permissions = [
       Permission.read(Role.users()),
       Permission.update(Role.user(inviterId)),
@@ -145,7 +144,7 @@ export const friendsService = {
     return (res.documents as unknown as InvitationDoc[]).map(mapDocToRequest);
   },
 
-  // Accepter une demande
+  // Accepter une demande → crée le doc pour partager mes stats avec l'inviter
   async acceptRequest(requestId: string, inviteeId: string, inviteeName: string, _inviteeEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== inviteeId) throw new Error('Unauthorized');
@@ -163,6 +162,7 @@ export const friendsService = {
       throw new Error('Invalid invitation: missing inviterId');
     }
 
+    // Je (invitee) crée un doc où je partage mes stats avec l'inviter
     await circleService.addMember(inviteeId, {
       memberId: invitation.inviterId,
       memberName: invitation.inviterName || 'Ami',
@@ -182,21 +182,42 @@ export const friendsService = {
     console.log('[friends/declineRequest] ignored — invitee has no update permission');
   },
 
-  // Voir les amis : uniquement les docs où JE suis propriétaire
+  // Voir les amis : cherche les docs où JE SUIS LE MEMBRE (memberId = moi)
+  // Ce sont les docs que mes amis ont créés pour partager leurs stats avec moi
   async getFriends(userId: string): Promise<Friend[]> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
 
     const res = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
-      Query.equal('userId', userId),
+      Query.equal('memberId', userId),
       Query.equal('isActive', true),
       Query.orderDesc('$createdAt'),
     ]);
 
-    return (res.documents as unknown as MemberDoc[]).map(mapDocToFriend);
+    const docs = res.documents as unknown as MemberDoc[];
+
+    // Récupérer les noms des propriétaires (les amis)
+    const ownerIds = [...new Set(docs.map(d => d.userId))];
+    const ownerNames: Record<string, string> = {};
+
+    if (ownerIds.length > 0) {
+      try {
+        const profileRes = await listDocuments(COLLECTIONS.USERS_PROFILE, [
+          Query.equal('userId', ownerIds),
+          Query.limit(ownerIds.length),
+        ]);
+        for (const p of profileRes.documents as any[]) {
+          ownerNames[p.userId] = p.name || 'Ami';
+        }
+      } catch {
+        // Ignore profile fetch errors
+      }
+    }
+
+    return docs.map(doc => mapDocToFriend(doc, ownerNames[doc.userId]));
   },
 
-  // Mettre à jour mon résumé partagé
+  // Mettre à jour mon résumé partagé (sur tous mes docs où je suis propriétaire)
   async updateMySummary(userId: string, summary: { weeklyUnits: number; soberDays: number; streak: number }): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
@@ -214,11 +235,13 @@ export const friendsService = {
     }
   },
 
-  // Supprimer un ami
+  // Supprimer un ami : désactive mon doc symétrique (userId = moi, memberId = ami)
+  // Le doc de l'ami reste actif mais je ne le vois plus car getFriends lit memberId = moi
   async removeFriend(userId: string, friendId: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
 
+    // Désactiver mon doc symétrique (userId = moi, memberId = ami)
     const myDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('userId', userId),
       Query.equal('memberId', friendId),
@@ -227,26 +250,35 @@ export const friendsService = {
       await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
     }
 
-    const hisDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
-      Query.equal('userId', friendId),
-      Query.equal('memberId', userId),
-    ]);
-    for (const doc of hisDocs.documents) {
-      await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
+    // Essayer de désactiver le doc de l'ami (userId = ami, memberId = moi)
+    // Peut échouer si pas les droits, c'est OK
+    try {
+      const hisDocs = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
+        Query.equal('userId', friendId),
+        Query.equal('memberId', userId),
+      ]);
+      for (const doc of hisDocs.documents) {
+        await updateDocument(COLLECTIONS.CIRCLE_MEMBERS, doc.$id, { isActive: false });
+      }
+    } catch {
+      // Ignore permission errors
     }
   },
 
-  // Synchroniser : détecter les docs créés par d'autres où je suis membre
+  // Synchroniser : crée mon doc symétrique quand un ami m'a ajouté
+  // Ce doc me permet de contrôler ma relation et de supprimer l'ami
   async syncAcceptedInvitations(userId: string, userName: string, _userEmail: string): Promise<void> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');
 
+    // Détecter les docs créés par d'autres où je suis membre
     const memberRes = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
       Query.equal('memberId', userId),
       Query.equal('isActive', true),
     ]);
 
     for (const doc of memberRes.documents as unknown as MemberDoc[]) {
+      // Vérifier si j'ai déjà un doc symétrique
       const existing = await listDocuments(COLLECTIONS.CIRCLE_MEMBERS, [
         Query.equal('userId', userId),
         Query.equal('memberId', doc.userId),
@@ -254,6 +286,7 @@ export const friendsService = {
       ]);
       if (existing.documents.length > 0) continue;
 
+      // Récupérer le nom du propriétaire
       let ownerName = 'Ami';
       try {
         const profileRes = await listDocuments(COLLECTIONS.USERS_PROFILE, [
