@@ -1,6 +1,6 @@
 import { listDocuments, Query } from '@/lib/appwrite';
 import { COLLECTIONS } from '@/lib/appwrite';
-import type { FinancialStats } from '@/features/wellbeing/utils/financial';
+import type { FinancialStats } from '@/features/budget/utils/financial';
 
 export interface BudgetAchievement {
   id: string;

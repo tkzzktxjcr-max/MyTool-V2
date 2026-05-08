@@ -4,8 +4,8 @@ import { useAuth } from '@/features/auth/context';
 import { budgetService } from './service';
 import { alcoholService } from '@/features/alcohol/services';
 import { profileService } from '@/features/alcohol/services';
-import { wellbeingBudgetService, type BudgetAchievement } from '@/features/wellbeing/services/budget';
-import { calculateFinancialStats, getBudgetStatus, getBudgetFeedback } from '@/features/wellbeing/utils/financial';
+import { wellbeingBudgetService, type BudgetAchievement } from '@/features/budget/services/wellbeingBudget';
+import { calculateFinancialStats, getBudgetStatus, getBudgetFeedback } from '@/features/budget/utils/financial';
 import type { BudgetEntry, CreateBudgetEntryForm, BudgetCategory } from './types';
 
 const STALE_TIME = 2 * 60 * 1000;
