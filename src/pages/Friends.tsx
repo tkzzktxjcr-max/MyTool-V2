@@ -578,17 +578,19 @@ export default function FriendsPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
+          className="space-y-5 relative z-0"
         >
-          {/* Live Map */}
-          <LiveMap
-            sessions={liveSessions}
-            mySession={liveSession}
-          />
+          {/* Live Map - isolated stacking context */}
+          <div className="relative isolate">
+            <LiveMap
+              sessions={liveSessions}
+              mySession={liveSession}
+            />
+          </div>
 
           {/* My Live Session Panel */}
           {isLive && liveSession && (
-            <>
+            <div className="space-y-4">
               <LiveSessionPanel
                 session={liveSession}
                 onStop={handleStopLive}
@@ -630,22 +632,24 @@ export default function FriendsPage() {
                   </div>
                 </Button>
               )}
-            </>
+            </div>
           )}
 
-          {/* Activate Live Button */}
+          {/* Activate Live Button - clear separation from map */}
           {!isLive && (
-            <motion.button
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowLiveOnboarding(true)}
-              className="w-full h-16 rounded-2xl bg-secondary/10 border-2 border-dashed border-secondary/30 flex items-center justify-center gap-3 text-secondary hover:bg-secondary/20 transition-all"
-            >
-              <Radio className="w-6 h-6" />
-              <div className="text-left">
-                <p className="font-semibold">Activer le Live Circle</p>
-                <p className="text-xs text-secondary/80">Partage ta position avec tes proches</p>
-              </div>
-            </motion.button>
+            <div className="pt-2">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowLiveOnboarding(true)}
+                className="w-full h-16 rounded-2xl bg-secondary/10 border-2 border-dashed border-secondary/30 flex items-center justify-center gap-3 text-secondary hover:bg-secondary/20 transition-all"
+              >
+                <Radio className="w-6 h-6" />
+                <div className="text-left">
+                  <p className="font-semibold">Activer le Live Circle</p>
+                  <p className="text-xs text-secondary/80">Partage ta position avec tes proches</p>
+                </div>
+              </motion.button>
+            </div>
           )}
 
           {/* Live Members List */}

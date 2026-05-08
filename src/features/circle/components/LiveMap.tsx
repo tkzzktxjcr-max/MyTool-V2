@@ -167,11 +167,11 @@ export default function LiveMap({ sessions, mySession, onCenterGroup }: LiveMapP
   };
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-white/10" style={{ height: 320 }}>
+    <div className="relative rounded-2xl overflow-hidden border border-white/10 isolate" style={{ height: 320 }}>
       <div ref={containerRef} className="w-full h-full" />
 
-      {/* Overlay controls */}
-      <div className="absolute top-3 right-3 flex flex-col gap-2 z-[400]">
+      {/* Overlay controls - z-index scoped to this relative parent only */}
+      <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
         <motion.button
           whileTap={{ scale: 0.9 }}
           onClick={handleCenter}
@@ -183,7 +183,7 @@ export default function LiveMap({ sessions, mySession, onCenterGroup }: LiveMapP
 
       {/* Member count badge */}
       {activeSessions.length > 0 && (
-        <div className="absolute top-3 left-3 z-[400]">
+        <div className="absolute top-3 left-3 z-10">
           <div className="px-3 py-1.5 rounded-xl bg-card/90 backdrop-blur border border-white/20 flex items-center gap-2 shadow-lg">
             <MapPin className="w-4 h-4 text-secondary" />
             <span className="text-sm font-medium">{activeSessions.length} en ligne</span>
@@ -193,7 +193,7 @@ export default function LiveMap({ sessions, mySession, onCenterGroup }: LiveMapP
 
       {/* Empty state */}
       {activeSessions.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-[300]">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-0">
           <div className="text-center">
             <MapPin className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
             <p className="text-sm text-muted-foreground">Personne ne partage sa position</p>
