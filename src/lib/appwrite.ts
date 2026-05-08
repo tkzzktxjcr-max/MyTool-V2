@@ -21,6 +21,9 @@ export const COLLECTIONS = {
   CIRCLE_MEMBERS: import.meta.env.VITE_COLLECTION_CIRCLE_MEMBERS || 'circle_members',
   CIRCLE_ALERTS: import.meta.env.VITE_COLLECTION_CIRCLE_ALERTS || 'circle_alerts',
   CIRCLE_EMERGENCY: import.meta.env.VITE_COLLECTION_CIRCLE_EMERGENCY || 'circle_emergency_sessions',
+  LIVE_SESSIONS: import.meta.env.VITE_COLLECTION_LIVE_SESSIONS || 'live_sessions',
+  SAFETY_EVENTS: import.meta.env.VITE_COLLECTION_SAFETY_EVENTS || 'safety_events',
+  EMERGENCY_ALERTS: import.meta.env.VITE_COLLECTION_EMERGENCY_ALERTS || 'emergency_alerts',
 };
 
 const client = new Client()
