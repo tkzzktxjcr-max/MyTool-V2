@@ -39,6 +39,10 @@ export default function FriendsPage() {
   const { user } = useAuth();
   const { insights, getWeeklyUnits } = useAlcohol();
 
+  // UI state FIRST (before any hooks that might read it)
+  const [activeTab, setActiveTab] = useState<FriendsTab>('amis');
+  const isLiveTab = activeTab === 'live';
+
   // Friends hooks
   const {
     friends, receivedRequests, isLoading: friendsLoading,
@@ -51,8 +55,9 @@ export default function FriendsPage() {
     isLoading: circleLoading, updatePermissions, revokeMember, sendInvitation,
   } = useCircle();
 
-  const { alerts, unreadCount, markAsRead, dismissAlert, markAllAsRead } = useCircleAlerts();
-  const { session: emergencySession, isActive: emergencyActive, formattedTime, stopEmergency, startEmergency } = useEmergencyMode();
+  // Live hooks - DISABLED when not on Live tab to prevent network spam
+  const { alerts, unreadCount, markAsRead, dismissAlert, markAllAsRead } = useCircleAlerts(isLiveTab);
+  const { session: emergencySession, isActive: emergencyActive, formattedTime, stopEmergency, startEmergency } = useEmergencyMode(isLiveTab);
 
   const {
     session: liveSession,
@@ -64,7 +69,7 @@ export default function FriendsPage() {
     updateStatus,
     startSafeReturn,
     stopSafeReturn,
-  } = useLiveSession(user?.$id);
+  } = useLiveSession(user?.$id, isLiveTab);
 
   // Build list of circle IDs: my own + all friends' userIds
   const friendUserIds = friends.map(f => f.userId);
@@ -73,10 +78,9 @@ export default function FriendsPage() {
   const {
     sessions: liveSessions,
     memberCount: liveMemberCount,
-  } = useLiveLocations(allCircleIds);
+  } = useLiveLocations(allCircleIds, isLiveTab);
 
   // UI state
-  const [activeTab, setActiveTab] = useState<FriendsTab>('amis');
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);

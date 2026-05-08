@@ -42,10 +42,10 @@ const mapDocToSession = (doc: LiveSessionDoc): LiveSession => ({
   userName: doc.userName,
 });
 
-export const useLiveLocations = (circleIds: string[]) => {
+export const useLiveLocations = (circleIds: string[], enabled: boolean = true) => {
   const [realtimeSessions, setRealtimeSessions] = useState<LiveSession[]>([]);
 
-  // Initial fetch for all circle IDs
+  // Initial fetch for all circle IDs - NO refetchInterval because realtime handles updates
   const sessionsQuery = useQuery({
     queryKey: ['live-locations', circleIds],
     queryFn: async () => {
@@ -63,9 +63,9 @@ export const useLiveLocations = (circleIds: string[]) => {
         return true;
       });
     },
-    enabled: circleIds.length > 0,
-    staleTime: 30000,
-    refetchInterval: 30000,
+    enabled: circleIds.length > 0 && enabled,
+    staleTime: 60000,
+    // NO refetchInterval - realtime subscription handles live updates
   });
 
   const baseSessions = sessionsQuery.data ?? [];
@@ -73,7 +73,7 @@ export const useLiveLocations = (circleIds: string[]) => {
 
   // Realtime subscription - listen to all live session changes
   useEffect(() => {
-    if (circleIds.length === 0) return;
+    if (circleIds.length === 0 || !enabled) return;
 
     const channel = `databases.${APPWRITE_CONFIG.databaseId}.collections.${COLLECTIONS.LIVE_SESSIONS}.documents`;
 
@@ -98,7 +98,7 @@ export const useLiveLocations = (circleIds: string[]) => {
     });
 
     return () => unsubscribe();
-  }, [circleIds]);
+  }, [circleIds, enabled]);
 
   // Merge base and realtime, keeping newest
   const mergedSessions = [...baseSessions, ...realtimeSessions].reduce((acc, session) => {

@@ -8,7 +8,7 @@ import type { LiveAccuracy, LiveStatus, TransportMode, LiveLocation } from '../t
 
 const STALE_TIME = 30 * 1000;
 
-export const useLiveSession = (circleId: string | undefined) => {
+export const useLiveSession = (circleId: string | undefined, enabled: boolean = true) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.$id;
@@ -19,9 +19,9 @@ export const useLiveSession = (circleId: string | undefined) => {
   const sessionQuery = useQuery({
     queryKey: ['live-session', userId],
     queryFn: () => liveSessionService.getMyActiveSession(userId!),
-    enabled: !!userId,
+    enabled: !!userId && enabled,
     staleTime: STALE_TIME,
-    refetchInterval: 60000,
+    refetchInterval: enabled ? 60000 : false,
   });
 
   const session = sessionQuery.data;
@@ -29,7 +29,7 @@ export const useLiveSession = (circleId: string | undefined) => {
 
   const geo = useGeolocation({
     accuracy: session?.accuracy || 'approximate',
-    enabled: isLive,
+    enabled: isLive && enabled,
     throttleMs: session?.safeReturnMode ? 15000 : 30000,
   });
 

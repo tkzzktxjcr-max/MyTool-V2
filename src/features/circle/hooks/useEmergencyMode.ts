@@ -4,9 +4,9 @@ import { useAuth } from '@/features/auth/context';
 import { emergencyService } from '../services';
 import type { EmergencySession } from '../types';
 
-const STALE_TIME = 30 * 1000;
+const STALE_TIME = 60 * 1000;
 
-export const useEmergencyMode = () => {
+export const useEmergencyMode = (enabled: boolean = true) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.$id;
@@ -14,9 +14,9 @@ export const useEmergencyMode = () => {
   const sessionQuery = useQuery({
     queryKey: ['emergency-session', userId],
     queryFn: () => emergencyService.getActiveSession(userId!),
-    enabled: !!userId,
+    enabled: !!userId && enabled,
     staleTime: STALE_TIME,
-    refetchInterval: 60000,
+    refetchInterval: enabled ? 120000 : false, // Reduced from 60s to 120s
   });
 
   const [timeRemaining, setTimeRemaining] = useState<number>(0);

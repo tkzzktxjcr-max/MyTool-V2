@@ -5,7 +5,7 @@ import type { CircleAlert } from '../types';
 
 const STALE_TIME = 60 * 1000;
 
-export const useCircleAlerts = () => {
+export const useCircleAlerts = (enabled: boolean = true) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const userId = user?.$id;
@@ -13,9 +13,9 @@ export const useCircleAlerts = () => {
   const alertsQuery = useQuery({
     queryKey: ['circle-alerts', userId],
     queryFn: () => alertService.getAlertsForUser(userId!),
-    enabled: !!userId,
+    enabled: !!userId && enabled,
     staleTime: STALE_TIME,
-    refetchInterval: 30000,
+    refetchInterval: enabled ? 60000 : false, // Reduced from 30s to 60s
   });
 
   const unreadCount = (alertsQuery.data ?? []).filter(a => !a.isRead).length;
