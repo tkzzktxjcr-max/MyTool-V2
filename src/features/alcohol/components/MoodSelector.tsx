@@ -1,5 +1,3 @@
-"use client";
-
 import { Smile, Coffee, Users, PartyPopper, AlertCircle, Frown, Moon, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 

@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Target, Scale, TrendingDown, Dumbbell, Ban, Wallet } from 'lucide-react';

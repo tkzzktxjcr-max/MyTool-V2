@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useAuth } from '@/features/auth/context';
 import { goalsService } from '@/features/alcohol/services';

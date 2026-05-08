@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { account } from '@/lib/appwrite';
 import { authService } from './service';

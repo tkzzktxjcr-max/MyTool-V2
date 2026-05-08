@@ -1,5 +1,3 @@
-"use client";
-
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Bell, Check, X, AlertTriangle, Info, ShieldAlert, Heart } from 'lucide-react';

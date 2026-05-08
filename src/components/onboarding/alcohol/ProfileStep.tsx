@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from 'framer-motion';
 import { Scale, User, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';

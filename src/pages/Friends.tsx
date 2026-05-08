@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFriends } from '@/features/friends/hooks/useFriends';
@@ -28,10 +26,10 @@ import LiveStatusBar from '@/features/circle/components/LiveStatusBar';
 import LiveSessionPanel from '@/features/circle/components/LiveSessionPanel';
 import SafeReturnSheet from '@/features/circle/components/SafeReturnSheet';
 import LiveOnboardingDialog from '@/features/circle/components/LiveOnboardingDialog';
-import CircleMemberCard from './circle/CircleMemberCard';
-import CircleAlertCard from './circle/CircleAlertCard';
-import EmergencyModeSheet from './circle/EmergencyModeSheet';
-import AddMemberSheet from './circle/AddMemberSheet';
+import CircleMemberCard from '@/features/circle/components/CircleMemberCard';
+import CircleAlertCard from '@/features/circle/components/CircleAlertCard';
+import EmergencyModeSheet from '@/features/circle/components/EmergencyModeSheet';
+import AddMemberSheet from '@/features/circle/components/AddMemberSheet';
 
 type FriendsTab = 'amis' | 'live';
 

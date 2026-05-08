@@ -1,5 +1,3 @@
-"use client";
-
 import { Card, CardContent } from '@/components/ui/card';
 import { BarChart3, Trophy, Flame, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';

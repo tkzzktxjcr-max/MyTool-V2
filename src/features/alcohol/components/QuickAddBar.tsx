@@ -1,4 +1,3 @@
-"use client";
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Star, Check, Clock, ChevronRight, Beer, Wine, GlassWater, Sparkles } from 'lucide-react';

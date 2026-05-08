@@ -1,4 +1,3 @@
-"use client";
 import { Card, CardContent } from '@/components/ui/card';
 import { Clock, Calendar, ChevronRight, Sparkles, Beer, Wine, GlassWater, Apple, X } from 'lucide-react';
 import { motion } from 'framer-motion';

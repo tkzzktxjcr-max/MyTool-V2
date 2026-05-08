@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from 'react';
 import { useBudget } from '@/features/budget/hooks';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +11,7 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { BUDGET_CATEGORIES, type CreateBudgetEntryForm } from '@/features/budget/types';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from 'recharts';
-import ConfettiAnimation from './alcohol/ConfettiAnimation';
+import ConfettiAnimation from '@/features/alcohol/components/ConfettiAnimation';
 
 export default function BudgetPage() {
   const { 

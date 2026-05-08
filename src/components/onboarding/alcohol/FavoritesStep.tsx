@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from 'framer-motion';
 import { Check, Sparkles, Beer, Wine, CupSoda, Apple } from 'lucide-react';
 import { cn } from '@/lib/utils';

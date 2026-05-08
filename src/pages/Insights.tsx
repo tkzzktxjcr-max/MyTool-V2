@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAlcohol } from '@/features/alcohol/hooks';
@@ -8,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { BarChart3, Trophy, Flame, Sparkles, TrendingUp, Calendar, Target, ChevronRight, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import BadgesSheet from './alcohol/BadgesSheet';
-import MonthlyHeatmap from './alcohol/MonthlyHeatmap';
-import InsightsCard from './alcohol/InsightsCard';
-import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
+import BadgesSheet from '@/features/alcohol/components/BadgesSheet';
+import MonthlyHeatmap from '@/features/alcohol/components/MonthlyHeatmap';
+import InsightsCard from '@/features/alcohol/components/InsightsCard';
+import WeeklyProgressCard from '@/features/alcohol/components/WeeklyProgressCard';
 import { HEALTH_GUIDELINES } from '@/features/alcohol/types';
 
 export default function InsightsPage() {

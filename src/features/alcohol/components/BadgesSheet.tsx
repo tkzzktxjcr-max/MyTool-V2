@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from 'framer-motion';
 import { Trophy, Lock, Star, Award, Gem, Leaf, Zap } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';

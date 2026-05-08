@@ -1,5 +1,3 @@
-"use client";
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, Flame, CheckCircle2, Sparkles, TrendingDown, Trophy } from 'lucide-react';
 import { motion } from 'framer-motion';

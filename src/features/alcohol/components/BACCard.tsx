@@ -1,5 +1,3 @@
-"use client";
-
 import { Card, CardContent } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, ReferenceLine, CartesianGrid } from 'recharts';
 import { format, formatDistanceToNow } from 'date-fns';

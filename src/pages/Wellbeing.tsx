@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from 'react';
 import { useAlcohol } from '@/features/alcohol/hooks';
 import { useAuth } from '@/features/auth/context';
@@ -15,18 +13,18 @@ import { toast } from 'sonner';
 import { AlcoholOnboardingWizard } from '@/components/onboarding/alcohol/AlcoholOnboardingWizard';
 import { useAlcoholOnboarding } from '@/components/onboarding/alcohol/useAlcoholOnboarding';
 
-import BACCard from './alcohol/BACCard';
-import WeeklyProgressCard from './alcohol/WeeklyProgressCard';
-import InsightsCard from './alcohol/InsightsCard';
-import HistoryCard from './alcohol/HistoryCard';
-import MonthlyHeatmap from './alcohol/MonthlyHeatmap';
-import BadgesSheet from './alcohol/BadgesSheet';
-import { GoalSetterDialog, ProfileEditorDialog, CreateDrinkDialog } from './alcohol/dialogs';
-import DrinkPicker from './alcohol/DrinkPicker';
-import MoodSelector from './alcohol/MoodSelector';
-import QuantitySelector from './alcohol/QuantitySelector';
-import TimeSelector from './alcohol/TimeSelector';
-import ConfettiAnimation from './alcohol/ConfettiAnimation';
+import BACCard from '@/features/alcohol/components/BACCard';
+import WeeklyProgressCard from '@/features/alcohol/components/WeeklyProgressCard';
+import InsightsCard from '@/features/alcohol/components/InsightsCard';
+import HistoryCard from '@/features/alcohol/components/HistoryCard';
+import MonthlyHeatmap from '@/features/alcohol/components/MonthlyHeatmap';
+import BadgesSheet from '@/features/alcohol/components/BadgesSheet';
+import { GoalSetterDialog, ProfileEditorDialog, CreateDrinkDialog } from '@/features/alcohol/components/dialogs';
+import DrinkPicker from '@/features/alcohol/components/DrinkPicker';
+import MoodSelector from '@/features/alcohol/components/MoodSelector';
+import QuantitySelector from '@/features/alcohol/components/QuantitySelector';
+import TimeSelector from '@/features/alcohol/components/TimeSelector';
+import ConfettiAnimation from '@/features/alcohol/components/ConfettiAnimation';
 
 const TIME_LABELS: Record<TimeOfDay, { icon: string; label: string }> = {
   morning: { icon: '☀️', label: 'Bon matin' },

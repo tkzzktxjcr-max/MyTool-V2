@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar, Leaf, Droplets, Sparkles, LeafIcon } from 'lucide-react';
