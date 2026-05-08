@@ -42,14 +42,28 @@ const mapDocToSession = (doc: LiveSessionDoc): LiveSession => ({
   userName: doc.userName,
 });
 
-export const useLiveLocations = (circleId: string | undefined) => {
+export const useLiveLocations = (circleIds: string[]) => {
   const [realtimeSessions, setRealtimeSessions] = useState<LiveSession[]>([]);
 
-  // Initial fetch
+  // Initial fetch for all circle IDs
   const sessionsQuery = useQuery({
-    queryKey: ['live-locations', circleId],
-    queryFn: () => (circleId ? liveSessionService.getActiveSessions(circleId) : Promise.resolve([])),
-    enabled: !!circleId,
+    queryKey: ['live-locations', circleIds],
+    queryFn: async () => {
+      if (circleIds.length === 0) return [];
+      const allSessions: LiveSession[] = [];
+      for (const circleId of circleIds) {
+        const sessions = await liveSessionService.getActiveSessions(circleId);
+        allSessions.push(...sessions);
+      }
+      // Deduplicate by session ID
+      const seen = new Set<string>();
+      return allSessions.filter(s => {
+        if (seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      });
+    },
+    enabled: circleIds.length > 0,
     staleTime: 30000,
     refetchInterval: 30000,
   });
@@ -57,9 +71,9 @@ export const useLiveLocations = (circleId: string | undefined) => {
   const baseSessions = sessionsQuery.data ?? [];
   const allSessions = realtimeSessions.length > 0 ? realtimeSessions : baseSessions;
 
-  // Realtime subscription
+  // Realtime subscription - listen to all live session changes
   useEffect(() => {
-    if (!circleId) return;
+    if (circleIds.length === 0) return;
 
     const channel = `databases.${APPWRITE_CONFIG.databaseId}.collections.${COLLECTIONS.LIVE_SESSIONS}.documents`;
 
@@ -67,7 +81,7 @@ export const useLiveLocations = (circleId: string | undefined) => {
       const events = response.events;
       const payload = response.payload as LiveSessionDoc;
 
-      if (!payload || payload.circleId !== circleId) return;
+      if (!payload || !circleIds.includes(payload.circleId)) return;
 
       setRealtimeSessions((prev) => {
         // Remove existing entry for this session
@@ -84,9 +98,9 @@ export const useLiveLocations = (circleId: string | undefined) => {
     });
 
     return () => unsubscribe();
-  }, [circleId]);
+  }, [circleIds]);
 
-  // Merge and deduplicate
+  // Merge base and realtime, keeping newest
   const mergedSessions = [...baseSessions, ...realtimeSessions].reduce((acc, session) => {
     const existing = acc.find((s) => s.id === session.id);
     if (!existing) {

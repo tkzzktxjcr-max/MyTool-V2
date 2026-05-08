@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFriends } from '@/features/friends/hooks/useFriends';
 import { useAlcohol } from '@/features/alcohol/hooks';
@@ -66,10 +66,14 @@ export default function FriendsPage() {
     stopSafeReturn,
   } = useLiveSession(user?.$id);
 
+  // Build list of circle IDs: my own + all friends' userIds
+  const friendUserIds = friends.map(f => f.userId);
+  const allCircleIds = user?.$id ? [user.$id, ...friendUserIds] : friendUserIds;
+  
   const {
     sessions: liveSessions,
     memberCount: liveMemberCount,
-  } = useLiveLocations(user?.$id);
+  } = useLiveLocations(allCircleIds);
 
   // UI state
   const [activeTab, setActiveTab] = useState<FriendsTab>('amis');
@@ -85,12 +89,13 @@ export default function FriendsPage() {
   const [encouragingId, setEncouragingId] = useState<string | null>(null);
 
   // Auto-update my summary when page loads
-  useState(() => {
+  useEffect(() => {
+    if (!user?.$id) return;
     const weeklyUnits = getWeeklyUnits();
     const streak = insights?.streak || 0;
     const soberDays = insights?.dailyTrend?.filter(d => d.units === 0).length || 0;
     updateSummary({ weeklyUnits, soberDays, streak }).catch(() => {});
-  });
+  }, [user?.$id, insights, getWeeklyUnits, updateSummary]);
 
   // Friends handlers
   const handleSendRequest = async () => {
@@ -683,7 +688,7 @@ export default function FriendsPage() {
 
       {/* Sheets & Dialogs */}
       <Sheet open={showAddSheet} onOpenChange={setShowAddSheet}>
-        <SheetContent side="bottom" className="rounded-t-3xl">
+        <SheetContent side="bottom" className="rounded-t-3xl z-50">
           <SheetHeader>
             <SheetTitle className="text-center flex items-center justify-center gap-2">
               <UserPlus className="w-5 h-5 text-accent" />

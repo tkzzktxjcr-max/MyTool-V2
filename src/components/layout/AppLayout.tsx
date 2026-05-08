@@ -18,7 +18,7 @@ import { useAuth } from '@/features/auth/context';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { path: '/', icon: Home, label: 'Tableau de bord' },
+  { path: '/', icon: Home, label: 'Accueil' },
   { path: '/wellbeing', icon: Wine, label: 'Bien-être' },
   { path: '/friends', icon: Users, label: 'Amis' },
   { path: '/insights', icon: Sparkles, label: 'Insights' },
@@ -32,9 +32,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-b border-white/10 px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-background relative">
+      {/* Mobile Header - z-30 to stay below modals/sheets (z-50) */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-30 h-14 glass-card backdrop-blur-xl border-b border-white/10 px-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold">
             W
@@ -49,8 +49,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </button>
       </header>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 glass-card backdrop-blur-xl border-t border-white/10 px-2 py-2 flex justify-around items-center">
+      {/* Mobile Bottom Navigation - z-20 to stay below all overlays */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-20 glass-card backdrop-blur-xl border-t border-white/10 px-2 py-2 pb-[env(safe-area-inset-bottom)] flex justify-around items-center">
         {navItems.slice(0, 5).map((item) => {
           const isActive = location.pathname === item.path;
           return (
@@ -69,7 +69,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         })}
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay - z-40 for overlay, z-50 for menu */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileMenuOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 lg:hidden"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
             />
             <motion.div
               initial={{ x: -300 }}
@@ -147,8 +147,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-card backdrop-blur-xl border-r border-white/10 z-40">
+      {/* Desktop Sidebar - z-30 */}
+      <aside className="hidden lg:flex fixed left-0 top-0 h-screen w-64 flex-col glass-card backdrop-blur-xl border-r border-white/10 z-30">
         <div className="p-6 border-b border-white/10">
           <Link to="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-xl">
@@ -200,8 +200,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="min-h-screen pt-16 pb-20 lg:pt-0 lg:pb-0 lg:ml-64">
+      {/* Main Content - adjusted padding for mobile header and bottom nav */}
+      <main className="min-h-screen pt-14 pb-24 lg:pt-0 lg:pb-0 lg:ml-64">
         <div className="p-4 md:p-6 lg:p-8">
           {children}
         </div>
