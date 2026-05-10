@@ -24,6 +24,22 @@ Thumbs.db
 .env.*
 !.env.example
 
+# Dev tooling
+scripts
+eslint.config.js
+postcss.config.js
+tailwind.config.ts
+tsconfig*.json
+vite.config.ts
+
+# Docs (not needed in image)
+README.md
+docs
+
+# Cache
+.cache
+.eslintcache
+
 # Logs
 logs
 *.log
