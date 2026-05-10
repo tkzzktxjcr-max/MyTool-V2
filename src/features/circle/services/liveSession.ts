@@ -194,6 +194,18 @@ export const liveSessionService = {
     return (response.documents as unknown as LiveSessionDoc[]).map(mapDocToSession);
   },
 
+  async getActiveSessionsForIds(circleIds: string[]): Promise<LiveSession[]> {
+    if (circleIds.length === 0) return [];
+    const now = new Date().toISOString();
+    const response = await listDocuments(COLLECTIONS.LIVE_SESSIONS, [
+      Query.in('circleId', circleIds),
+      Query.equal('isActive', true),
+      Query.greaterThanEqual('expiresAt', now),
+      Query.orderDesc('$updatedAt'),
+    ]);
+    return (response.documents as unknown as LiveSessionDoc[]).map(mapDocToSession);
+  },
+
   async getMyActiveSession(userId: string): Promise<LiveSession | null> {
     const currentUser = await account.get();
     if (currentUser.$id !== userId) throw new Error('Unauthorized');

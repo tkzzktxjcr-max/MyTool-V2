@@ -45,23 +45,12 @@ const mapDocToSession = (doc: LiveSessionDoc): LiveSession => ({
 export const useLiveLocations = (circleIds: string[], enabled: boolean = true) => {
   const [realtimeSessions, setRealtimeSessions] = useState<LiveSession[]>([]);
 
-  // Initial fetch for all circle IDs - NO refetchInterval because realtime handles updates
+  // Initial fetch for all circle IDs in ONE query (batch)
   const sessionsQuery = useQuery({
     queryKey: ['live-locations', circleIds],
     queryFn: async () => {
       if (circleIds.length === 0) return [];
-      const allSessions: LiveSession[] = [];
-      for (const circleId of circleIds) {
-        const sessions = await liveSessionService.getActiveSessions(circleId);
-        allSessions.push(...sessions);
-      }
-      // Deduplicate by session ID
-      const seen = new Set<string>();
-      return allSessions.filter(s => {
-        if (seen.has(s.id)) return false;
-        seen.add(s.id);
-        return true;
-      });
+      return liveSessionService.getActiveSessionsForIds(circleIds);
     },
     enabled: circleIds.length > 0 && enabled,
     staleTime: 60000,
