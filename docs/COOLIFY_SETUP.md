@@ -60,7 +60,7 @@ Dans Coolify → **Environment Variables**, ajoute :
 1. Coolify détecte automatiquement le `Dockerfile`
 2. Le builder stage installe les déps et build avec les `VITE_*` injectés
 3. Le runner stage sert les fichiers statiques via Nginx sur le port **80**
-4. Configure ton domaine dans Coolify (ex: `wellhub.071098v2.duckdns.org`)
+4. Configure ton domaine dans Coolify (ex: `mytools.071098v2.duckdns.org`)
 
 ## Étape 5 : Post-déploiement
 
