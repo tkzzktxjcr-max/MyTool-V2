@@ -25,14 +25,14 @@ export const useCircle = () => {
   const sentInvitationsQuery = useQuery({
     queryKey: ['circle-invitations-sent', userId],
     queryFn: () => invitationService.getSentInvitations(userId!),
-    enabled: !!userId,
+    enabled: false, // Only loaded when AddMemberSheet is opened
     staleTime: STALE_TIME,
   });
 
   const receivedInvitationsQuery = useQuery({
     queryKey: ['circle-invitations-received', userEmail],
     queryFn: () => invitationService.getReceivedInvitations(userEmail!),
-    enabled: !!userEmail,
+    enabled: false, // Only loaded when needed
     staleTime: STALE_TIME,
   });
 
