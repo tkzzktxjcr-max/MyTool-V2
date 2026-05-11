@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/context';
 import { useAlcohol } from '@/features/alcohol/hooks';
