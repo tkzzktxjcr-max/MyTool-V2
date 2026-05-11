@@ -15,7 +15,7 @@ export const useCircleAlerts = (enabled: boolean = true) => {
     queryFn: () => alertService.getAlertsForUser(userId!),
     enabled: !!userId && enabled,
     staleTime: STALE_TIME,
-    refetchInterval: enabled ? 60000 : false, // Reduced from 30s to 60s
+    refetchInterval: enabled ? 120000 : false, // Poll every 2 min to avoid rate limits
   });
 
   const unreadCount = (alertsQuery.data ?? []).filter(a => !a.isRead).length;
