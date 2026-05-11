@@ -31,34 +31,32 @@ export const useFriends = () => {
     staleTime: STALE_TIME,
   });
 
-  const sentRequestsQuery = useQuery({
-    queryKey: ['friend-requests-sent', userId],
-    queryFn: () => friendsService.getSentRequests(userId!),
-    enabled: !!userId,
-    staleTime: STALE_TIME,
-  });
-
-  // Sync accepted invitations on mount
+  // Sync accepted invitations on mount — DELAYED to avoid burst
   useEffect(() => {
     if (!userId || !userName || !userEmail) return;
-    friendsService.syncAcceptedInvitations(userId, userName, userEmail).then(() => {
-      queryClient.invalidateQueries({ queryKey: ['friends', userId] });
-    }).catch(() => {});
+    const timer = setTimeout(() => {
+      friendsService.syncAcceptedInvitations(userId, userName, userEmail).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['friends', userId] });
+      }).catch(() => {});
+    }, 800);
+    return () => clearTimeout(timer);
   }, [userId, userName, userEmail, queryClient]);
 
-  // Auto-update my summary when page loads
+  // Auto-update my summary when page loads — DELAYED to avoid burst
   useEffect(() => {
     if (!userId) return;
-    const weeklyUnits = getWeeklyUnits();
-    const streak = insights?.streak || 0;
-    const soberDays = insights?.dailyTrend?.filter(d => d.units === 0).length || 0;
-    friendsService.updateMySummary(userId, { weeklyUnits, soberDays, streak }).catch(() => {});
+    const timer = setTimeout(() => {
+      const weeklyUnits = getWeeklyUnits();
+      const streak = insights?.streak || 0;
+      const soberDays = insights?.dailyTrend?.filter(d => d.units === 0).length || 0;
+      friendsService.updateMySummary(userId, { weeklyUnits, soberDays, streak }).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(timer);
   }, [userId, insights, getWeeklyUnits]);
 
   // ── Derived data ─────────────────────────────────────────────────────
   const friends = friendsQuery.data ?? [];
   const receivedRequests = receivedRequestsQuery.data ?? [];
-  const sentRequests = sentRequestsQuery.data ?? [];
 
   // ── Mutations ─────────────────────────────────────────────────────────
   const sendRequestMutation = useMutation({
@@ -111,7 +109,6 @@ export const useFriends = () => {
   return {
     friends,
     receivedRequests,
-    sentRequests,
     isLoading,
     sendRequest,
     acceptRequest,
