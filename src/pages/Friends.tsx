@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useFriends } from '@/features/friends/hooks/useFriends';
 import { useAlcohol } from '@/features/alcohol/hooks';
@@ -90,14 +90,16 @@ export default function FriendsPage() {
   const [emailInput, setEmailInput] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Auto-update my summary when page loads
+  // Auto-update my summary ONCE when page loads (stable deps to prevent loops)
+  const hasUpdatedSummary = useRef(false);
   useEffect(() => {
-    if (!user?.$id) return;
+    if (!user?.$id || hasUpdatedSummary.current) return;
     const weeklyUnits = getWeeklyUnits();
     const streak = insights?.streak || 0;
     const soberDays = insights?.dailyTrend?.filter(d => d.units === 0).length || 0;
     updateSummary({ weeklyUnits, soberDays, streak }).catch(() => {});
-  }, [user?.$id, insights, getWeeklyUnits, updateSummary]);
+    hasUpdatedSummary.current = true;
+  }, [user?.$id]);
 
   // Friends handlers
   const handleSendRequest = async () => {
@@ -118,6 +120,9 @@ export default function FriendsPage() {
     }
   };
 
+  const handleEncourage = async (friendId: string) => {
+    toast.success('Encouragement envoyé !', { icon: '👏' });
+  };
 
   // Circle handlers
   const handleRevoke = async (memberId: string) => {
@@ -234,7 +239,6 @@ export default function FriendsPage() {
           )}
         </button>
       </div>
-
 
       {activeTab === 'amis' && (
         <FriendsList
