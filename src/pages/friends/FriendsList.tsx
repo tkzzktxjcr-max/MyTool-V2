@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { Users, UserPlus, Check, X, Hand, Shield, Bell, TrendingUp, Flame, Wine } from "lucide-react";
+import { Users, UserPlus, Check, X, Hand, Shield, Bell, TrendingUp, Flame, Wine, Power, ChevronRight } from "lucide-react";
 import type { Friend, FriendRequest } from "@/features/friends/types";
 import type { CircleMember, CircleAlert } from "@/features/circle/types";
 import CircleMemberCard from "@/features/circle/components/CircleMemberCard";
