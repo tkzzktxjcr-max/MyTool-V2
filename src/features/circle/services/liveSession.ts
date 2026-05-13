@@ -77,12 +77,7 @@ export const liveSessionService = {
         safeReturnDestination: null,
         safeReturnTransportMode: null,
         userName: data.userName || currentUser.name || 'Moi',
-      },
-      [
-        Permission.read(Role.users()),
-        Permission.update(Role.user(data.userId)),
-        Permission.delete(Role.user(data.userId)),
-      ]
+      }
     );
     return mapDocToSession(doc as unknown as LiveSessionDoc);
   },
